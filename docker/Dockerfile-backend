@@ -1,0 +1,25 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+FROM python:3.10
+
+# default graphrag version will be 0.0.0 unless overridden by --build-arg
+ARG GRAPHRAG_VERSION=0.0.0
+ENV GRAPHRAG_VERSION=v${GRAPHRAG_VERSION}
+ENV PIP_ROOT_USER_ACTION=ignore
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV SETUPTOOLS_USE_DISTUTILS=stdlib
+ENV PYTHONPATH=/backend
+
+COPY poetry.lock pyproject.toml /
+COPY backend /backend
+RUN pip install poetry \
+    && poetry config virtualenvs.create false \
+    && poetry install --without frontend
+
+# download all nltk data that graphrag requires
+RUN python -m nltk.downloader punkt averaged_perceptron_tagger maxent_ne_chunker words wordnet
+
+WORKDIR /backend
+EXPOSE 80
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "80"]

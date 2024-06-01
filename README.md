@@ -1,57 +1,40 @@
-# Project Name
+# GraphRAG Accelerator
 
-(short, 1-3 sentenced, description of the project)
+[![Open in Dev Containers](https://img.shields.io/static/v1?label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/strategic-missions-and-technologies/GraphRAG)
 
-## Features
+Welcome to the GraphRAG solution accelerator! This accelerator builds on top of the [graphrag](https://github.com/microsoft/graphrag) python package and exposes API endpoints hosted on Azure, which can be used to trigger indexing pipelines and enable querying of the graphrag knowledge graph.
 
-This project framework provides the following features:
+For FAQ, access instructions, and our roadmap, please visit `aka.ms/graphrag`
 
-* Feature 1
-* Feature 2
-* ...
+![](docs/assets/graphrag-architecture-diagram.png)
 
-## Getting Started
+## Getting Started with GraphRAG on Azure
 
-### Prerequisites
+### Deployment Guide
+To deploy the solution accelerator, see the [deployment guide](docs/DEPLOYMENT-GUIDE.md). This will result in a full deployment of graphrag as an API.
+Afterwards, check out the [Hello World](notebooks/HelloWorld.ipynb) notebook for a demonstration of various API calls.
 
-(ideally very short, if any)
+## Development Guide
+Interested in contributing? Check out the [development guide](docs/DEVELOPMENT-GUIDE.md).
 
-- OS
-- Library version
-- ...
+### How to file issues and get help
+This project uses GitHub Issues to track bugs and feature requests. Please search the existing issues before filing new issues to avoid duplicates. For new issues, file your bug or feature request as a new Issue.
 
-### Installation
+## Contributing
 
-(ideally very short)
+This project welcomes contributions and suggestions. Most contributions require you to
+agree to a Contributor License Agreement (CLA) declaring that you have the right to,
+and actually do, grant us the rights to use your contribution. For details, visit
+https://cla.microsoft.com.
 
-- npm install [package name]
-- mvn install
-- ...
+When you submit a pull request, a CLA-bot will automatically determine whether you need
+to provide a CLA and decorate the PR appropriately (e.g., label, comment). Simply follow the
+instructions provided by the bot. You will only need to do this once across all repositories using our CLA.
 
-### Quickstart
-(Add steps to get up and running quickly)
+This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
+For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/)
+or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
 
-1. git clone [repository clone url]
-2. cd [repository name]
-3. ...
+# Trademarks
 
-
-## Demo
-
-A demo app is included to show how to use the project.
-
-To run the demo, follow these steps:
-
-(Add steps to start up the demo)
-
-1.
-2.
-3.
-
-## Resources
-
-(Any additional resources or related projects)
-
-- Link to supporting information
-- Link to similar sample
-- ...
+This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft trademarks or logos is subject to and must follow [Microsoft’s Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general). Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship. Any use of third-party trademarks or logos are subject to those third-party’s policies.

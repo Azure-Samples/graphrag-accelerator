@@ -1,0 +1,20 @@
+notebooks
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+.github
+.git
+**/__pycache__
+*.pyc
+*.pyo
+*.pyd
+**/.pytest_cache
+**/.ruff_cache
+**/.DS_Store

@@ -1,0 +1,28 @@
+<policies>
+	<inbound>
+		<base />
+		<cors allow-credentials="false">
+			<allowed-origins>
+				<origin>*</origin>
+			</allowed-origins>
+			<allowed-methods>
+				<method>*</method>
+			</allowed-methods>
+			<allowed-headers>
+				<header>*</header>
+			</allowed-headers>
+			<expose-headers>
+				<header>*</header>
+			</expose-headers>
+		</cors>
+	</inbound>
+	<backend>
+		<forward-request buffer-response="false" />
+	</backend>
+	<outbound>
+		<base />
+	</outbound>
+	<on-error>
+		<base />
+	</on-error>
+</policies>

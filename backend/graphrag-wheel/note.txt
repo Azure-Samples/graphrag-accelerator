@@ -1,0 +1,6 @@
+This graphrag wheel file was built from the following repo
+
+https://github.com/microsoft/graphrag
+
+on commit hash 6afec2ae421eabf468e1da8595e1e23d4bda5ecb
+

@@ -1,0 +1,68 @@
+/*
+Copyright (c) Microsoft Corporation.
+Licensed under the MIT License.
+*/
+
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css');
+
+#root > div:nth-child(1) > div.withScreencast > div > div > div > section.main.st-emotion-cache-uf99v8.ea3mdgi8 > div.block-container.st-emotion-cache-z5fcl4.ea3mdgi5 > div > div > div > div.st-emotion-cache-ocqkz7.e1f1d6gn5 > div:nth-child(4) > div > div > div > div > div{
+    margin-top: 1.6em;
+}
+
+
+[data-testid="stHeadingDivider"] {
+    background-color: #3d9df3;  /* Set your desired color */
+    height: 1px;
+}
+
+#microsoft-graphrag-copilot > div > span {
+    text-align: center;
+    margin-top: -1em;
+}
+
+/* Tooltip container */
+.tooltip {
+    position: relative;
+    display: inline-block;
+    border-bottom: 1px dotted black; /* If you want dots under the hoverable text */
+  }
+  
+  /* Tooltip text */
+  .tooltip .tooltiptext {
+    visibility: hidden;
+    width: 120px;
+    background-color: #555;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -60px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  
+  /* Show the tooltip text when you hover over the tooltip container */
+  .tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+  }
+
+  .gray-box {
+   
+    background-color: #ffffff;
+    padding: 10px;
+    width: 80%;
+}
+
+.center-container {
+  margin-top: -10em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
