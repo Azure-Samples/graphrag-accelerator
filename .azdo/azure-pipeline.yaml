@@ -11,20 +11,6 @@ pool:
   vmImage: ubuntu-latest
 
 steps:
-  # - task: Docker@2
-  #   displayName: Build backend docker image
-  #   inputs:
-  #     command: build
-  #     repository: backend
-  #     Dockerfile: $(Build.SourcesDirectory)/docker/Dockerfile-backend
-  #     tags: latest
-  # - task: Docker@2
-  #   displayName: Build frontend docker image
-  #   inputs:
-  #     command: build
-  #     repository: frontend
-  #     Dockerfile: $(Build.SourcesDirectory)/docker/Dockerfile-frontend
-  #     tags: latest
   - script: docker build -t graphrag:backend -f docker/Dockerfile-backend .
   - script: docker build -t graphrag:frontend -f docker/Dockerfile-frontend .
   # Component Governance does not support pyproject.toml yet.
@@ -39,3 +25,4 @@ steps:
       scanType: 'Register'
       verbosity: 'Verbose'
       alertWarningLevel: 'High'
+      dockerImagesToScan: graphrag:backend, graphrag:frontend
