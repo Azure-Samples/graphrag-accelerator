@@ -16,10 +16,8 @@ steps:
   # dependencies into a requirements.txt file.
   - script: pip install toml-to-requirements
   - script: toml-to-req --toml-file pyproject.toml --poetry --optional-lists dev,test,backend,frontend
-
-steps:
-- task: ComponentGovernanceComponentDetection@0
-  inputs:
-    scanType: 'Register'
-    verbosity: 'Verbose'
-    alertWarningLevel: 'High'
+  - task: ComponentGovernanceComponentDetection@0
+    inputs:
+      scanType: 'Register'
+      verbosity: 'Verbose'
+      alertWarningLevel: 'High'
