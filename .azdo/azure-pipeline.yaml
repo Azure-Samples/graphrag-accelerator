@@ -11,6 +11,20 @@ pool:
   vmImage: ubuntu-latest
 
 steps:
+  - task: Docker@2
+    displayName: Build backend docker image
+    inputs:
+      command: build
+      repository: backend
+      Dockerfile: $(Build.SourcesDirectory)/docker/Dockerfile-backend
+      tags: latest
+  - task: Docker@2
+    displayName: Build frontend docker image
+    inputs:
+      command: build
+      repository: frontend
+      Dockerfile: $(Build.SourcesDirectory)/docker/Dockerfile-frontend
+      tags: latest
   # Component Governance does not support pyproject.toml yet.
   # For that reason, use toml-to-requirements to export the
   # dependencies into a requirements.txt file.
