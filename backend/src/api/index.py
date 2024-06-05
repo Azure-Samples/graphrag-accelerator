@@ -142,10 +142,10 @@ def setup_indexing_pipeline(
     else:
         # create or update state in cosmos db
         pipelinejob.create_item(
-            id=sanitized_index_name,  # request.index_name,
+            id=sanitized_index_name,
             index_name=sanitized_index_name,
-            storage_name=sanitized_storage_name,  # request.storage_name,
-            entity_config_name=sanitized_entity_config_name,  # request.entity_config_name,
+            storage_name=sanitized_storage_name,
+            entity_config_name=sanitized_entity_config_name,
             status=PipelineJobState.SCHEDULED,
         )
 
@@ -498,14 +498,14 @@ async def delete_index(index_name: str):
     """
     Delete a specified index.
     """
+    sanitized_index_name = sanitize_name(index_name)
     reporter = ReporterSingleton().get_instance()
     try:
         # kill indexing job if it is running
         if os.getenv("KUBERNETES_SERVICE_HOST"):  # only found if in AKS
-            _delete_k8s_job(f"indexing-job-{index_name}", "graphrag")
+            _delete_k8s_job(f"indexing-job-{sanitized_index_name}", "graphrag")
 
         # remove blob container and all associated entries in cosmos db
-        sanitized_index_name = sanitize_name(index_name)
         try:
             delete_blob_container(sanitized_index_name)
         except Exception:
