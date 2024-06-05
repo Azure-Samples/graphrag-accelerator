@@ -118,7 +118,7 @@ def sanitize_name(name: str | None) -> str | None:
     Sanitize a human-readable name by converting it to a SHA256 hash, then truncate
     to 128 bit length to ensure it is within the 63 character limit imposed by Azure Storage.
 
-    The sanitized name will be used to identify container names for Azure Storage and CosmosDB.
+    The sanitized name will be used to identify container names in both Azure Storage and CosmosDB.
 
     Args:
     -----
@@ -138,7 +138,7 @@ def sanitize_name(name: str | None) -> str | None:
 
 def retrieve_original_blob_container_name(sanitized_name: str) -> str | None:
     """
-    Retrieve the original human-readable container name of a sanitized name.
+    Retrieve the original human-readable container name of a sanitized blob name.
 
     Args:
     -----
@@ -166,7 +166,7 @@ def retrieve_original_blob_container_name(sanitized_name: str) -> str | None:
 
 def retrieve_original_entity_config_name(sanitized_name: str) -> str | None:
     """
-    Retrieve the original human-readable entity config name of a sanitized name.
+    Retrieve the original human-readable entity config name of a sanitized entity config name.
 
     Args:
     -----

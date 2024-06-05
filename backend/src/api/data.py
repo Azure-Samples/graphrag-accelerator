@@ -144,7 +144,7 @@ async def upload_files(
     except ValueError:
         raise HTTPException(
             status_code=500,
-            detail=f"Invalid container name: '{storage_name}'. Please try a different name.",
+            detail=f"Invalid blob container name: '{storage_name}'. Please try a different name.",
         )
     try:
         blob_service_client = BlobServiceClientSingletonAsync.get_instance()

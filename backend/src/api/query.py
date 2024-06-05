@@ -235,11 +235,11 @@ async def local_query(request: GraphRequest):
         text_unit_df.document_ids = text_unit_df.document_ids.apply(
             lambda x: [i + add_on for i in x]
         )
-        text_unit_df.entity_ids = text_unit_df.entity_ids.apply(
-            lambda x: [i + add_on for i in x]
+        text_unit_df.entity_ids = text_unit_df.entity_ids.map(
+            lambda x: [i + add_on for i in x], na_action="ignore"
         )
-        text_unit_df.relationship_ids = text_unit_df.relationship_ids.apply(
-            lambda x: [i + add_on for i in x]
+        text_unit_df.relationship_ids = text_unit_df.relationship_ids.map(
+            lambda x: [i + add_on for i in x], na_action="ignore"
         )
         text_unit_dfs.append(text_unit_df)
 
