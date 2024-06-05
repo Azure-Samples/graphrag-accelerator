@@ -62,7 +62,7 @@ async def get_all_data_storage_containers():
         for item in container_store_client.read_all_items():
             if item["type"] == "data":
                 items.append(item["human_readable_name"])
-    except Exception as e:
+    except Exception:
         reporter = ReporterSingleton().get_instance()
         reporter.on_error("Error getting list of data containers.")
     return StorageNameList(storage_name=items)
