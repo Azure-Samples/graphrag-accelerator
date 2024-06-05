@@ -12,7 +12,7 @@ from fastapi import (
 
 from src.api.azure_clients import AzureStorageClientManager
 from src.api.common import (
-    sanitize_container_name,
+    sanitize_name,
     verify_subscription_key_exist,
 )
 from src.models import (
@@ -68,13 +68,16 @@ def create_entity(request: EntityConfiguration):
     entity_container = azure_storage_client_manager.get_cosmos_container_client(
         database_name="graphrag", container_name="entities"
     )
-    sanitized_config_name = sanitize_container_name(request.entity_configuration_name)
+    sanitized_entity_config_name = sanitize_name(request.entity_configuration_name)
     try:
         # throw error if entity configuration already exists
-        entity_container.read_item(sanitized_config_name, sanitized_config_name)
+        entity_container.read_item(
+            item=sanitized_entity_config_name,
+            partition_key=sanitized_entity_config_name,
+        )
         raise HTTPException(
             status_code=500,
-            detail=f"{request.entity_configuration_name} already exists.",
+            detail=f"Entity configuration name '{request.entity_configuration_name}' already exists.",
         )
     except Exception:
         pass
@@ -100,11 +103,11 @@ def create_entity(request: EntityConfiguration):
     for entity in request.entity_types:
         if entity not in all_examples:
             return BaseResponse(
-                status=f"Entity:{entity} does not have an associated example."
+                status=f"Entity '{entity}' does not have an associated example."
             )
     entity_container.create_item(
         {
-            "id": sanitized_config_name,
+            "id": sanitized_entity_config_name,
             "human_readable_name": request.entity_configuration_name,
             "entity_types": request.entity_types,
             "entity_examples": entity_examples,
@@ -127,9 +130,7 @@ def update_entity(request: EntityConfiguration):
         entity_container = azure_storage_client_manager.get_cosmos_container_client(
             database_name="graphrag", container_name="entities"
         )
-        sanitized_config_name = sanitize_container_name(
-            request.entity_configuration_name
-        )
+        sanitized_config_name = sanitize_name(request.entity_configuration_name)
         existing_item = entity_container.read_item(
             item=sanitized_config_name,
             partition_key=sanitized_config_name,
@@ -137,10 +138,11 @@ def update_entity(request: EntityConfiguration):
     except Exception as e:
         reporter.on_error(f"Error getting entity type: {str(e)}")
         reporter.on_error(
-            f"Item with entityConfigurationName '{request.entity_configuration_name}' not found."
+            f"Item with entity configuration name '{request.entity_configuration_name}' not found."
         )
         raise HTTPException(
-            status_code=500, detail=f"{request.entity_configuration_name} not found."
+            status_code=500,
+            detail=f"Entity configuration '{request.entity_configuration_name}' not found.",
         )
     # update entity configuration and add back to database
     try:
@@ -156,7 +158,7 @@ def update_entity(request: EntityConfiguration):
         for entity in request.entity_types:
             if entity not in all_examples:
                 return BaseResponse(
-                    status=f"Entity: {entity} does not have an example associated."
+                    status=f"Entity '{entity}' does not have an example associated."
                 )
         # Update the existing item with the new information if it is different
         if existing_item["entity_types"] != request.entity_types:
@@ -185,7 +187,7 @@ def get_entity(entity_configuration_name: str):
         entity_container = azure_storage_client_manager.get_cosmos_container_client(
             database_name="graphrag", container_name="entities"
         )
-        sanitized_config_name = sanitize_container_name(entity_configuration_name)
+        sanitized_config_name = sanitize_name(entity_configuration_name)
         existing_item = entity_container.read_item(
             item=sanitized_config_name,
             partition_key=sanitized_config_name,
@@ -198,10 +200,11 @@ def get_entity(entity_configuration_name: str):
     except Exception as e:
         reporter.on_error(f"Error getting entity type: {str(e)}")
         reporter.on_error(
-            f"Item with entity_configuration_name: {entity_configuration_name} not found."
+            f"Item with entity configuration name '{entity_configuration_name}' not found."
         )
         raise HTTPException(
-            status_code=500, detail=f"{entity_configuration_name} not found."
+            status_code=500,
+            detail=f"Entity configuration '{entity_configuration_name}' not found.",
         )
 
 
@@ -217,17 +220,18 @@ def delete_entity(entity_configuration_name: str):
         entity_container = azure_storage_client_manager.get_cosmos_container_client(
             database_name="graphrag", container_name="entities"
         )
-        sanitized_config_name = sanitize_container_name(entity_configuration_name)
+        sanitized_entity_config_name = sanitize_name(entity_configuration_name)
         entity_container.delete_item(
-            item=sanitized_config_name,
-            partition_key=sanitized_config_name,
+            item=sanitized_entity_config_name,
+            partition_key=sanitized_entity_config_name,
         )
         return BaseResponse(status="Success")
     except Exception as e:
-        reporter.on_error(f"Error deleting entity type: {str(e)}")
+        reporter.on_error(f"Error deleting entity: {str(e)}")
         reporter.on_error(
-            f"Item with entity_configuration_name {entity_configuration_name} not found."
+            f"Item with entity configuration name '{entity_configuration_name}' not found."
         )
         raise HTTPException(
-            status_code=500, detail=f"{entity_configuration_name} not found."
+            status_code=500,
+            detail=f"Entity configuration '{entity_configuration_name}' not found.",
         )

@@ -21,7 +21,7 @@ from src.api.azure_clients import (
 )
 from src.api.common import (
     delete_blob_container,
-    sanitize_container_name,
+    sanitize_name,
     validate_blob_container_name,
     verify_subscription_key_exist,
 )
@@ -64,7 +64,7 @@ async def get_all_data_storage_containers():
                 items.append(item["human_readable_name"])
     except Exception as e:
         reporter = ReporterSingleton().get_instance()
-        reporter.on_error(f"Error getting all data containers: {str(e)}")
+        reporter.on_error("Error getting list of data containers.")
     return StorageNameList(storage_name=items)
 
 
@@ -137,14 +137,14 @@ async def upload_files(
         HTTPException: If the container name is invalid or if any error occurs during the upload process.
     """
     reporter = ReporterSingleton().get_instance()
-    sanitized_storage_name = sanitize_container_name(storage_name)
+    sanitized_storage_name = sanitize_name(storage_name)
     # ensure container name follows Azure Blob Storage naming conventions
     try:
         validate_blob_container_name(sanitized_storage_name)
     except ValueError:
         raise HTTPException(
             status_code=500,
-            detail=f"Invalid container name: {storage_name}. Please try a different name.",
+            detail=f"Invalid container name: '{storage_name}'. Please try a different name.",
         )
     try:
         blob_service_client = BlobServiceClientSingletonAsync.get_instance()
@@ -186,7 +186,10 @@ async def upload_files(
         reporter.on_error(
             "Error uploading files.", details={"ErrorDetails": str(e), "files": files}
         )
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error uploading files to container '{storage_name}'.",
+        )
 
 
 @data_route.delete(
@@ -199,7 +202,7 @@ async def delete_files(storage_name: str):
     """
     Delete a specified data storage container.
     """
-    sanitized_storage_name = sanitize_container_name(storage_name)
+    sanitized_storage_name = sanitize_name(storage_name)
     try:
         # delete container in Azure Storage
         delete_blob_container(sanitized_storage_name)
@@ -210,7 +213,8 @@ async def delete_files(storage_name: str):
             )
         )
         container_store_client.delete_item(
-            sanitized_storage_name, sanitized_storage_name
+            item=sanitized_storage_name,
+            partition_key=sanitized_storage_name,
         )
     except Exception as e:
         reporter = ReporterSingleton().get_instance()
@@ -218,5 +222,7 @@ async def delete_files(storage_name: str):
             f"Error deleting container {storage_name}.",
             details={"ErrorDetails": str(e), "Container": storage_name},
         )
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500, detail=f"Error deleting container '{storage_name}'."
+        )
     return BaseResponse(status="Success")

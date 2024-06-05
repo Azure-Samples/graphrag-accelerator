@@ -8,7 +8,7 @@ kind: Job
 metadata:
   name: PLACEHOLDER
 spec:
-  ttlSecondsAfterFinished: 0
+  ttlSecondsAfterFinished: 60
   backoffLimit: 30
   template:
     metadata:

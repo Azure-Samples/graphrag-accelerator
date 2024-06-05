@@ -8,6 +8,7 @@ from azure.identity import DefaultAzureCredential
 from fastapi import APIRouter, Depends, HTTPException
 
 from src.api.common import (
+    sanitize_name,
     validate_index_file_exist,
     verify_subscription_key_exist,
 )
@@ -46,10 +47,11 @@ storage_account_name = storage_account_blob_url.split("//")[1].split(".")[0]
 )
 async def get_report_info(index_name: str, report_id: str):
     # check for existence of file the query relies on to validate the index is complete
-    validate_index_file_exist(index_name, COMMUNITY_REPORT_TABLE)
+    sanitized_index_name = sanitize_name(index_name)
+    validate_index_file_exist(sanitized_index_name, COMMUNITY_REPORT_TABLE)
     try:
         report_table = pd.read_parquet(
-            f"abfs://{index_name}/{COMMUNITY_REPORT_TABLE}",
+            f"abfs://{sanitized_index_name}/{COMMUNITY_REPORT_TABLE}",
             storage_options={
                 "account_name": storage_account_name,
                 "credential": DefaultAzureCredential(),
@@ -62,7 +64,7 @@ async def get_report_info(index_name: str, report_id: str):
         reporter.on_error(f"Could not get report. Exception: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Error retrieving report {report_id} from index {index_name}",
+            detail=f"Error retrieving report '{report_id}' from index '{index_name}'.",
         )
 
 
@@ -74,18 +76,19 @@ async def get_report_info(index_name: str, report_id: str):
 )
 async def get_chunk_info(index_name: str, text_unit_id: str):
     # check for existence of file the query relies on to validate the index is complete
-    validate_index_file_exist(index_name, TEXT_UNITS_TABLE)
-    validate_index_file_exist(index_name, DOCUMENTS_TABLE)
+    sanitized_index_name = sanitize_name(index_name)
+    validate_index_file_exist(sanitized_index_name, TEXT_UNITS_TABLE)
+    validate_index_file_exist(sanitized_index_name, DOCUMENTS_TABLE)
     try:
         text_unit_table = pd.read_parquet(
-            f"abfs://{index_name}/{TEXT_UNITS_TABLE}",
+            f"abfs://{sanitized_index_name}/{TEXT_UNITS_TABLE}",
             storage_options={
                 "account_name": storage_account_name,
                 "credential": DefaultAzureCredential(),
             },
         )
         docs = pd.read_parquet(
-            f"abfs://{index_name}/{DOCUMENTS_TABLE}",
+            f"abfs://{sanitized_index_name}/{DOCUMENTS_TABLE}",
             storage_options={
                 "account_name": storage_account_name,
                 "credential": DefaultAzureCredential(),
@@ -109,7 +112,7 @@ async def get_chunk_info(index_name: str, text_unit_id: str):
         reporter.on_error(f"Could not get text chunk. Exception: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Error retrieving text chunk {text_unit_id} from index {index_name}",
+            detail=f"Error retrieving text chunk '{text_unit_id}' from index '{index_name}'.",
         )
 
 
@@ -121,10 +124,11 @@ async def get_chunk_info(index_name: str, text_unit_id: str):
 )
 async def get_entity_info(index_name: str, entity_id: int):
     # check for existence of file the query relies on to validate the index is complete
-    validate_index_file_exist(index_name, ENTITY_EMBEDDING_TABLE)
+    sanitized_index_name = sanitize_name(index_name)
+    validate_index_file_exist(sanitized_index_name, ENTITY_EMBEDDING_TABLE)
     try:
         entity_table = pd.read_parquet(
-            f"abfs://{index_name}/{ENTITY_EMBEDDING_TABLE}",
+            f"abfs://{sanitized_index_name}/{ENTITY_EMBEDDING_TABLE}",
             storage_options={
                 "account_name": storage_account_name,
                 "credential": DefaultAzureCredential(),
@@ -141,7 +145,7 @@ async def get_entity_info(index_name: str, entity_id: int):
         reporter.on_error(f"Could not get entity. Exception: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Error retrieving entity {entity_id} from index {index_name}",
+            detail=f"Error retrieving entity '{entity_id}' from index '{index_name}'.",
         )
 
 
@@ -154,16 +158,17 @@ async def get_entity_info(index_name: str, entity_id: int):
 async def get_claim_info(index_name: str, claim_id: int):
     # check for existence of file the query relies on to validate the index is complete
     # claims is optional in graphrag
+    sanitized_index_name = sanitize_name(index_name)
     try:
-        validate_index_file_exist(index_name, COVARIATES_TABLE)
+        validate_index_file_exist(sanitized_index_name, COVARIATES_TABLE)
     except ValueError:
         raise HTTPException(
             status_code=500,
-            detail=f"Claim data unavailable for index {index_name}",
+            detail=f"Claim data unavailable for index '{index_name}'.",
         )
     try:
         claims_table = pd.read_parquet(
-            f"abfs://{index_name}/{COVARIATES_TABLE}",
+            f"abfs://{sanitized_index_name}/{COVARIATES_TABLE}",
             storage_options={
                 "account_name": storage_account_name,
                 "credential": DefaultAzureCredential(),
@@ -188,7 +193,7 @@ async def get_claim_info(index_name: str, claim_id: int):
         reporter.on_error(f"Could not get claim. Exception: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Error retrieving claim {claim_id} from index {index_name}",
+            detail=f"Error retrieving claim '{claim_id}' from index '{index_name}'.",
         )
 
 
@@ -200,18 +205,19 @@ async def get_claim_info(index_name: str, claim_id: int):
 )
 async def get_relationship_info(index_name: str, relationship_id: int):
     # check for existence of file the query relies on to validate the index is complete
-    validate_index_file_exist(index_name, RELATIONSHIPS_TABLE)
-    validate_index_file_exist(index_name, ENTITY_EMBEDDING_TABLE)
+    sanitized_index_name = sanitize_name(index_name)
+    validate_index_file_exist(sanitized_index_name, RELATIONSHIPS_TABLE)
+    validate_index_file_exist(sanitized_index_name, ENTITY_EMBEDDING_TABLE)
     try:
         relationship_table = pd.read_parquet(
-            f"abfs://{index_name}/{RELATIONSHIPS_TABLE}",
+            f"abfs://{sanitized_index_name}/{RELATIONSHIPS_TABLE}",
             storage_options={
                 "account_name": storage_account_name,
                 "credential": DefaultAzureCredential(),
             },
         )
         entity_table = pd.read_parquet(
-            f"abfs://{index_name}/{ENTITY_EMBEDDING_TABLE}",
+            f"abfs://{sanitized_index_name}/{ENTITY_EMBEDDING_TABLE}",
             storage_options={
                 "account_name": storage_account_name,
                 "credential": DefaultAzureCredential(),
@@ -239,5 +245,5 @@ async def get_relationship_info(index_name: str, relationship_id: int):
         reporter.on_error(f"Could not get relationship. Exception: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Error retrieving relationship {relationship_id} from index {index_name}",
+            detail=f"Error retrieving relationship '{relationship_id}' from index '{index_name}'.",
         )

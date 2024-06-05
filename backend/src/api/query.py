@@ -15,7 +15,7 @@ from graphrag.config import create_graphrag_config
 
 from src.api.azure_clients import BlobServiceClientSingleton
 from src.api.common import (
-    sanitize_container_name,
+    sanitize_name,
     validate_index_file_exist,
     verify_subscription_key_exist,
 )
@@ -52,7 +52,7 @@ async def global_query(request: GraphRequest):
         index_names = [request.index_name]
     else:
         index_names = request.index_name
-    sanitized_index_names = [sanitize_container_name(name) for name in index_names]
+    sanitized_index_names = [sanitize_name(name) for name in index_names]
 
     for index_name in sanitized_index_names:
         if not _is_index_complete(index_name):
@@ -149,9 +149,9 @@ async def local_query(request: GraphRequest):
         index_names = [request.index_name]
     else:
         index_names = request.index_name
-    sanized_index_names = [sanitize_container_name(name) for name in index_names]
+    sanitized_index_names = [sanitize_name(name) for name in index_names]
 
-    for index_name in sanized_index_names:
+    for index_name in sanitized_index_names:
         if not _is_index_complete(index_name):
             raise HTTPException(
                 status_code=500,
@@ -164,7 +164,7 @@ async def local_query(request: GraphRequest):
     relationship_dfs = []
     covariate_dfs = []
     text_unit_dfs = []
-    for index_idx, index_name in enumerate(sanized_index_names):
+    for index_idx, index_name in enumerate(sanitized_index_names):
         add_on = "-" + str(index_idx)
         COMMUNITY_REPORT_TABLE = "output/create_final_community_reports.parquet"
         ENTITY_TABLE = "output/create_final_nodes.parquet"
@@ -250,12 +250,12 @@ async def local_query(request: GraphRequest):
     if len(report_df["community_id"]) > 0:
         max_id = report_df["community_id"].astype(float).astype(int).max()
     report_df["title"] = [
-        sanized_index_names[0] + "<sep>" + i + "<sep>" + str(t)
+        sanitized_index_names[0] + "<sep>" + i + "<sep>" + str(t)
         for i, t in zip(report_df["community_id"], report_df["title"])
     ]
     for idx, df in enumerate(report_dfs[1:]):
         df["title"] = [
-            sanized_index_names[idx + 1] + "<sep>" + str(i) + "<sep>" + str(t)
+            sanitized_index_names[idx + 1] + "<sep>" + str(i) + "<sep>" + str(t)
             for i, t in zip(df["community_id"], df["title"])
         ]
         df["community_id"] = [str(int(i) + max_id + 1) for i in df["community_id"]]
@@ -265,7 +265,7 @@ async def local_query(request: GraphRequest):
 
     entity_df = entity_dfs[0]
     entity_df["description"] = [
-        sanized_index_names[0] + "<sep>" + str(i) + "<sep>" + str(t)
+        sanitized_index_names[0] + "<sep>" + str(i) + "<sep>" + str(t)
         for i, t in zip(entity_df["short_id"], entity_df["description"])
     ]
     max_id = 0
@@ -273,7 +273,7 @@ async def local_query(request: GraphRequest):
         max_id = entity_df["short_id"].astype(float).astype(int).max()
     for idx, df in enumerate(entity_dfs[1:]):
         df["description"] = [
-            sanized_index_names[idx + 1] + "<sep>" + str(i) + "<sep>" + str(t)
+            sanitized_index_names[idx + 1] + "<sep>" + str(i) + "<sep>" + str(t)
             for i, t in zip(df["short_id"], df["description"])
         ]
         df["short_id"] = [str(int(i) + max_id + 1) for i in range(len(df["short_id"]))]
@@ -283,7 +283,7 @@ async def local_query(request: GraphRequest):
 
     relationship_df = relationship_dfs[0]
     relationship_df["description"] = [
-        sanized_index_names[0] + "<sep>" + str(i) + "<sep>" + str(t)
+        sanitized_index_names[0] + "<sep>" + str(i) + "<sep>" + str(t)
         for i, t in zip(relationship_df["short_id"], relationship_df["description"])
     ]
     max_id = 0
@@ -291,7 +291,7 @@ async def local_query(request: GraphRequest):
         max_id = relationship_df["short_id"].astype(float).astype(int).max()
     for idx, df in enumerate(relationship_dfs[1:]):
         df["description"] = [
-            sanized_index_names[idx + 1] + "<sep>" + str(i) + "<sep>" + str(t)
+            sanitized_index_names[idx + 1] + "<sep>" + str(i) + "<sep>" + str(t)
             for i, t in zip(df["short_id"], df["description"])
         ]
         df["short_id"] = [str(int(i) + max_id + 1) for i in range(len(df["short_id"]))]
@@ -304,7 +304,7 @@ async def local_query(request: GraphRequest):
     if len(covariate_dfs) > 0:
         covariate_df = covariate_dfs[0]
         covariate_df["subject_id"] = [
-            sanized_index_names[0] + "<sep>" + str(i) + "<sep>" + str(t)
+            sanitized_index_names[0] + "<sep>" + str(i) + "<sep>" + str(t)
             for i, t in zip(covariate_df["short_id"], covariate_df["subject_id"])
         ]
         max_id = 0
@@ -312,7 +312,7 @@ async def local_query(request: GraphRequest):
             max_id = covariate_df["short_id"].astype(float).astype(int).max()
         for idx, df in enumerate(covariate_dfs[1:]):
             df["subject_id"] = [
-                sanized_index_names[idx + 1] + "<sep>" + str(i) + "<sep>" + str(t)
+                sanitized_index_names[idx + 1] + "<sep>" + str(i) + "<sep>" + str(t)
                 for i, t in zip(df["short_id"], df["subject_id"])
             ]
             df["short_id"] = [
@@ -326,12 +326,12 @@ async def local_query(request: GraphRequest):
 
     text_unit_df = text_unit_dfs[0]
     text_unit_df["text"] = [
-        sanized_index_names[0] + "<sep>" + str(i) + "<sep>" + str(t)
+        sanitized_index_names[0] + "<sep>" + str(i) + "<sep>" + str(t)
         for i, t in zip(text_unit_df["id"], text_unit_df["text"])
     ]
     for idx, df in enumerate(text_unit_dfs[1:]):
         df["text"] = [
-            sanized_index_names[idx + 1] + "<sep>" + str(i) + "<sep>" + str(t)
+            sanitized_index_names[idx + 1] + "<sep>" + str(i) + "<sep>" + str(t)
             for i, t in zip(df["id"], df["text"])
         ]
         text_unit_df = pd.concat([text_unit_df, df], ignore_index=True, sort=False)
@@ -346,7 +346,7 @@ async def local_query(request: GraphRequest):
 
     # convert all the pandas dataframe artifacts into community objects
     local_search = CommunitySearchHelpers(
-        index_names=sanized_index_names, config=parameters
+        index_names=sanitized_index_names, config=parameters
     )
     community_data = local_search.read_community_info(
         report_df=report_df,
