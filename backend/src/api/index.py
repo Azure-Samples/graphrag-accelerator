@@ -34,6 +34,7 @@ from src.api.azure_clients import (
 )
 from src.api.common import (
     delete_blob_container,
+    sanitize_container_name,
     validate_blob_container_name,
     verify_subscription_key_exist,
 )
@@ -82,29 +83,38 @@ def setup_indexing_pipeline(
     pipelinejob = PipelineJob()  # TODO: fix class so initiliazation is not required
 
     # validate index name against blob container naming rules
-    validate_blob_container_name(request.index_name)
-
-    # check for data container existence
-    if not _blob_service_client.get_container_client(request.storage_name).exists():
+    sanitized_index_name = sanitize_container_name(request.index_name)
+    try:
+        validate_blob_container_name(sanitized_index_name)
+    except ValueError:
         raise HTTPException(
             status_code=500,
-            detail=f"storage container '{request.storage_name}' does not exist.",
+            detail=f"Invalid index name: {request.index_name}",
+        )
+
+    # check for data container existence
+    sanitized_storage_name = sanitize_container_name(request.storage_name)
+    if not _blob_service_client.get_container_client(sanitized_storage_name).exists():
+        raise HTTPException(
+            status_code=500,
+            detail=f"Data container '{request.storage_name}' does not exist.",
         )
 
     # check for entity configuration existence
+    sanitized_entity_config_name = sanitize_container_name(request.entity_config_name)
     if request.entity_config_name:
         entity_container_client = get_database_container_client(
             database_name="graphrag", container_name="entities"
         )
         try:
             entity_container_client.read_item(  # noqa
-                item=request.entity_config_name,
-                partition_key=request.entity_config_name,
+                item=sanitized_entity_config_name,
+                partition_key=sanitized_entity_config_name,
             )
         except Exception:
             raise HTTPException(
                 status_code=500,
-                detail=f"entity configuration '{request.entity_config_name}' does not exist.",
+                detail=f"Entity configuration '{request.entity_config_name}' does not exist.",
             )
 
     # check for existing index job
@@ -130,10 +140,10 @@ def setup_indexing_pipeline(
     else:
         # create or update state in cosmos db
         pipelinejob.create_item(
-            id=request.index_name,
-            index_name=request.index_name,
-            storage_name=request.storage_name,
-            entity_config_name=request.entity_config_name,
+            id=sanitized_index_name,  # request.index_name,
+            index_name=sanitized_index_name,
+            storage_name=sanitized_storage_name,  # request.storage_name,
+            entity_config_name=sanitized_entity_config_name,  # request.entity_config_name,
             status=PipelineJobState.SCHEDULED,
         )
 
@@ -145,14 +155,16 @@ def setup_indexing_pipeline(
     4) there is no indexing job with this name currently running or a previous job has finished
     """
     # update or create new item in container-store in cosmosDB
-    if not _blob_service_client.get_container_client(request.index_name).exists():
-        _blob_service_client.create_container(request.index_name)
+    if not _blob_service_client.get_container_client(sanitized_index_name).exists():
+        _blob_service_client.create_container(sanitized_index_name)
+
     container_store_client = get_database_container_client(
         database_name="graphrag", container_name="container-store"
     )
     container_store_client.upsert_item(
         {
-            "id": request.index_name,
+            "id": sanitized_index_name,
+            "human_readable_name": request.index_name,
             "type": "index",
         }
     )
@@ -170,11 +182,12 @@ def setup_indexing_pipeline(
             # retrieve job manifest template and replace necessary values
             job_manifest = _generate_aks_job_manifest(
                 docker_image_name=pod.spec.containers[0].image,
-                index_name=request.index_name,
-                storage_name=request.storage_name,
+                index_name=sanitized_index_name,
+                storage_name=sanitized_storage_name,
                 service_account_name=pod.spec.service_account_name,
-                entity_config_name=request.entity_config_name,
+                entity_config_name=sanitized_entity_config_name,
             )
+            print(f"Created job manifest:\n{job_manifest}")
             try:
                 batch_v1 = client.BatchV1Api()
                 batch_v1.create_namespaced_job(
@@ -244,9 +257,9 @@ async def _start_indexing_pipeline(
     data["reporting"]["container_name"] = index_name
     data["cache"]["container_name"] = index_name
     if "vector_store" in data["embeddings"]:
-        data["embeddings"]["vector_store"][
-            "collection_name"
-        ] = f"{index_name}_description_embedding"
+        data["embeddings"]["vector_store"]["collection_name"] = (
+            f"{index_name}_description_embedding"
+        )
 
     # if entity_config_name was provided, load entity configuration and incorporate into pipeline
     # otherwise, set prompt and entity types to None to use the default values provided by graphrag
@@ -411,7 +424,7 @@ async def get_all_indexes():
         )
         for item in container_store_client.read_all_items():
             if item["type"] == "index":
-                items.append(item["id"])
+                items.append(item["human_readable_name"])
     except Exception as e:
         reporter = ReporterSingleton().get_instance()
         reporter.on_error(f"Error retrieving index names: {str(e)}")
@@ -480,8 +493,9 @@ async def delete_index(index_name: str):
             _delete_k8s_job(f"indexing-job-{index_name}", "graphrag")
 
         # remove blob container and all associated entries in cosmos db
+        sanitized_index_name = sanitize_container_name(index_name)
         try:
-            delete_blob_container(index_name)
+            delete_blob_container(sanitized_index_name)
         except Exception:
             pass
 
@@ -490,7 +504,9 @@ async def delete_index(index_name: str):
             container_store_client = get_database_container_client(
                 database_name="graphrag", container_name="container-store"
             )
-            container_store_client.delete_item(index_name, index_name)
+            container_store_client.delete_item(
+                item=sanitized_index_name, partition_key=sanitized_index_name
+            )
         except Exception:
             pass
 
@@ -499,7 +515,9 @@ async def delete_index(index_name: str):
             jobs_container = get_database_container_client(
                 database_name="graphrag", container_name="jobs"
             )
-            jobs_container.delete_item(index_name, index_name)
+            jobs_container.delete_item(
+                item=sanitized_index_name, partition_key=sanitized_index_name
+            )
         except Exception:
             pass
 
@@ -507,8 +525,8 @@ async def delete_index(index_name: str):
         index_client = SearchIndexClient(
             endpoint=url, credential=DefaultAzureCredential()
         )
-        if index_name in index_client.list_index_names():
-            index_client.delete_index(index_name)
+        if sanitized_index_name in index_client.list_index_names():
+            index_client.delete_index(sanitized_index_name)
 
     except Exception as e:
         reporter.on_error(
@@ -528,8 +546,9 @@ async def delete_index(index_name: str):
 )
 async def get_index_job_status(index_name: str):
     pipelinejob = PipelineJob()  # TODO: fix class so initiliazation is not required
-    if pipelinejob.item_exist(index_name):
-        pipeline_job = pipelinejob.load_item(index_name)
+    sanitized_index_name = sanitize_container_name(index_name)
+    if pipelinejob.item_exist(sanitized_index_name):
+        pipeline_job = pipelinejob.load_item(sanitized_index_name)
         return IndexStatusResponse(
             status_code=200,
             index_name=pipeline_job.index_name,

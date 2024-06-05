@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+import hashlib
 import re
 from typing import Annotated
 
@@ -110,6 +111,29 @@ def validate_blob_container_name(container_name: str):
         raise ValueError(
             f"Container name cannot end with a hyphen. Name provided was {container_name}."
         )
+
+
+def sanitize_container_name(name: str | None) -> str | None:
+    """
+    Sanitize a human-readable container name by converting it to a SHA256 hash, then truncate
+    to 128 bit length to ensure it is within the 63 character limit imposed by Azure Storage.
+
+    The sanitized name will be used to label container names in Azure Store and CosmosDB.
+
+    Args:
+    -----
+    name (str)
+        The name to be sanitized.
+
+    Returns: str
+        The sanitized name.
+    """
+    if not name:
+        return None
+    name = name.encode()
+    name_hash = hashlib.sha256(name)
+    truncated_hash = name_hash.digest()[:16]  # get the first 16 bytes (128 bits)
+    return truncated_hash.hex()
 
 
 async def verify_subscription_key_exist(

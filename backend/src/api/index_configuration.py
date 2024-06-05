@@ -11,7 +11,10 @@ from fastapi import (
 )
 
 from src.api.azure_clients import AzureStorageClientManager
-from src.api.common import verify_subscription_key_exist
+from src.api.common import (
+    sanitize_container_name,
+    verify_subscription_key_exist,
+)
 from src.models import (
     BaseResponse,
     EntityConfiguration,
@@ -47,7 +50,7 @@ def get_all_entitys():
             database_name="graphrag", container_name="entities"
         )
         for item in entity_container.read_all_items():
-            items.append(item["id"])
+            items.append(item["human_readable_name"])
     except Exception as e:
         reporter = ReporterSingleton.get_instance()
         reporter.on_error(f"Error getting all entity configurations: {str(e)}")
@@ -65,11 +68,10 @@ def create_entity(request: EntityConfiguration):
     entity_container = azure_storage_client_manager.get_cosmos_container_client(
         database_name="graphrag", container_name="entities"
     )
+    sanitized_config_name = sanitize_container_name(request.entity_configuration_name)
     try:
         # throw error if entity configuration already exists
-        entity_container.read_item(
-            request.entity_configuration_name, request.entity_configuration_name
-        )
+        entity_container.read_item(sanitized_config_name, sanitized_config_name)
         raise HTTPException(
             status_code=500,
             detail=f"{request.entity_configuration_name} already exists.",
@@ -102,7 +104,8 @@ def create_entity(request: EntityConfiguration):
             )
     entity_container.create_item(
         {
-            "id": request.entity_configuration_name,
+            "id": sanitized_config_name,
+            "human_readable_name": request.entity_configuration_name,
             "entity_types": request.entity_types,
             "entity_examples": entity_examples,
         }
@@ -124,9 +127,12 @@ def update_entity(request: EntityConfiguration):
         entity_container = azure_storage_client_manager.get_cosmos_container_client(
             database_name="graphrag", container_name="entities"
         )
+        sanitized_config_name = sanitize_container_name(
+            request.entity_configuration_name
+        )
         existing_item = entity_container.read_item(
-            item=request.entity_configuration_name,
-            partition_key=request.entity_configuration_name,
+            item=sanitized_config_name,
+            partition_key=sanitized_config_name,
         )
     except Exception as e:
         reporter.on_error(f"Error getting entity type: {str(e)}")
@@ -160,7 +166,7 @@ def update_entity(request: EntityConfiguration):
                 {"entity_types": i.entity_types, "text": i.text, "output": i.output}
                 for i in request.entity_examples
             ]
-        entity_container.replace_item(request.entity_configuration_name, existing_item)
+        entity_container.replace_item(sanitized_config_name, existing_item)
     except Exception as e:
         reporter.on_error(f"Error updating entity type: {str(e)}")
     return BaseResponse(status="Success.")
@@ -179,11 +185,13 @@ def get_entity(entity_configuration_name: str):
         entity_container = azure_storage_client_manager.get_cosmos_container_client(
             database_name="graphrag", container_name="entities"
         )
+        sanitized_config_name = sanitize_container_name(entity_configuration_name)
         existing_item = entity_container.read_item(
-            entity_configuration_name, entity_configuration_name
+            item=sanitized_config_name,
+            partition_key=sanitized_config_name,
         )
         return EntityConfiguration(
-            entity_configuration_name=existing_item["id"],
+            entity_configuration_name=existing_item["human_readable_name"],
             entity_types=existing_item["entity_types"],
             entity_examples=existing_item["entity_examples"],
         )
@@ -209,8 +217,10 @@ def delete_entity(entity_configuration_name: str):
         entity_container = azure_storage_client_manager.get_cosmos_container_client(
             database_name="graphrag", container_name="entities"
         )
+        sanitized_config_name = sanitize_container_name(entity_configuration_name)
         entity_container.delete_item(
-            entity_configuration_name, entity_configuration_name
+            item=sanitized_config_name,
+            partition_key=sanitized_config_name,
         )
         return BaseResponse(status="Success")
     except Exception as e:
