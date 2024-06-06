@@ -27,7 +27,7 @@ param systemOsDiskSizeGB int = 128
 @description('The number of nodes for the system node pool.')
 @minValue(1)
 @maxValue(50)
-param systemNodeCount int = 3
+param systemNodeCount int = 1
 
 @description('The size of the system Virtual Machine.')
 param systemVMSize string = 'standard_d4s_v5'
@@ -73,6 +73,9 @@ resource aks 'Microsoft.ContainerService/managedClusters@2023-10-01' = {
     agentPoolProfiles: [
       {
         name: 'agentpool'
+        enableAutoScaling: true
+        minCount: 1
+        maxCount: 10
         osDiskSizeGB: systemOsDiskSizeGB
         count: systemNodeCount
         vmSize: systemVMSize
@@ -80,27 +83,12 @@ resource aks 'Microsoft.ContainerService/managedClusters@2023-10-01' = {
         mode: 'System'
         enableEncryptionAtHost: enableEncryptionAtHost
         vnetSubnetID: vnetSubnetIdVar
-      }
-      {
-        name: 'graphrag'
-        enableAutoScaling: true
-        minCount: 1
-        maxCount: 10
-        osDiskSizeGB: systemOsDiskSizeGB
-        count: graphragNodeCount
-        vmSize: graphragVMSize
-        osType: 'Linux'
-        mode: 'User'
-        enableEncryptionAtHost: enableEncryptionAtHost
-        vnetSubnetID: vnetSubnetIdVar
-        nodeLabels: {
-          workload: 'graphrag'
-        }
-        tags: {
-          workload: 'graphrag'
-        }
+        type: 'VirtualMachineScaleSets'
       }
     ]
+    autoScalerProfile: {
+      expander: 'least-waste'
+    }
     linuxProfile: {
       adminUsername: linuxAdminUsername
       ssh: {
@@ -123,6 +111,29 @@ resource aks 'Microsoft.ContainerService/managedClusters@2023-10-01' = {
       workloadIdentity: {
         enabled: true
       }
+    }
+  }
+
+  resource graphragNodePool 'agentPools@2024-02-01' = {
+    name: 'graphrag'
+    properties: {
+      enableAutoScaling: true
+      minCount: 1
+      maxCount: 10
+      osDiskSizeGB: systemOsDiskSizeGB
+      count: graphragNodeCount
+      vmSize: graphragVMSize
+      osType: 'Linux'
+      mode: 'User'
+      enableEncryptionAtHost: enableEncryptionAtHost
+      vnetSubnetID: vnetSubnetIdVar
+      nodeLabels: {
+        workload: 'graphrag'
+      }
+      tags: {
+        workload: 'graphrag'
+      }
+      type: 'VirtualMachineScaleSets'
     }
   }
 }

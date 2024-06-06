@@ -12,6 +12,8 @@ resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10
   location: location
   properties: {
     retentionInDays: 30
+    publicNetworkAccessForIngestion: 'Disabled'
+    publicNetworkAccessForQuery: 'Enabled'
     features: {
       immediatePurgeDataOn30Days: true
     }
