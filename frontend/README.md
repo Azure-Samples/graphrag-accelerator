@@ -4,6 +4,9 @@ Add the following variables to a `.env` file
 
 * APIM_SUBSCRIPTION_KEY
 * DEPLOYMENT_URL
+* AI_SEARCH_URL
+* AI_SEARCH_KEY
+* DEPLOYER_EMAIL
 
 The frontend can run natively as a streamlit app:
 ```

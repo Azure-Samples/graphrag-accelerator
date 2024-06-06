@@ -26,7 +26,7 @@ Licensed under the MIT License.
     display: inline-block;
     border-bottom: 1px dotted black; /* If you want dots under the hoverable text */
   }
-  
+
   /* Tooltip text */
   .tooltip .tooltiptext {
     visibility: hidden;
@@ -44,7 +44,7 @@ Licensed under the MIT License.
     opacity: 0;
     transition: opacity 0.3s;
   }
-  
+
   /* Show the tooltip text when you hover over the tooltip container */
   .tooltip:hover .tooltiptext {
     visibility: visible;
@@ -52,7 +52,7 @@ Licensed under the MIT License.
   }
 
   .gray-box {
-   
+
     background-color: #ffffff;
     padding: 10px;
     width: 80%;
@@ -66,3 +66,19 @@ Licensed under the MIT License.
   height: 100vh;
 }
 
+.footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  background-color: #f1f1f1;
+  text-align: center;
+  padding: 5px;
+  z-index: 1000;
+}
+.footer p{
+  font-size: 12px;
+}
