@@ -12,9 +12,9 @@ import wikipedia
 from azure.cosmos import CosmosClient
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient
-from fastapi.testclient import TestClient
+from dotenv import load_dotenv
 
-from ..main import app
+load_dotenv()
 
 
 def _upload_files(blob_service_client, directory, container_name):
@@ -36,20 +36,14 @@ def _upload_files(blob_service_client, directory, container_name):
 
 @pytest.fixture(scope="session")
 def client(request):
-    """Return the outside URL or a TestClient based on environment variable USE_LOCAL_SERVER."""
-    use_local_server = os.getenv("USE_LOCAL_SERVER", "false").lower() == "true"
-    if use_local_server:
-        # If running with -localserver flag, use FastAPI TestClient
-        return TestClient(app)
-    else:
-        # Otherwise, use the outside URL
-        deployment_url = os.environ["DEPLOYMENT_URL"]
-        deployment_url = deployment_url.rstrip("/")
-        apim_key = os.environ["APIM_SUBSCRIPTION_KEY"]
-        session = requests.Session()
-        session.headers.update({"Ocp-Apim-Subscription-Key": apim_key})
-        session.base_url = deployment_url
-        return session
+    """Return the session base url which is the deployment url authorized with the apim subscription key stored in your .env file"""
+    deployment_url = os.environ["DEPLOYMENT_URL"]
+    deployment_url = deployment_url.rstrip("/")
+    apim_key = os.environ["APIM_SUBSCRIPTION_KEY"]
+    session = requests.Session()
+    session.headers.update({"Ocp-Apim-Subscription-Key": apim_key})
+    session.base_url = deployment_url
+    return session
 
 
 @pytest.fixture()
@@ -206,9 +200,7 @@ def prepare_invalid_index_data():
     yield container_name  # test runs here
 
     # clean up
-    blob_service_client.delete_container(
-        container_name
-    )  # delete container after the test
+    blob_service_client.delete_container(container_name)
     container_container.delete_item(item=container_name, partition_key=container_name)
     container_jobs.delete_item(item=container_name, partition_key=container_name)
 

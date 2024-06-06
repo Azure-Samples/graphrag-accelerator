@@ -29,7 +29,7 @@ pre-commit = ">=3.6.0"
 ruff = ">=0.1.13"
 
 [tool.poetry.group.test.dependencies]
-pytest = ">=7.4.3"
+pytest = ">=8.2.1"
 wikipedia = ">=1.4.0"
 
 [tool.poetry.group.backend.dependencies]

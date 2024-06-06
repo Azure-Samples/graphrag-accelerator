@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+import hashlib
 import re
 from typing import Annotated
 
@@ -110,6 +111,85 @@ def validate_blob_container_name(container_name: str):
         raise ValueError(
             f"Container name cannot end with a hyphen. Name provided was {container_name}."
         )
+
+
+def sanitize_name(name: str | None) -> str | None:
+    """
+    Sanitize a human-readable name by converting it to a SHA256 hash, then truncate
+    to 128 bit length to ensure it is within the 63 character limit imposed by Azure Storage.
+
+    The sanitized name will be used to identify container names in both Azure Storage and CosmosDB.
+
+    Args:
+    -----
+    name (str)
+        The name to be sanitized.
+
+    Returns: str
+        The sanitized name.
+    """
+    if not name:
+        return None
+    name = name.encode()
+    name_hash = hashlib.sha256(name)
+    truncated_hash = name_hash.digest()[:16]  # get the first 16 bytes (128 bits)
+    return truncated_hash.hex()
+
+
+def retrieve_original_blob_container_name(sanitized_name: str) -> str | None:
+    """
+    Retrieve the original human-readable container name of a sanitized blob name.
+
+    Args:
+    -----
+    sanitized_name (str)
+        The sanitized name to be converted back to the original name.
+
+    Returns: str
+        The original human-readable name.
+    """
+    try:
+        container_store_client = (
+            azure_storage_client_manager.get_cosmos_container_client(
+                database_name="graphrag", container_name="container-store"
+            )
+        )
+        for item in container_store_client.read_all_items():
+            if item["id"] == sanitized_name:
+                return item["human_readable_name"]
+    except Exception:
+        raise HTTPException(
+            status_code=500, detail="Error retrieving original blob name."
+        )
+    return None
+
+
+def retrieve_original_entity_config_name(sanitized_name: str) -> str | None:
+    """
+    Retrieve the original human-readable entity config name of a sanitized entity config name.
+
+    Args:
+    -----
+    sanitized_name (str)
+        The sanitized name to be converted back to the original name.
+
+    Returns: str
+        The original human-readable name.
+    """
+    try:
+        container_store_client = (
+            azure_storage_client_manager.get_cosmos_container_client(
+                database_name="graphrag", container_name="entities"
+            )
+        )
+        for item in container_store_client.read_all_items():
+            if item["id"] == sanitized_name:
+                return item["human_readable_name"]
+    except Exception:
+        raise HTTPException(
+            status_code=500, detail="Error retrieving original entity config name."
+        )
+    return None
 
 
 async def verify_subscription_key_exist(
