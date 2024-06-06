@@ -39,6 +39,16 @@ Login with Azure CLI and set the appropriate Azure subscription.
 > az account set --subscription "<subscription_id>"
 ```
 
+The Azure subscription that you deploy the accelerator in will require the `Microsoft.OperationsManagement` resource provider to be registered.
+This can be accomplished via the [Portal](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/resource-providers-and-types#azure-ortal) or these [Azure CLI](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/resource-providers-and-types#azure-cli) commands:
+
+```shell
+# Register provider
+az provider register --namespace Microsoft.OperationsManagement
+# Verify provider was registered
+az provider show --namespace Microsoft.OperationsManagement -o table
+```
+
 ## 3. Deploy Azure Container Registry (ACR) and host the `graphrag` docker image in the registry
 ACR may be deployed using the [Portal](https://learn.microsoft.com/en-us/azure/container-registry/container-registry-get-started-portal?tabs=azure-cli) or [Azure CLI](https://learn.microsoft.com/en-us/azure/container-registry/container-registry-get-started-azure-cli).
 

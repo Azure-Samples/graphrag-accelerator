@@ -360,17 +360,26 @@ async def app():
         help="Select the index(es) to query. The selected index(es) must have a complete status in order to yield query results without error. Use Check Index Status to confirm status.",
     )
     search_button = col4.button("Search")
-
-    content = """
+    url = "https://github.com/strategic-missions-and-technologies/graphrag-accelerator/blob/main/docs/RESPONSIBLE-AI.md"
+    content = f"""
     ##  Welcome to GraphRAG!
-    Diving into complex information and uncovering semantic relationships has never been easier. Here's how you can get started with just a few clicks:
+    Diving into complex information and uncovering semantic relationships utilizing generative AI has never been easier. Here's how you can get started with just a few clicks:
     - *Set Up:* In the left pane, select or upload your data storage, configure entities, and name your index to begin building an index.
     - *Explore:* On the query side, choose your index, specify the query type, and click search to see insights.
 
-    GraphRAG turns complex data tasks into a breeze, giving you insights at your fingertips.
+    [GraphRAG]({url}) turns complex data tasks into a breeze, giving you insights at your fingertips.
     """
     # Display text in the gray box
     container_placeholder = st.markdown(content, unsafe_allow_html=False)
+
+    deployer_email = os.environ["DEPLOYER_EMAIL"]
+    footer = f"""
+        <div class="footer">
+            <p> Responses may be inaccurate; please review all responses for accuracy. Learn more about Azure OpenAI code of conduct <a href="https://learn.microsoft.com/en-us/legal/cognitive-services/openai/code-of-conduct"> here</a>. </br> For feedback, email us at <a href="mailto:{deployer_email}">{deployer_email}</a>.</p>
+        </div>
+    """
+
+    st.markdown(footer, unsafe_allow_html=True)
 
     # container_placeholder = st.empty()
 
@@ -402,145 +411,176 @@ async def app():
         ]
 
         query_response = None
-        while query_response is None:
-            for _ in range(3):
-                # wait 5 seconds
-                message = np.random.choice(idler_message_list)
-                with st.spinner(text=message):
-                    time.sleep(5)
+        try:
+            while query_response is None:
+                for _ in range(3):
+                    # wait 5 seconds
+                    message = np.random.choice(idler_message_list)
+                    with st.spinner(text=message):
+                        time.sleep(5)
+
+                if query_type == "Global" or query_type == "Local":
+                    with st.spinner():
+                        query_response = await query_index(
+                            select_index_search, query_type, search_bar
+                        )
+                elif query_type == "Global Streaming":
+                    with st.spinner():
+                        url = f"{api_url}/experimental/query/global/streaming"
+                        query_response = requests.post(
+                            url,
+                            json={
+                                "index_name": select_index_search,
+                                "query": search_bar,
+                            },
+                            headers=headers,
+                            stream=True,
+                        )
+                        assistant_response = ""
+                        context_list = []
+                        if query_response.status_code == 200:
+                            text_placeholder = st.empty()
+                            reports_context_expander = None
+                            for chunk in query_response.iter_lines(
+                                # allow up to 256KB to avoid excessive many reads
+                                chunk_size=256 * KILOBYTE,
+                                decode_unicode=True,
+                            ):
+                                try:
+                                    payload = json.loads(chunk)
+                                except json.JSONDecodeError as e:
+                                    # In the event that a chunk is not a complete JSON object,
+                                    # document it for further analysis.
+                                    print(chunk)
+                                    raise e
+
+                                token = payload["token"]
+                                context = payload["context"]
+                                if (token != "<EOM>") and (context is None):
+                                    assistant_response += token
+                                    text_placeholder.write(assistant_response)
+                                elif (token == "<EOM>") and (context is None):
+                                    # Message is over, you will not receive the context values
+                                    reports_context_expander = st.expander(
+                                        "Expand to see context reports"
+                                    )
+                                elif (token == "<EOM>") and (context is not None):
+                                    context_list.append(context)
+                                    with reports_context_expander:
+                                        with st.expander(context["title"]):
+                                            df_context = pd.DataFrame.from_dict(
+                                                [context]
+                                            )
+                                            if "id" in df_context.columns:
+                                                df_context = df_context.drop(
+                                                    "id", axis=1
+                                                )
+                                            if "title" in df_context.columns:
+                                                df_context = df_context.drop(
+                                                    "title", axis=1
+                                                )
+                                            if "index_id" in df_context.columns:
+                                                df_context = df_context.drop(
+                                                    "index_id", axis=1
+                                                )
+                                            st.dataframe(
+                                                df_context, use_container_width=True
+                                            )
+                                else:
+                                    print(chunk)
+                                    raise Exception(
+                                        "Received unexpected response from server"
+                                    )
+
             if query_type == "Global" or query_type == "Local":
-                query_response = await query_index(
-                    select_index_search, query_type, search_bar
-                )
-            elif query_type == "Global Streaming":
-                with st.chat_message("assistant"):
-                    url = f"{api_url}/experimental/query/global/streaming"
-                    query_response = requests.post(
-                        url,
-                        json={"index_name": select_index_search, "query": search_bar},
-                        headers=headers,
-                        stream=True,
-                    )
-                    assistant_response = ""
-                    context_list = []
-                    if query_response.status_code == 200:
-                        text_placeholder = st.empty()
-                        reports_context_expander = None
-                        for chunk in query_response.iter_lines(
-                            # allow up to 256KB to avoid excessive many reads
-                            chunk_size=256 * KILOBYTE,
-                            decode_unicode=True,
-                        ):
-                            try:
-                                payload = json.loads(chunk)
-                            except json.JSONDecodeError as e:
-                                # In the event that a chunk is not a complete JSON object,
-                                # document it for further analysis.
-                                print(chunk)
-                                raise e
+                container_placeholder.empty()
 
-                            token = payload["token"]
-                            context = payload["context"]
-                            if (token != "<EOM>") and (context is None):
-                                assistant_response += token
-                                text_placeholder.write(assistant_response)
-                            elif (token == "<EOM>") and (context is None):
-                                # Message is over, you will not receive the context values
-                                reports_context_expander = st.expander(
-                                    "Expand to see context reports"
+                if query_response["result"] != "":
+                    with st.expander("Results", expanded=True):
+                        st.write(query_response["result"])
+
+                if query_response["context_data"]["reports"] != []:
+                    with st.expander(
+                        f"View context for this response from {query_type} method:"
+                    ):
+                        if query_type == "Local":
+                            st.write(
+                                query_response["context_data"]["reports"][0]["content"]
+                            )
+                        else:
+                            df = pd.DataFrame(query_response["context_data"]["reports"])
+                            if "index_name" in df.columns:
+                                df = df.drop("index_name", axis=1)
+                            if "index_id" in df.columns:
+                                df = df.drop("index_id", axis=1)
+                            st.dataframe(df, use_container_width=True)
+
+                if query_response["context_data"]["entities"] != []:
+                    with st.spinner("Loading context entities..."):
+                        with st.expander("View context entities"):
+                            df_entities = pd.DataFrame(
+                                query_response["context_data"]["entities"]
+                            )
+                            if "in_context" in df_entities.columns:
+                                df_entities = df_entities.drop("in_context", axis=1)
+                            st.dataframe(df_entities, use_container_width=True)
+
+                            for report in query_response["context_data"]["entities"]:
+                                entity_data = get_source_entity(
+                                    report["index_name"], report["id"]
                                 )
-                            elif (token == "<EOM>") and (context is not None):
-                                context_list.append(context)
-                                with reports_context_expander:
-                                    with st.expander(context["title"]):
-                                        df_context = pd.DataFrame.from_dict([context])
-                                        if "id" in df_context.columns:
-                                            df_context = df_context.drop("id", axis=1)
-                                        if "title" in df_context.columns:
-                                            df_context = df_context.drop(
-                                                "title", axis=1
-                                            )
-                                        if "index_id" in df_context.columns:
-                                            df_context = df_context.drop(
-                                                "index_id", axis=1
-                                            )
+                                for unit in entity_data["text_units"]:
+                                    response = requests.get(
+                                        f"{api_url}/source/text/{report['index_name']}/{unit}",
+                                        headers=headers,
+                                    )
+                                    text_info = response.json()
+                                    if text_info is not None:
+                                        with st.expander(
+                                            f" Entity: {report['entity']} - Source Document: {text_info['source_document']} "
+                                        ):
+                                            st.write(text_info["text"])
+
+                if query_response["context_data"]["relationships"] != []:
+                    with st.spinner("Loading context relationships..."):
+                        with st.expander("View context relationships"):
+                            df_relationships = pd.DataFrame(
+                                query_response["context_data"]["relationships"]
+                            )
+                            if "in_context" in df_relationships.columns:
+                                df_relationships = df_relationships.drop(
+                                    "in_context", axis=1
+                                )
+                            st.dataframe(df_relationships, use_container_width=True)
+                            for report in query_response["context_data"][
+                                "relationships"
+                            ][:15]:
+                                # with st.expander(
+                                #     f"Source: {report['source']} Target: {report['target']} Rank: {report['rank']}"
+                                # ):
+                                # st.write(report["description"])
+                                relationship_data = requests.get(
+                                    f"{api_url}/source/relationship/{report['index_name']}/{report['id']}",
+                                    headers=headers,
+                                )
+                                relationship_data = relationship_data.json()
+                                for unit in relationship_data["text_units"]:
+                                    response = requests.get(
+                                        f"{api_url}/source/text/{report['index_name']}/{unit}",
+                                        headers=headers,
+                                    )
+                                    text_info_rel = response.json()
+
+                                    df_textinfo_rel = pd.DataFrame([text_info_rel])
+                                    with st.expander(
+                                        f"Source: {report['source']} Target: {report['target']} - Source Document: {text_info['source_document']} "
+                                    ):
+                                        st.write(text_info["text"])
                                         st.dataframe(
-                                            df_context, use_container_width=True
+                                            df_textinfo_rel, use_container_width=True
                                         )
-                            else:
-                                print(chunk)
-                                raise Exception(
-                                    "Received unexpected response from server"
-                                )
-
-        if query_type == "Global" or query_type == "Local":
-            container_placeholder.empty()
-
-            if query_response["result"] != "":
-                with st.expander("Results", expanded=True):
-                    st.write(query_response["result"])
-
-            if query_response["context_data"]["reports"] != []:
-                with st.expander(
-                    f"View context for this response from {query_type} method:"
-                ):
-                    df = pd.DataFrame(query_response["context_data"]["reports"])
-                    if "index_name" in df.columns:
-                        df = df.drop("index_name", axis=1)
-                    if "index_id" in df.columns:
-                        df = df.drop("index_id", axis=1)
-                    st.dataframe(df, use_container_width=True)
-
-            if query_response["context_data"]["entities"] != []:
-                with st.expander("View context entities"):
-                    df_entities = pd.DataFrame(
-                        query_response["context_data"]["entities"]
-                    )
-                    if "in_context" in df_entities.columns:
-                        df_entities = df_entities.drop("in_context", axis=1)
-                    st.dataframe(df_entities, use_container_width=True)
-
-                    for report in query_response["context_data"]["entities"]:
-                        with st.expander(
-                            f"Entity: {report['entity']} Id: {report['id']} Number of relationships:{report['number of relationships']} "
-                        ):
-                            st.write(report["description"])
-                            entity_data = get_source_entity(
-                                select_index_search, report["id"]
-                            )
-                            for unit in entity_data["text_units"]:
-                                response = requests.get(
-                                    f"{api_url}/source/text/{select_index_search}/{unit}",
-                                    headers=headers,
-                                )
-                                text_info = response.json()
-                                with st.expander(
-                                    f"Text Unit {unit} - Source Document: {text_info['source_document']} "
-                                ):
-                                    st.write(text_info["text"])
-
-            if query_response["context_data"]["relationships"] != []:
-                with st.expander("View context relationships"):
-                    for report in query_response["context_data"]["relationships"][:15]:
-                        with st.expander(
-                            f"Source: {report['source']} Target: {report['target']} Rank: {report['rank']}"
-                        ):
-                            st.write(report["description"])
-                            relationship_data = requests.get(
-                                f"{api_url}/source/relationship/{select_index_search}/{report['id']}",
-                                headers=headers,
-                            )
-                            relationship_data = relationship_data.json()
-                            for unit in relationship_data["text_units"]:
-                                response = requests.get(
-                                    f"{api_url}/source/text/{select_index_search}/{unit}",
-                                    headers=headers,
-                                )
-                                text_info = response.json()
-                                with st.expander(
-                                    f"Text Unit {unit} - Source Document: {text_info['source_document']} "
-                                ):
-                                    st.write(text_info["text"])
+        except requests.exceptions.RequestException as e:
+            st.error(f"Error with query: {str(e)}")
 
     if search_button:
         await search_button_clicked()
