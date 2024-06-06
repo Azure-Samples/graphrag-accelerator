@@ -360,7 +360,7 @@ async def app():
         help="Select the index(es) to query. The selected index(es) must have a complete status in order to yield query results without error. Use Check Index Status to confirm status.",
     )
     search_button = col4.button("Search")
-    url = "https://github.com/strategic-missions-and-technologies/graphrag-accelerator/blob/main/docs/RESPONSIBLE-AI.md"
+    url = "https://github.com/Azure-Samples/graphrag-accelerator/blob/main/docs/TRANSPARENCY.md"
     content = f"""
     ##  Welcome to GraphRAG!
     Diving into complex information and uncovering semantic relationships utilizing generative AI has never been easier. Here's how you can get started with just a few clicks:
