@@ -23,6 +23,7 @@ from graphrag.query.structured_search.global_search.callbacks import (
 )
 
 from src.api.common import (
+    sanitize_name,
     validate_index_file_exist,
     verify_subscription_key_exist,
 )
@@ -66,8 +67,9 @@ async def global_search_streaming(request: GraphRequest):
         index_names = [request.index_name]
     else:
         index_names = request.index_name
+    sanitized_index_names = [sanitize_name(name) for name in index_names]
 
-    for index_name in index_names:
+    for index_name in sanitized_index_names:
         if not _is_index_complete(index_name):
             raise HTTPException(
                 status_code=500,
@@ -77,7 +79,7 @@ async def global_search_streaming(request: GraphRequest):
     ENTITY_TABLE = "output/create_final_nodes.parquet"
     COMMUNITY_REPORT_TABLE = "output/create_final_community_reports.parquet"
 
-    for index_name in index_names:
+    for index_name in sanitized_index_names:
         validate_index_file_exist(index_name, COMMUNITY_REPORT_TABLE)
         validate_index_file_exist(index_name, ENTITY_TABLE)
 
@@ -85,7 +87,7 @@ async def global_search_streaming(request: GraphRequest):
     COMMUNITY_LEVEL = 1
     try:
         report_dfs = []
-        for index_name in index_names:
+        for index_name in sanitized_index_names:
             entity_table_path = f"abfs://{index_name}/{ENTITY_TABLE}"
             community_report_table_path = (
                 f"abfs://{index_name}/{COMMUNITY_REPORT_TABLE}"
@@ -101,12 +103,12 @@ async def global_search_streaming(request: GraphRequest):
         if len(report_df["community_id"]) > 0:
             max_id = report_df["community_id"].astype(int).max()
         report_df["title"] = [
-            index_names[0] + "<sep>" + i + "<sep>" + t
+            sanitized_index_names[0] + "<sep>" + i + "<sep>" + t
             for i, t in zip(report_df["community_id"], report_df["title"])
         ]
         for idx, df in enumerate(report_dfs[1:]):
             df["title"] = [
-                index_names[idx + 1] + "<sep>" + i + "<sep>" + t
+                sanitized_index_names[idx + 1] + "<sep>" + i + "<sep>" + t
                 for i, t in zip(df["community_id"], df["title"])
             ]
             df["community_id"] = [str(int(i) + max_id + 1) for i in df["community_id"]]
