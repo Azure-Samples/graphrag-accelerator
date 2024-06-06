@@ -200,9 +200,7 @@ def prepare_invalid_index_data():
     yield container_name  # test runs here
 
     # clean up
-    blob_service_client.delete_container(
-        container_name
-    )  # delete container after the test
+    blob_service_client.delete_container(container_name)
     container_container.delete_item(item=container_name, partition_key=container_name)
     container_jobs.delete_item(item=container_name, partition_key=container_name)
 
