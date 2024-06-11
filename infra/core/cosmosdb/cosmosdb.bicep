@@ -25,7 +25,7 @@ resource cosmosDb 'Microsoft.DocumentDB/databaseAccounts@2022-11-15' = {
     type: 'SystemAssigned'
   }
   properties: {
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: 'Disabled'
     enableAutomaticFailover: false
     enableMultipleWriteLocations: false
     isVirtualNetworkFilterEnabled: false
@@ -207,7 +207,6 @@ resource cosmosDbIdentityAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRo
 }
 
 
-output cosmosDbResourceId string = cosmosDb.id
-output cosmosDbResourceName string = cosmosDb.name
-output serviceName string = cosmosDb.name
+output id string = cosmosDb.id
+output name string = cosmosDb.name
 output endpoint string = cosmosDb.properties.documentEndpoint

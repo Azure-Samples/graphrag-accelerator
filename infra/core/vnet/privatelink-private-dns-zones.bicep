@@ -1,5 +1,6 @@
 var blobStoragePrivateDnsZoneName = 'privatelink.blob.${environment().suffixes.storage}'
 var queueStoragePrivateDnsZoneName = 'privatelink.queue.${environment().suffixes.storage}'
+var cosmosDbPrivateDnsZoneName = 'privatelink.documents.azure.com'
 var storagePrivateDnsZoneNames = [blobStoragePrivateDnsZoneName, queueStoragePrivateDnsZoneName]
 
 var cloudName = toLower(environment().name)
@@ -7,7 +8,7 @@ var privateDnsZoneData = loadJsonContent('private-dns-zone-groups.json')
 
 var azureMonitorPrivateDnsZones = privateDnsZoneData[cloudName].azureMonitor
 
-var privateDnsZones = union(azureMonitorPrivateDnsZones, storagePrivateDnsZoneNames)
+var privateDnsZones = union(azureMonitorPrivateDnsZones, storagePrivateDnsZoneNames, [cosmosDbPrivateDnsZoneName])
 
 @description('Virtual Network IDs to link to')
 param linkedVnetResourceIds array
@@ -55,6 +56,16 @@ output queueStoragePrivateDnsZoneConfigs array = [
     properties: {
       #disable-next-line use-resource-id-functions
       privateDnsZoneId: privateDnsZoneResources[indexOf(privateDnsZones, queueStoragePrivateDnsZoneName)].id
+    }
+  }
+]
+
+output cosmosDbPrivateDnsZoneConfigs array = [
+  {
+    name: privateDnsZoneResources[indexOf(privateDnsZones, cosmosDbPrivateDnsZoneName)].name
+    properties: {
+      #disable-next-line use-resource-id-functions
+      privateDnsZoneId: privateDnsZoneResources[indexOf(privateDnsZones, cosmosDbPrivateDnsZoneName)].id
     }
   }
 ]

@@ -243,6 +243,19 @@ module azureMonitorPrivateLinkScope 'core/monitor/private-link-scope.bicep' = {
   }
 }
 
+module cosmosDbPrivateEndpoint 'core/vnet/private-endpoint.bicep' = {
+  name: 'cosmosDbPrivateEndpoint'
+  scope: rg
+  params: {
+    privateEndpointName: '${abbrs.privateEndpoint}cosmos-${cosmosdb.outputs.name}'
+    location: location
+    privateLinkServiceId: cosmosdb.outputs.id
+    subnetId: apim.outputs.defaultSubnetId
+    groupId: 'Sql'
+    privateDnsZoneConfigs: privatelinkPrivateDns.outputs.cosmosDbPrivateDnsZoneConfigs
+  }
+}
+
 module blobStoragePrivateEndpoint 'core/vnet/private-endpoint.bicep' = {
   name: 'blobStoragePrivateEndpoint'
   scope: rg
@@ -292,8 +305,8 @@ output azure_aks_service_account_name string = aksServiceAccountName
 output azure_storage_account string = storage.outputs.name
 output azure_storage_account_blob_url string = storage.outputs.primaryEndpoints.blob
 output azure_cosmosdb_endpoint string = cosmosdb.outputs.endpoint
-output azure_cosmosdb_name string = cosmosdb.outputs.cosmosDbResourceName
-output azure_cosmosdb_id string = cosmosdb.outputs.cosmosDbResourceId
+output azure_cosmosdb_name string = cosmosdb.outputs.name
+output azure_cosmosdb_id string = cosmosdb.outputs.id
 output azure_apim_name string = apim.outputs.name
 output azure_apim_url string = apim.outputs.apimGatewayUrl
 output azure_apim_vnet_name string = apim.outputs.vnetName
