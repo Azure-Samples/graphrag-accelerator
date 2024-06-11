@@ -282,6 +282,19 @@ module queueStoragePrivateEndpoint 'core/vnet/private-endpoint.bicep' = {
   }
 }
 
+module aiSearchPrivateEndpoint 'core/vnet/private-endpoint.bicep' = {
+  name: 'aiSearchPrivateEndpoint'
+  scope: rg
+  params: {
+    privateEndpointName: '${abbrs.privateEndpoint}search-${aiSearch.outputs.name}'
+    location: location
+    privateLinkServiceId: aiSearch.outputs.id
+    subnetId: apim.outputs.defaultSubnetId
+    groupId: 'searchService'
+    privateDnsZoneConfigs: privatelinkPrivateDns.outputs.aiSearchPrivateDnsZoneConfigs
+  }
+}
+
 module privateLinkScopePrivateEndpoint 'core/vnet/private-endpoint.bicep' = {
   name: 'privateLinkScopePrivateEndpoint'
   scope: rg
