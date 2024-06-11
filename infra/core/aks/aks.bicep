@@ -13,7 +13,7 @@ param logAnalyticsWorkspaceId string
 @description('The auto-upgrade profile.')
 param autoUpgradeProfile object = {
   nodeOsUpgradeChannel: 'NodeImage'
-  upgradeChannel: 'patch'
+  upgradeChannel: 'stable'
 }
 
 @description('Optional DNS prefix to use with hosted Kubernetes API server FQDN.')
