@@ -39,7 +39,7 @@ resource cosmosDb 'Microsoft.DocumentDB/databaseAccounts@2022-11-15' = {
     databaseAccountOfferType: 'Standard'
     defaultIdentity: 'FirstPartyIdentity'
     networkAclBypass: 'None'
-    disableLocalAuth: true
+    disableLocalAuth: false
     enablePartitionMerge: false
     minimalTlsVersion: 'Tls12'
     consistencyPolicy: {
@@ -205,7 +205,6 @@ resource cosmosDbIdentityAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRo
     scope: cosmosDb.id
   }
 }
-
 
 output id string = cosmosDb.id
 output name string = cosmosDb.name
