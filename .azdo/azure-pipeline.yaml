@@ -5,6 +5,12 @@ pool:
   vmImage: ubuntu-latest
 
 steps:
+  - task: PoliCheck@1
+    inputs:
+      inputType: 'Basic'
+      targetType: 'F'
+      targetArgument: '$(System.DefaultWorkingDirectory)'
+      result: 'PoliCheck.xml'
   - script: docker build -t graphrag:backend -f docker/Dockerfile-backend .
     displayName: 'Build backend docker image'
   - script: docker build -t graphrag:frontend -f docker/Dockerfile-frontend .
