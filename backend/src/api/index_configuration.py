@@ -1,16 +1,22 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+import inspect
 import os
 from typing import Union
 
+import yaml
 from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
 )
+from graphrag.prompt_tune.cli import fine_tune as fine_tune_prompt
 
-from src.api.azure_clients import AzureStorageClientManager
+from src.api.azure_clients import (
+    AzureStorageClientManager,
+    BlobServiceClientSingleton,
+)
 from src.api.common import (
     sanitize_name,
     verify_subscription_key_exist,
@@ -235,3 +241,29 @@ def delete_entity(entity_configuration_name: str):
             status_code=500,
             detail=f"Entity configuration '{entity_configuration_name}' not found.",
         )
+
+
+@index_configuration_route.post(
+    "/prompts",
+    summary="Generate graphrag prompts based on data storage",
+    responses={200: {"model": BaseResponse}},
+)
+def generate_prompts(storage_name: str, num_files: int = None):
+    """
+    Automatically generate custom prompts for entity entraction,
+    community reports, and summarize descriptions based on a sample of provided data.
+    """
+    _blob_service_client = BlobServiceClientSingleton().get_instance()
+    # check for data container existence
+    sanitized_storage_name = sanitize_name(storage_name)
+    if not _blob_service_client.get_container_client(sanitized_storage_name).exists():
+        raise HTTPException(
+            status_code=500,
+            detail=f"Data container '{storage_name}' does not exist.",
+        )
+    this_directory = os.path.dirname(
+        os.path.abspath(inspect.getfile(inspect.currentframe()))
+    )
+    data = yaml.safe_load(open(f"{this_directory}/pipeline_settings.yaml"))
+    data["input"]["container_name"] = sanitized_storage_name
+    # fine_tune_prompt
