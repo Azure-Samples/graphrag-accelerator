@@ -17,14 +17,10 @@ resource aiSearch 'Microsoft.Search/searchServices@2024-03-01-preview' = {
     name: 'standard'
   }
   properties: {
-    authOptions: {
-      aadOrApiKey: {
-        aadAuthFailureMode: 'http401WithBearerChallenge'
-      }
-    }
+    disableLocalAuth: true
     replicaCount: 1
     partitionCount: 1
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: 'disabled'
     semanticSearch: 'disabled'
   }
 }
@@ -37,4 +33,5 @@ resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
   }
 ]
 
+output id string = aiSearch.id
 output name string = aiSearch.name

@@ -8,7 +8,7 @@ param apimname string
 resource api 'Microsoft.ApiManagement/service/apis@2023-03-01-preview' = {
   name: '${apimname}/${name}'
   properties: {
-    displayName: 'Graph RAG'
+    displayName: 'GraphRAG'
     apiRevision: '1'
     subscriptionRequired: true
     serviceUrl: backendUrl

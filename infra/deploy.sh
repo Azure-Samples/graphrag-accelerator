@@ -283,8 +283,20 @@ peerVirtualNetworks () {
     echo "...peering complete"
 }
 
-deployGraphrag () {
-    printf "Deploying graphrag... "
+linkPrivateDnsToAks () {
+    echo "Linking private DNS zone to AKS..."
+    local privateDnsZoneNames=$(jq -r .azure_private_dns_zones.value <<< $AZURE_OUTPUTS)
+    exitIfValueEmpty "$privateDnsZoneNames" "Unable to parse private DNS zone names from deployment outputs, exiting..."
+    AZURE_DEPLOY_RESULTS=$(az deployment group create --name "private-dns-to-aks" --no-prompt -o json --template-file ./core/vnet/batch-private-dns-vnet-link.bicep \
+        -g $RESOURCE_GROUP \
+        --parameters "vnetResourceIds=[\"$AKS_VNET_ID\"]" \
+        --parameters "privateDnsZoneNames=$privateDnsZoneNames")
+    exitIfCommandFailed $? "Error linking private DNS to AKS vnet..."
+    echo "...linking private DNS complete"
+}
+
+deployHelmChart () {
+    printf "Deploying graphrag helm chart... "
     local workloadId=$(jq -r .azure_workload_identity_client_id.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$workloadId" "Unable to parse workload id from Azure outputs, exiting..."
 
@@ -350,7 +362,7 @@ deployGraphrag () {
 
     local helmResult=$?
     "$reset_x" && set +x
-    exitIfCommandFailed $helmResult "Error deploying helm charts, exiting..."
+    exitIfCommandFailed $helmResult "Error deploying helm chart, exiting..."
 }
 
 waitForGraphragExternalIp () {
@@ -468,8 +480,9 @@ assignAKSPullRoleToRegistry $RESOURCE_GROUP $AKS_NAME $CONTAINER_REGISTRY_SERVER
 # Deploy kubernetes resources
 setupAksCredentials $RESOURCE_GROUP $AKS_NAME
 populateAksVnetInfo $RESOURCE_GROUP $AKS_NAME
+linkPrivateDnsToAks
 peerVirtualNetworks
-deployGraphrag
+deployHelmChart
 deployGraphragDnsRecord
 
 # Import GraphRAG API into APIM

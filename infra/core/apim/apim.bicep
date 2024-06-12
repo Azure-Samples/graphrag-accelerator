@@ -440,15 +440,19 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   location: location
   kind: 'web'
   properties: {
-    Application_Type:'web'
+    Application_Type: 'web'
     WorkspaceResourceId: logAnalyticsWorkspaceId
+    publicNetworkAccessForIngestion: 'Disabled'
+    publicNetworkAccessForQuery: 'Enabled'
   }
 }
 
 output apimIPs array = apiManagementService.properties.publicIPAddresses
 output apimGatewayUrl string = apiManagementService.properties.gatewayUrl
 output appInsightsName string = appInsights.name
+output appInsightsId string = appInsights.id
 output name string = apiManagementService.name
 output vnetName string = virtualNetwork.name
 output vnetId string = virtualNetwork.id
+output defaultSubnetId string = virtualNetwork.properties.subnets[0].id
 output hostnameConfigs array = apiManagementService.properties.hostnameConfigurations

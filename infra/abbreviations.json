@@ -104,6 +104,7 @@
   "operationalInsightsWorkspaces": "log-",
   "portalDashboards": "dash-",
   "powerBIDedicatedCapacities": "pbi-",
+  "privateEndpoint": "pep-",
   "purviewAccounts": "pview-",
   "recoveryServicesVaults": "rsv-",
   "resourcesResourceGroups": "rg-",
