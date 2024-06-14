@@ -2,5 +2,4 @@ This graphrag wheel file was built from the following repo
 
 https://github.com/microsoft/graphrag
 
-on commit hash 6afec2ae421eabf468e1da8595e1e23d4bda5ecb
-
+on commit hash a389514b4723189803097dc0d602b50d139ee92c
