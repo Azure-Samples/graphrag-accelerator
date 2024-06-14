@@ -4,9 +4,9 @@
 # this yaml file serves as a configuration template for the graphrag indexing jobs
 # some values are hardcoded while others will be dynamically set
 input:
-  type: text
+  type: blob
+  file_type: text
   file_pattern: .*\.txt$
-  storage_type: blob
   storage_account_blob_url: $STORAGE_ACCOUNT_BLOB_URL
   container_name: PLACEHOLDER
   base_dir: .

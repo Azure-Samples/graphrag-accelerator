@@ -3,15 +3,19 @@
 
 import inspect
 import os
+import shutil
+import tempfile
 from typing import Union
 
 import yaml
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
     Depends,
     HTTPException,
 )
-from graphrag.prompt_tune.cli import fine_tune as fine_tune_prompt
+from fastapi.responses import FileResponse, StreamingResponse
+from graphrag.prompt_tune.cli import fine_tune as generate_fine_tune_prompts
 
 from src.api.azure_clients import (
     AzureStorageClientManager,
@@ -46,7 +50,7 @@ if os.getenv("KUBERNETES_SERVICE_HOST"):
     response_model=EntityNameList,
     responses={200: {"model": EntityNameList}, 400: {"model": EntityNameList}},
 )
-def get_all_entitys():
+async def get_all_entitys():
     """
     Retrieve a list of all entity configuration names.
     """
@@ -69,7 +73,7 @@ def get_all_entitys():
     response_model=BaseResponse,
     responses={200: {"model": BaseResponse}},
 )
-def create_entity(request: EntityConfiguration):
+async def create_entity(request: EntityConfiguration):
     # check for entity configuration existence
     entity_container = azure_storage_client_manager.get_cosmos_container_client(
         database_name="graphrag", container_name="entities"
@@ -128,7 +132,7 @@ def create_entity(request: EntityConfiguration):
     response_model=BaseResponse,
     responses={200: {"model": BaseResponse}},
 )
-def update_entity(request: EntityConfiguration):
+async def update_entity(request: EntityConfiguration):
     # check for entity configuration existence
     reporter = ReporterSingleton.get_instance()
     existing_item = None
@@ -186,7 +190,7 @@ def update_entity(request: EntityConfiguration):
     response_model=Union[EntityConfiguration, BaseResponse],
     responses={200: {"model": EntityConfiguration}, 400: {"model": BaseResponse}},
 )
-def get_entity(entity_configuration_name: str):
+async def get_entity(entity_configuration_name: str):
     reporter = ReporterSingleton.get_instance()
     try:
         existing_item = None
@@ -220,7 +224,7 @@ def get_entity(entity_configuration_name: str):
     response_model=BaseResponse,
     responses={200: {"model": BaseResponse}},
 )
-def delete_entity(entity_configuration_name: str):
+async def delete_entity(entity_configuration_name: str):
     reporter = ReporterSingleton.get_instance()
     try:
         entity_container = azure_storage_client_manager.get_cosmos_container_client(
@@ -242,13 +246,17 @@ def delete_entity(entity_configuration_name: str):
             detail=f"Entity configuration '{entity_configuration_name}' not found.",
         )
 
+async def _cleanup_dirs(directory_to_clean:list[str]):
+    for dir in directory_to_clean:
+        shutil.rmtree(dir, ignore_errors=True)
+        print(f"CLEANUP - removed {dir}")
 
-@index_configuration_route.post(
-    "/prompts",
-    summary="Generate graphrag prompts based on data storage",
-    responses={200: {"model": BaseResponse}},
+@index_configuration_route.get(
+    "/prompts/{storage_name}",
+    summary="Generate graphrag prompts from user-provided data. Will run for a few minutes based on the amount of data used.",
+    response_description="Successfully generated prompts",
 )
-def generate_prompts(storage_name: str, num_files: int = None):
+async def generate_prompts(storage_name: str):
     """
     Automatically generate custom prompts for entity entraction,
     community reports, and summarize descriptions based on a sample of provided data.
@@ -256,6 +264,8 @@ def generate_prompts(storage_name: str, num_files: int = None):
     _blob_service_client = BlobServiceClientSingleton().get_instance()
     # check for data container existence
     sanitized_storage_name = sanitize_name(storage_name)
+    print(f"SANITIZED STORAGE NAME: {sanitized_storage_name}")
+
     if not _blob_service_client.get_container_client(sanitized_storage_name).exists():
         raise HTTPException(
             status_code=500,
@@ -264,6 +274,43 @@ def generate_prompts(storage_name: str, num_files: int = None):
     this_directory = os.path.dirname(
         os.path.abspath(inspect.getfile(inspect.currentframe()))
     )
-    data = yaml.safe_load(open(f"{this_directory}/pipeline_settings.yaml"))
+    print("THIS DIRECTORY: ", this_directory)
+    print("CWD: ", os.getcwd())
+
+    # write custom settings.yaml to a file
+    data = yaml.safe_load(open(f"{this_directory}/pipeline-settings.yaml"))
     data["input"]["container_name"] = sanitized_storage_name
-    # fine_tune_prompt
+    temp_settings_dir = "settings-dir" #tempfile.TemporaryDirectory()
+    os.makedirs(temp_settings_dir, exist_ok=True)
+    # print(f"TEMP SETTINGS DIR: {temp_settings_dir.name}")
+    with open(f"{temp_settings_dir}/settings.yaml","w") as f:
+        yaml.dump(data, f, default_flow_style=False)
+    for f in os.listdir(temp_settings_dir):
+        print(f"    FILE: {f}")
+
+    await generate_fine_tune_prompts(root=temp_settings_dir,
+                                     domain="",
+                                     select="random",
+                                     limit=1)
+
+    # zip up the generated prompt files and return the zip file
+    temp_archive = f"{temp_settings_dir}/prompts" # will become a zip file with the name prompts.zip
+    shutil.make_archive(temp_archive,
+                        "zip",
+                        root_dir=temp_settings_dir,
+                        base_dir="prompts")
+    print(f"ARCHIVE: {temp_archive}.zip")
+    for f in os.listdir(temp_settings_dir):
+        print(f"FILE: {f}")
+
+    def iterfile(file_path: str):
+        with open(file_path, mode="rb") as file_like:
+            yield from file_like
+
+    # cleanup temp directories after file is downloaded
+    # print(f"CLEANUP - will remove temp directories: {temp_settings_dir.name}, {temp_output_dir.name}")
+    # background_tasks.add_task(_cleanup_dirs, [temp_settings_dir.name, temp_output_dir.name])
+    # return FileResponse(path=f"{temp_archive}.zip", media_type="application/zip", filename="generated-prompts.zip")
+    # return FileResponse(path=f"{temp_archive}.zip")
+    return StreamingResponse(iterfile(f"{temp_archive}.zip")) # headers={"Content-Disposition": "attachment; filename=generated-prompts.zip"})
+    # return {"status": "Success. Generated prompts are available for download."}

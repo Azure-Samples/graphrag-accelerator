@@ -259,7 +259,7 @@ async def _start_indexing_pipeline(
     this_directory = os.path.dirname(
         os.path.abspath(inspect.getfile(inspect.currentframe()))
     )
-    data = yaml.safe_load(open(f"{this_directory}/pipeline_settings.yaml"))
+    data = yaml.safe_load(open(f"{this_directory}/pipeline-settings.yaml"))
     # dynamically set some values
     data["input"]["container_name"] = sanitized_storage_name
     data["storage"]["container_name"] = sanitized_index_name
