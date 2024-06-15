@@ -9,6 +9,7 @@ from typing import (
 )
 
 from azure.cosmos.exceptions import CosmosHttpResponseError
+from fastapi import UploadFile
 from pydantic import BaseModel
 
 from src.api.azure_clients import AzureStorageClientManager
@@ -75,6 +76,9 @@ class IndexRequest(BaseModel):
     storage_name: str
     index_name: str
     entity_config_name: Optional[str | None] = None
+    entity_extraction_prompt: Optional[UploadFile | None] = None
+    community_prompt: Optional[UploadFile | None] = None
+    summarize_descriptions_prompt: Optional[UploadFile | None] = None
     webhook_url: Optional[str | None] = None
 
 

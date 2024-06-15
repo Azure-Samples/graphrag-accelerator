@@ -4,8 +4,13 @@
 import asyncio
 import inspect
 import os
+import shutil
 import traceback
-from typing import cast
+from typing import (
+    List,
+    Optional,
+    cast,
+)
 
 import yaml
 from azure.identity import DefaultAzureCredential
@@ -15,7 +20,9 @@ from fastapi import (
     APIRouter,
     BackgroundTasks,
     Depends,
+    File,
     HTTPException,
+    UploadFile,
 )
 from graphrag.config import create_graphrag_config
 from graphrag.index import create_pipeline_config
@@ -78,33 +85,36 @@ if os.getenv("KUBERNETES_SERVICE_HOST"):
     response_model=BaseResponse,
     responses={200: {"model": BaseResponse}},
 )
-def setup_indexing_pipeline(
-    request: IndexRequest, background_tasks: BackgroundTasks = None
+async def setup_indexing_pipeline(
+    files: List[UploadFile],
+    storage_name: str,
+    index_name: str,
+    entity_config_name: Optional[str | None] = None,
 ):
     _blob_service_client = BlobServiceClientSingleton().get_instance()
-    pipelinejob = PipelineJob()  # TODO: fix class so initiliazation is not required
+    pipelinejob = PipelineJob()
 
     # validate index name against blob container naming rules
-    sanitized_index_name = sanitize_name(request.index_name)
+    sanitized_index_name = sanitize_name(index_name)
     try:
         validate_blob_container_name(sanitized_index_name)
     except ValueError:
         raise HTTPException(
             status_code=500,
-            detail=f"Invalid index name: {request.index_name}",
+            detail=f"Invalid index name: {index_name}",
         )
 
     # check for data container existence
-    sanitized_storage_name = sanitize_name(request.storage_name)
+    sanitized_storage_name = sanitize_name(storage_name)
     if not _blob_service_client.get_container_client(sanitized_storage_name).exists():
         raise HTTPException(
             status_code=500,
-            detail=f"Data container '{request.storage_name}' does not exist.",
+            detail=f"Data container '{storage_name}' does not exist.",
         )
 
     # check for entity configuration existence
-    sanitized_entity_config_name = sanitize_name(request.entity_config_name)
-    if request.entity_config_name:
+    sanitized_entity_config_name = sanitize_name(entity_config_name)
+    if entity_config_name:
         entity_container_client = get_database_container_client(
             database_name="graphrag", container_name="entities"
         )
@@ -116,8 +126,15 @@ def setup_indexing_pipeline(
         except Exception:
             raise HTTPException(
                 status_code=500,
-                detail=f"Entity configuration '{request.entity_config_name}' does not exist.",
+                detail=f"Entity configuration '{entity_config_name}' does not exist.",
             )
+
+    for f in files:
+        print(f)
+        if f.filename == "entity_extraction.txt":
+            with open("my_entity_extract_prompt.txt","wb") as outfile:
+                shutil.copyfileobj(f.file, outfile)
+    return BaseResponse(status="indexing operation has been scheduled.")
 
     # check for existing index job
     # it is okay if job doesn't exist, but if it does,
@@ -240,7 +257,7 @@ async def _start_indexing_pipeline(
     pipelinejob = PipelineJob()  # TODO: fix class so initiliazation is not required
 
     # download nltk dependencies
-    bootstrap()  # todo: expose the quiet flag to the user
+    bootstrap()
 
     # create new reporters/callbacks just for this job
     reporters = []

@@ -246,14 +246,9 @@ async def delete_entity(entity_configuration_name: str):
             detail=f"Entity configuration '{entity_configuration_name}' not found.",
         )
 
-async def _cleanup_dirs(directory_to_clean:list[str]):
-    for dir in directory_to_clean:
-        shutil.rmtree(dir, ignore_errors=True)
-        print(f"CLEANUP - removed {dir}")
-
 @index_configuration_route.get(
     "/prompts/{storage_name}",
-    summary="Generate graphrag prompts from user-provided data. Will run for a few minutes based on the amount of data used.",
+    summary="Generate graphrag prompts from user-provided data. Will run for several minutes based on the amount of data used.",
     response_description="Successfully generated prompts",
 )
 async def generate_prompts(storage_name: str):
@@ -261,11 +256,9 @@ async def generate_prompts(storage_name: str):
     Automatically generate custom prompts for entity entraction,
     community reports, and summarize descriptions based on a sample of provided data.
     """
+    # check for storage container existence
     _blob_service_client = BlobServiceClientSingleton().get_instance()
-    # check for data container existence
     sanitized_storage_name = sanitize_name(storage_name)
-    print(f"SANITIZED STORAGE NAME: {sanitized_storage_name}")
-
     if not _blob_service_client.get_container_client(sanitized_storage_name).exists():
         raise HTTPException(
             status_code=500,
@@ -277,40 +270,34 @@ async def generate_prompts(storage_name: str):
     print("THIS DIRECTORY: ", this_directory)
     print("CWD: ", os.getcwd())
 
-    # write custom settings.yaml to a file
+    # write custom settings.yaml to a file and store in a temporary directory
     data = yaml.safe_load(open(f"{this_directory}/pipeline-settings.yaml"))
     data["input"]["container_name"] = sanitized_storage_name
-    temp_settings_dir = "settings-dir" #tempfile.TemporaryDirectory()
-    os.makedirs(temp_settings_dir, exist_ok=True)
-    # print(f"TEMP SETTINGS DIR: {temp_settings_dir.name}")
-    with open(f"{temp_settings_dir}/settings.yaml","w") as f:
+    temp_dir = f"/tmp/{sanitized_storage_name}_prompt_tuning"
+    shutil.rmtree(temp_dir, ignore_errors=True)
+    os.makedirs(temp_dir, exist_ok=True)
+    print(f"TEMP SETTINGS DIR: {temp_dir}")
+    with open(f"{temp_dir}/settings.yaml","w") as f:
         yaml.dump(data, f, default_flow_style=False)
-    for f in os.listdir(temp_settings_dir):
-        print(f"    FILE: {f}")
 
-    await generate_fine_tune_prompts(root=temp_settings_dir,
+    await generate_fine_tune_prompts(root=temp_dir,
                                      domain="",
                                      select="random",
-                                     limit=1)
+                                     limit=5,
+                                     skip_entity_types=True,
+                                     output="prompts")
 
     # zip up the generated prompt files and return the zip file
-    temp_archive = f"{temp_settings_dir}/prompts" # will become a zip file with the name prompts.zip
+    temp_archive = f"{temp_dir}/prompts" # will become a zip file with the name prompts.zip
     shutil.make_archive(temp_archive,
                         "zip",
-                        root_dir=temp_settings_dir,
+                        root_dir=temp_dir,
                         base_dir="prompts")
     print(f"ARCHIVE: {temp_archive}.zip")
-    for f in os.listdir(temp_settings_dir):
+    for f in os.listdir(temp_dir):
         print(f"FILE: {f}")
 
     def iterfile(file_path: str):
         with open(file_path, mode="rb") as file_like:
             yield from file_like
-
-    # cleanup temp directories after file is downloaded
-    # print(f"CLEANUP - will remove temp directories: {temp_settings_dir.name}, {temp_output_dir.name}")
-    # background_tasks.add_task(_cleanup_dirs, [temp_settings_dir.name, temp_output_dir.name])
-    # return FileResponse(path=f"{temp_archive}.zip", media_type="application/zip", filename="generated-prompts.zip")
-    # return FileResponse(path=f"{temp_archive}.zip")
-    return StreamingResponse(iterfile(f"{temp_archive}.zip")) # headers={"Content-Disposition": "attachment; filename=generated-prompts.zip"})
-    # return {"status": "Success. Generated prompts are available for download."}
+    return StreamingResponse(iterfile(f"{temp_archive}.zip"))
