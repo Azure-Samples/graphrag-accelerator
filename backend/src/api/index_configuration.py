@@ -4,17 +4,15 @@
 import inspect
 import os
 import shutil
-import tempfile
 from typing import Union
 
 import yaml
 from fastapi import (
     APIRouter,
-    BackgroundTasks,
     Depends,
     HTTPException,
 )
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 from graphrag.prompt_tune.cli import fine_tune as generate_fine_tune_prompts
 
 from src.api.azure_clients import (

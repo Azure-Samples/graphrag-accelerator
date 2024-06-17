@@ -9,14 +9,10 @@ from src.api.index import _start_indexing_pipeline
 
 parser = argparse.ArgumentParser(description="Kickoff indexing job.")
 parser.add_argument("-i", "--index-name", required=True)
-parser.add_argument("-s", "--storage-name", required=True)
-parser.add_argument("-e", "--entity-config", required=False)
 args = parser.parse_args()
 
 asyncio.run(
     _start_indexing_pipeline(
         index_name=args.index_name,
-        storage_name=args.storage_name,
-        entity_config_name=args.entity_config,
     )
 )

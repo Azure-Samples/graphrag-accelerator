@@ -75,5 +75,11 @@ entity_extraction:
   prompt: PLACEHOLDER
   entity_types: PLACEHOLDER
 
+community_reports:
+  prompt: PLACEHOLDER
+
+summarize_descriptions:
+  prompt: PLACEHOLDER
+
 snapshots:
   graphml: True

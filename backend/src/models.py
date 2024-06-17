@@ -9,7 +9,6 @@ from typing import (
 )
 
 from azure.cosmos.exceptions import CosmosHttpResponseError
-from fastapi import UploadFile
 from pydantic import BaseModel
 
 from src.api.azure_clients import AzureStorageClientManager
@@ -72,16 +71,6 @@ class IndexNameList(BaseModel):
     index_name: List[str]
 
 
-class IndexRequest(BaseModel):
-    storage_name: str
-    index_name: str
-    entity_config_name: Optional[str | None] = None
-    entity_extraction_prompt: Optional[UploadFile | None] = None
-    community_prompt: Optional[UploadFile | None] = None
-    summarize_descriptions_prompt: Optional[UploadFile | None] = None
-    webhook_url: Optional[str | None] = None
-
-
 class IndexStatusResponse(BaseModel):
     status_code: int
     index_name: str
@@ -92,11 +81,36 @@ class IndexStatusResponse(BaseModel):
     progress: str
 
 
+class ReportResponse(BaseModel):
+    text: str
+
+
+class RelationshipResponse(BaseModel):
+    source: str
+    source_id: int
+    target: str
+    target_id: int
+    description: str
+    text_units: list[str]
+
+
+class StorageNameList(BaseModel):
+    storage_name: List[str]
+
+
+class TextUnitResponse(BaseModel):
+    text: str
+    source_document: str
+
+
 @dataclass
 class PipelineJob:
     _id: str = field(default=None, init=False)
     _index_name: str = field(default=None, init=False)
     _storage_name: str = field(default=None, init=False)
+    _entity_extraction_prompt: str = field(default=None, init=False)
+    _community_report_prompt: str = field(default=None, init=False)
+    _summarize_descriptions_prompt: str = field(default=None, init=False)
     _entity_config_name: str = field(default=None, init=False)
     _all_workflows: List[str] = field(default_factory=list, init=False)
     _completed_workflows: List[str] = field(default_factory=list, init=False)
@@ -119,6 +133,9 @@ class PipelineJob:
         index_name: str,
         storage_name: str,
         entity_config_name: str,
+        entity_extraction_prompt: str | None = None,
+        community_report_prompt: str | None = None,
+        summarize_descriptions_prompt: str | None = None,
         **kwargs,
     ) -> "PipelineJob":
         """
@@ -129,6 +146,9 @@ class PipelineJob:
             index_name (str): The name of the index.
             storage_name (str): The name of the storage.
             entity_config_name (str): The name of the entity configuration.
+            entity_extraction_prompt (str): The entity extraction prompt.
+            community_prompt (str): The community prompt.
+            summarize_descriptions_prompt (str): The prompt for summarizing descriptions.
             all_workflows (List[str]): List of all workflows.
             completed_workflows (List[str]): List of completed workflows.
             failed_workflows (List[str]): List of failed workflows.
@@ -156,6 +176,9 @@ class PipelineJob:
         instance._id = id
         instance._index_name = index_name
         instance._storage_name = storage_name
+        instance._entity_extraction_prompt = entity_extraction_prompt
+        instance._community_report_prompt = community_report_prompt
+        instance._summarize_descriptions_prompt = summarize_descriptions_prompt
         instance._entity_config_name = entity_config_name
         instance._all_workflows = kwargs.get("all_workflows", [])
         instance._completed_workflows = kwargs.get("completed_workflows", [])
@@ -193,6 +216,11 @@ class PipelineJob:
         instance._id = db_item.get("id")
         instance._index_name = db_item.get("index_name")
         instance._storage_name = db_item.get("storage_name")
+        instance._entity_extraction_prompt = db_item.get("entity_extraction_prompt")
+        instance._community_report_prompt = db_item.get("community_report_prompt")
+        instance._summarize_descriptions_prompt = db_item.get(
+            "summarize_descriptions_prompt"
+        )
         instance._entity_config_name = db_item.get("entity_config_name")
         instance._all_workflows = db_item.get("all_workflows", [])
         instance._completed_workflows = db_item.get("completed_workflows", [])
@@ -224,7 +252,7 @@ class PipelineJob:
         )
 
     def dump_model(self) -> dict:
-        return {
+        model = {
             "id": self._id,
             "index_name": self._index_name,
             "storage_name": self._storage_name,
@@ -236,6 +264,13 @@ class PipelineJob:
             "percent_complete": self._percent_complete,
             "progress": self._progress,
         }
+        if self._entity_extraction_prompt:
+            model["entity_extraction_prompt"] = self._entity_extraction_prompt
+        if self._community_report_prompt:
+            model["community_report_prompt"] = self._community_report_prompt
+        if self._summarize_descriptions_prompt:
+            model["summarize_descriptions_prompt"] = self._summarize_descriptions_prompt
+        return model
 
     def update_db(self):
         PipelineJob._jobs_container().upsert_item(body=self.dump_model())
@@ -273,13 +308,45 @@ class PipelineJob:
     def storage_name(self) -> str:
         return self._storage_name
 
+    @storage_name.setter
+    def storage_name(self, storage_name: str) -> None:
+        self._storage_name = storage_name
+        self.update_db()
+
     @property
     def entity_config_name(self) -> str:
         return self._entity_config_name
 
-    @storage_name.setter
-    def storage_name(self, storage_name: str) -> None:
-        self._storage_name = storage_name
+    @entity_config_name.setter
+    def entity_config_name(self, entity_config_name: str) -> None:
+        self._entity_config_name = entity_config_name
+        self.update_db()
+
+    @property
+    def entity_extraction_prompt(self) -> str:
+        return self._entity_extraction_prompt
+
+    @entity_extraction_prompt.setter
+    def entity_extraction_prompt(self, entity_extraction_prompt: str) -> None:
+        self._entity_extraction_prompt = entity_extraction_prompt
+        self.update_db()
+
+    @property
+    def community_report_prompt(self) -> str:
+        return self._community_report_prompt
+
+    @community_report_prompt.setter
+    def community_report_prompt(self, community_report_prompt: str) -> None:
+        self._community_report_prompt = community_report_prompt
+        self.update_db()
+
+    @property
+    def summarize_descriptions_prompt(self) -> str:
+        return self._summarize_descriptions_prompt
+
+    @summarize_descriptions_prompt.setter
+    def summarize_descriptions_prompt(self, summarize_descriptions_prompt: str) -> None:
+        self._summarize_descriptions_prompt = summarize_descriptions_prompt
         self.update_db()
 
     @property
@@ -335,25 +402,3 @@ class PipelineJob:
     def progress(self, progress: str) -> None:
         self._progress = progress
         self.update_db()
-
-
-class ReportResponse(BaseModel):
-    text: str
-
-
-class RelationshipResponse(BaseModel):
-    source: str
-    source_id: int
-    target: str
-    target_id: int
-    description: str
-    text_units: list[str]
-
-
-class StorageNameList(BaseModel):
-    storage_name: List[str]
-
-
-class TextUnitResponse(BaseModel):
-    text: str
-    source_document: str
