@@ -21,7 +21,7 @@ GraphRAG has been evaluated in multiple ways.  The primary concerns are 1) accur
   1. Hallucination rates are evaluated using claim coverage metrics, manual inspection of answer and source, and adversarial attacks to attempt a forced hallucination through adversarial and exceptionally challenging datasets.
 
 ## What are the limitations of GraphRAG? How can users minimize the impact of GraphRAG’s limitations when using the system?
-- GraphRAG depends on a well-constructed indexing examples.  For general applications (e.g. content oriented around people, places, organizations, things, etc.) we provide example indexing prompts. For unique datasets effective indexing can depend on proper identification of domain-specific concepts.
+- GraphRAG depends on well-constructed indexing examples.  For general applications (e.g. content oriented around people, places, organizations, things, etc.) we provide example indexing prompts. For unique datasets, effective indexing can depend on proper identification of domain-specific concepts.
 - Indexing is a relatively expensive operation; a best practice to mitigate indexing is to create a small test dataset in the target domain to ensure indexer performance prior to large indexing operations.
 - GraphRAG is designed to accept well-formatted UTF-8 text only.  Input data that does not conform to this specification will cause issues in indexing with unreliable effects.
 
