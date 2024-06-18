@@ -9,7 +9,7 @@ metadata:
   name: PLACEHOLDER
 spec:
   ttlSecondsAfterFinished: 120
-  backoffLimit: 30
+  backoffLimit: 6
   template:
     metadata:
       labels:
