@@ -43,7 +43,10 @@ from graphrag.vector_stores.base import (
     VectorStoreSearchResult,
 )
 
-cognitive_services_endpoint = os.environ["GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT"]
+cognitive_services_endpoint = os.environ.get(
+    "GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT",
+    "https://cognitiveservices.azure.com/.default",
+)
 token_provider = get_bearer_token_provider(
     DefaultAzureCredential(), cognitive_services_endpoint
 )
