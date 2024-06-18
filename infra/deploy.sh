@@ -11,6 +11,7 @@ AISEARCH_ENDPOINT_SUFFIX=""
 APIM_NAME=""
 RESOURCE_BASE_NAME=""
 REPORTERS=""
+GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT=""
 
 requiredParams=(
     CONTAINER_REGISTRY_SERVER
@@ -151,6 +152,10 @@ populateOptionalParams () {
     if [ -z "$REPORTERS" ]; then
         REPORTERS="blob,console"
         printf "\tsetting REPORTERS=blob,console\n"
+    fi
+    if [ -z "$GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT" ]; then
+        GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT="https://cognitiveservices.azure.com/.default"
+        printf "\tsetting GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT=$GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT\n"
     fi
     printf "Done.\n"
 }
@@ -353,6 +358,7 @@ deployHelmChart () {
         --set "graphragConfig.COSMOS_URI_ENDPOINT=$cosmosEndpoint" \
         --set "graphragConfig.GRAPHRAG_API_BASE=$GRAPHRAG_API_BASE" \
         --set "graphragConfig.GRAPHRAG_API_VERSION=$GRAPHRAG_API_VERSION" \
+	--set "graphragConfig.GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT=$GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT" \
         --set "graphragConfig.GRAPHRAG_LLM_MODEL=$GRAPHRAG_LLM_MODEL" \
         --set "graphragConfig.GRAPHRAG_LLM_DEPLOYMENT_NAME=$GRAPHRAG_LLM_DEPLOYMENT_NAME" \
         --set "graphragConfig.GRAPHRAG_EMBEDDING_MODEL=$GRAPHRAG_EMBEDDING_MODEL" \
