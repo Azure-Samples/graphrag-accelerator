@@ -153,6 +153,10 @@ populateOptionalParams () {
         REPORTERS="blob,console"
         printf "\tsetting REPORTERS=blob,console\n"
     fi
+    if [ -z "$GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT" ]; then
+        GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT="https://cognitiveservices.azure.com/.default"
+        printf "\tsetting GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT=$GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT\n"
+    fi
     printf "Done.\n"
 }
 
