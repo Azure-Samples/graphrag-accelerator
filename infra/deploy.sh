@@ -445,36 +445,80 @@ deployGraphragAPI () {
     rm core/apim/graphrag-openapi.json
 }
 
+grantDevAccessToAzureResources() {
+    # This function is used to grant the deployer of this script "developer" access to GraphRAG Azure resources
+    # by assigning the necessary RBAC roles for Azure Storage, AI Search, and CosmosDB to the signed-in user.
+    # This will grant the deployer access to the storage account, cosmos db, and AI search services in the resource group via the Azure portal.
+    echo "Granting deployer developer access to Azure resources..."
+
+    # get subscription id of the active subscription
+    local azureAccount=$(az account show -o json)
+    local subscriptionId=$(jq -r .id <<< $azureAccount)
+    exitIfValueEmpty $subscriptionId "Subscription ID not found"
+
+    # get principal/object id of the signed in user
+    local azureUserDetails=$(az ad signed-in-user show -o json)
+    local principalId=$(jq -r .id <<< $azureUserDetails)
+    exitIfValueEmpty $principalId "Principal ID not found"
+
+    # assign storage account roles
+    local storageAccountDetails=$(az storage account list --resource-group $RESOURCE_GROUP -o json)
+    local storageAccountName=$(jq -r .[0].name <<< $storageAccountDetails)
+    exitIfValueEmpty $storageAccountName "Storage account not found"
+    az role assignment create --role "Storage Blob Data Contributor" --assignee $principalId --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Storage/storageAccounts/$storageAccountName" > /dev/null
+    az role assignment create --role "Storage Queue Data Contributor" --assignee $principalId --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Storage/storageAccounts/$storageAccountName" > /dev/null
+
+    # assign cosmos db role
+    local cosmosDbDetails=$(az cosmosdb list --resource-group $RESOURCE_GROUP -o json)
+    local cosmosDbName=$(jq -r .[0].name <<< $cosmosDbDetails)
+    exitIfValueEmpty $cosmosDbName "CosmosDB account not found"
+    az cosmosdb sql role assignment create --account-name $cosmosDbName --resource-group $RESOURCE_GROUP --scope "/" --principal-id $principalId --role-definition-id /subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.DocumentDB/databaseAccounts/graphrag/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002 > /dev/null
+
+    # assign AI search roles
+    local searchServiceDetails=$(az search service list --resource-group $RESOURCE_GROUP -o json)
+    local searchServiceName=$(jq -r .[0].name <<< $searchServiceDetails)
+    exitIfValueEmpty $searchServiceName "AI Search service not found"
+    az role assignment create --role "Contributor" --assignee $principalId --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Search/searchServices/$searchServiceName" > /dev/null
+    az role assignment create --role "Search Index Data Contributor" --assignee $principalId --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Search/searchServices/$searchServiceName" > /dev/null
+    az role assignment create --role "Search Index Data Reader" --assignee $principalId --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Search/searchServices/$searchServiceName" > /dev/null
+}
+
 ################################################################################
 # Help menu                                                                    #
 ################################################################################
 usage() {
    echo
-   echo "Usage: bash $0 [-h|d] -p <deploy.parameters.json>"
+   echo "Usage: bash $0 [-h|d|g] -p <deploy.parameters.json>"
    echo "Description: Deployment script for the GraphRAG Solution Accelerator."
    echo "options:"
    echo "  -h     Print this help menu."
    echo "  -d     Disable private endpoint usage."
-   echo "  -p     deploy.parameters.json file"
+   echo "  -g     Developer user only. Grants deployer of this script access to Azure Storage, AI Search, and CosmosDB. Will also disable private endpoints (-d)."
+   echo "  -p     A JSON file containing the deployment parameters (deploy.parameters.json)."
    echo
 }
 # print usage if no arguments are supplied
-[ $# -eq 0 ] && usage
+[ $# -eq 0 ] && usage && exit 0
 # parse arguments
 ENABLE_PRIVATE_ENDPOINTS=true
+GRANT_DEV_ACCESS=0 # false
 PARAMS_FILE=""
-while getopts ":dp:h" option; do
+while getopts ":dgp:h" option; do
     case "${option}" in
-      d)
-          ENABLE_PRIVATE_ENDPOINTS=false
-          ;;
-      p)
-          PARAMS_FILE=${OPTARG}
-          ;;
-      h | *)
-          usage
-          exit 0
-          ;;
+        d)
+            ENABLE_PRIVATE_ENDPOINTS=false
+            ;;
+        g)
+            ENABLE_PRIVATE_ENDPOINTS=false
+            GRANT_DEV_ACCESS=1 # true
+            ;;
+        p)
+            PARAMS_FILE=${OPTARG}
+            ;;
+        h | *)
+            usage
+            exit 0
+            ;;
     esac
 done
 shift $((OPTIND-1))
@@ -518,5 +562,9 @@ deployGraphragDnsRecord
 
 # Import GraphRAG API into APIM
 deployGraphragAPI
+
+if [ $GRANT_DEV_ACCESS -eq 1 ]; then
+    grantDevAccessToAzureResources
+fi
 
 echo "SUCCESS: GraphRAG deployment to resource group $RESOURCE_GROUP complete"
