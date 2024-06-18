@@ -230,7 +230,8 @@ deployAzureResources () {
         --parameters "apimName=$APIM_NAME" \
         --parameters "publisherName=$PUBLISHER_NAME" \
         --parameters "aksSshRsaPublicKey=$SSH_PUBLICKEY" \
-        --parameters "publisherEmail=$PUBLISHER_EMAIL")
+        --parameters "publisherEmail=$PUBLISHER_EMAIL" \
+        --parameters "enablePrivateEndpoints=$ENABLE_PRIVATE_ENDPOINTS")
     exitIfCommandFailed $? "Error deploying Azure resources..."
     AZURE_OUTPUTS=$(jq -r .properties.outputs <<< $AZURE_DEPLOY_RESULTS)
     exitIfCommandFailed $? "Error parsing outputs from Azure resource deployment..."
@@ -444,18 +445,48 @@ deployGraphragAPI () {
     rm core/apim/graphrag-openapi.json
 }
 
-##### START EXECUTION #####
-if [ $# -ne 1 ]; then
-    echo "Usage: deploy.sh <params file>"
-    exit 1
-fi
-
-PARAMS_FILE=$1
+################################################################################
+# Help menu                                                                    #
+################################################################################
+usage() {
+   echo
+   echo "Usage: bash $0 [-h|d] -p <deploy.parameters.json>"
+   echo "Description: Deployment script for the GraphRAG Solution Accelerator."
+   echo "options:"
+   echo "  -h     Print this help menu."
+   echo "  -d     Disable private endpoint usage."
+   echo "  -p     deploy.parameters.json file"
+   echo
+}
+# print usage if no arguments are supplied
+[ $# -eq 0 ] && usage
+# parse arguments
+ENABLE_PRIVATE_ENDPOINTS=true
+PARAMS_FILE=""
+while getopts ":dp:h" option; do
+    case "${option}" in
+      d)
+          ENABLE_PRIVATE_ENDPOINTS=false
+          ;;
+      p)
+          PARAMS_FILE=${OPTARG}
+          ;;
+      h | *)
+          usage
+          exit 0
+          ;;
+    esac
+done
+shift $((OPTIND-1))
+# check if required arguments are supplied
 if [ ! -f $PARAMS_FILE ]; then
-    echo "Parameters file $PARAMS_FILE not found"
+    echo "Error: invalid required argument."
+    usage
     exit 1
 fi
-
+################################################################################
+# Main Program                                                                 #
+################################################################################
 checkRequiredTools
 
 populateParams $PARAMS_FILE
@@ -463,7 +494,7 @@ populateParams $PARAMS_FILE
 # Create resource group
 createResourceGroupIfNotExists $LOCATION $RESOURCE_GROUP
 
-# AKS ssh key setup
+# generate ssh key for AKS
 createSshkeyIfNotExists $RESOURCE_GROUP
 
 # Deploy Azure resources
@@ -472,15 +503,15 @@ deployAzureResources
 # Setup RBAC roles to access external services already deployed.
 AKS_NAME=$(jq -r .azure_aks_name.value <<< $AZURE_OUTPUTS)
 exitIfValueEmpty "$AKS_NAME" "Unable to parse AKS name from azure deployment outputs, exiting..."
-# setup RBAC for managed identity to access the AOAI instance
 assignAOAIRoleToManagedIdentity
-# setup RBAC for AKS to access the container registry
 assignAKSPullRoleToRegistry $RESOURCE_GROUP $AKS_NAME $CONTAINER_REGISTRY_SERVER
 
 # Deploy kubernetes resources
 setupAksCredentials $RESOURCE_GROUP $AKS_NAME
 populateAksVnetInfo $RESOURCE_GROUP $AKS_NAME
-linkPrivateDnsToAks
+if [ "$ENABLE_PRIVATE_ENDPOINTS" = "true" ]; then
+    linkPrivateDnsToAks
+fi
 peerVirtualNetworks
 deployHelmChart
 deployGraphragDnsRecord

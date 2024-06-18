@@ -5,7 +5,6 @@ import asyncio
 import inspect
 import os
 import traceback
-from pprint import pprint
 from typing import cast
 
 import yaml
@@ -143,8 +142,8 @@ async def setup_indexing_pipeline(
     # check for existing index job
     # it is okay if job doesn't exist, but if it does,
     # it must not be scheduled or running
-    if pipelinejob.item_exist(index_name):
-        existing_job = pipelinejob.load_item(index_name)
+    if pipelinejob.item_exist(sanitized_index_name):
+        existing_job = pipelinejob.load_item(sanitized_index_name)
         if (PipelineJobState(existing_job.status) == PipelineJobState.SCHEDULED) or (
             PipelineJobState(existing_job.status) == PipelineJobState.RUNNING
         ):
@@ -154,49 +153,52 @@ async def setup_indexing_pipeline(
             )
         # if indexing job is in a failed state, delete the associated K8s job and pod to allow for a new job to be scheduled
         if PipelineJobState(existing_job.status) == PipelineJobState.FAILED:
-            _delete_k8s_job(f"indexing-job-{index_name}", "graphrag")
+            _delete_k8s_job(f"indexing-job-{sanitized_index_name}", "graphrag")
 
         # reset the job to scheduled state
         existing_job.status = PipelineJobState.SCHEDULED
         existing_job.percent_complete = 0
         existing_job.progress = ""
-    else:
-        # create or update state in cosmos db
-        entity_extraction_prompt_content = (
-            entity_extraction_prompt.file.read().decode("utf-8")
-            if entity_extraction_prompt
-            else None
-        )
-        community_report_prompt_content = (
-            community_report_prompt.file.read().decode("utf-8")
-            if community_report_prompt
-            else None
-        )
-        summarize_descriptions_prompt_content = (
-            summarize_descriptions_prompt.file.read().decode("utf-8")
-            if summarize_descriptions_prompt
-            else None
-        )
-        # print(f"ENTITY EXTRACTION PROMPT:\n{entity_extraction_prompt_content}")
-        # print(f"COMMUNITY REPORT PROMPT:\n{community_report_prompt_content}")
-        # print(f"SUMMARIZE DESCRIPTIONS PROMPT:\n{summarize_descriptions_prompt_content}")
-        pipelinejob.create_item(
-            id=sanitized_index_name,
-            index_name=sanitized_index_name,
-            storage_name=sanitized_storage_name,
-            entity_config_name=sanitized_entity_config_name,
-            entity_extraction_prompt=entity_extraction_prompt_content,
-            community_report_prompt=community_report_prompt_content,
-            summarize_descriptions_prompt=summarize_descriptions_prompt_content,
-            status=PipelineJobState.SCHEDULED,
-        )
+        existing_job.all_workflows = existing_job.completed_workflows = existing_job.failed_workflows = []
+        existing_job.entity_extraction_prompt = None
+        existing_job.community_report_prompt = None
+        existing_job.summarize_descriptions_prompt = None
+
+    # create or update state in cosmos db
+    entity_extraction_prompt_content = (
+        entity_extraction_prompt.file.read().decode("utf-8")
+        if entity_extraction_prompt
+        else None
+    )
+    community_report_prompt_content = (
+        community_report_prompt.file.read().decode("utf-8")
+        if community_report_prompt
+        else None
+    )
+    summarize_descriptions_prompt_content = (
+        summarize_descriptions_prompt.file.read().decode("utf-8")
+        if summarize_descriptions_prompt
+        else None
+    )
+    # print(f"ENTITY EXTRACTION PROMPT:\n{entity_extraction_prompt_content}")
+    # print(f"COMMUNITY REPORT PROMPT:\n{community_report_prompt_content}")
+    # print(f"SUMMARIZE DESCRIPTIONS PROMPT:\n{summarize_descriptions_prompt_content}")
+    pipelinejob.create_item(
+        id=sanitized_index_name,
+        index_name=sanitized_index_name,
+        storage_name=sanitized_storage_name,
+        entity_config_name=sanitized_entity_config_name,
+        entity_extraction_prompt=entity_extraction_prompt_content,
+        community_report_prompt=community_report_prompt_content,
+        summarize_descriptions_prompt=summarize_descriptions_prompt_content,
+        status=PipelineJobState.SCHEDULED,
+    )
 
     """
     At this point, we know:
     1) the index name is valid
     2) the data container exists
-    3) the entity configuration exists.
-    4) there is no indexing job with this name currently running or a previous job has finished
+    3) there is no indexing job with this name currently running or a previous job has finished
     """
     # update or create new item in container-store in cosmosDB
     if not _blob_service_client.get_container_client(sanitized_index_name).exists():
@@ -213,8 +215,8 @@ async def setup_indexing_pipeline(
         }
     )
 
+    # schedule AKS job
     try:
-        # schedule AKS job
         config.load_incluster_config()
         # get container image name
         core_v1 = client.CoreV1Api()

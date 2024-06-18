@@ -10,6 +10,9 @@ param location string = resourceGroup().location
 @description('Array of objects with fields principalId, principalType, roleDefinitionId')
 param roleAssignments array = []
 
+@allowed([ 'enabled', 'disabled' ])
+param publicNetworkAccess string = 'enabled'
+
 resource aiSearch 'Microsoft.Search/searchServices@2024-03-01-preview' = {
   name: name
   location: location
@@ -20,7 +23,7 @@ resource aiSearch 'Microsoft.Search/searchServices@2024-03-01-preview' = {
     disableLocalAuth: true
     replicaCount: 1
     partitionCount: 1
-    publicNetworkAccess: 'disabled'
+    publicNetworkAccess: publicNetworkAccess
     semanticSearch: 'disabled'
   }
 }
