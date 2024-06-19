@@ -58,6 +58,7 @@ azure_storage_client_manager = (
 )  # TODO: update API to use the AzureStorageClientManager
 
 ai_search_url = os.environ["AI_SEARCH_URL"]
+ai_search_audience = os.environ["AI_SEARCH_AUDIENCE"]
 
 index_route = APIRouter(
     prefix="/index",
@@ -544,9 +545,10 @@ async def delete_index(index_name: str):
         except Exception:
             pass
 
-        url = ai_search_url
         index_client = SearchIndexClient(
-            endpoint=url, credential=DefaultAzureCredential()
+            endpoint=ai_search_url, 
+            credential=DefaultAzureCredential(), 
+            audience=ai_search_audience
         )
         ai_search_index_name = f"{sanitized_index_name}_description_embedding"
         if ai_search_index_name in index_client.list_index_names():

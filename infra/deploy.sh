@@ -7,6 +7,7 @@
 aksNamespace="graphrag"
 
 # OPTIONAL PARAMS
+AISEARCH_AUDIENCE=""
 AISEARCH_ENDPOINT_SUFFIX=""
 APIM_NAME=""
 RESOURCE_BASE_NAME=""
@@ -128,6 +129,10 @@ populateOptionalParams () {
     if [ -z "$AISEARCH_ENDPOINT_SUFFIX" ]; then
         AISEARCH_ENDPOINT_SUFFIX="search.windows.net"
         printf "\tsetting AISEARCH_ENDPOINT_SUFFIX=$AISEARCH_ENDPOINT_SUFFIX\n"
+    fi
+    if [ -z "$AISEARCH_AUDIENCE" ]; then
+        AISEARCH_AUDIENCE="https://search.azure.com"
+        printf "\tsetting AISEARCH_AUDIENCE=$AISEARCH_AUDIENCE\n"
     fi
     if [ -z "$PUBLISHER_NAME" ]; then
         PUBLISHER_NAME="publisher"
@@ -359,6 +364,7 @@ deployHelmChart () {
         --set "ingress.host=$graphragHostname" \
         --set "graphragConfig.APIM_GATEWAY_URL=$apimGatewayUrl" \
         --set "graphragConfig.AI_SEARCH_URL=https://$aiSearchName.$AISEARCH_ENDPOINT_SUFFIX" \
+        --set "graphragConfig.AI_SEARCH_AUDIENCE=$AISEARCH_AUDIENCE" \
         --set "graphragConfig.COSMOS_URI_ENDPOINT=$cosmosEndpoint" \
         --set "graphragConfig.GRAPHRAG_API_BASE=$GRAPHRAG_API_BASE" \
         --set "graphragConfig.GRAPHRAG_API_VERSION=$GRAPHRAG_API_VERSION" \
