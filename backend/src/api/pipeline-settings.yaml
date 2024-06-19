@@ -74,9 +74,14 @@ embeddings:
     url: $AI_SEARCH_URL
     audience: $AI_SEARCH_AUDIENCE
 
-entity_extraction:
-  prompt: PLACEHOLDER
-  entity_types: PLACEHOLDER
+# entity_extraction:
+#   prompt: PLACEHOLDER
+
+# community_reports:
+#   prompt: PLACEHOLDER
+
+# summarize_descriptions:
+#   prompt: PLACEHOLDER
 
 snapshots:
   graphml: True

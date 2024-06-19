@@ -106,7 +106,7 @@ async def global_query(request: GraphRequest):
         this_directory = os.path.dirname(
             os.path.abspath(inspect.getfile(inspect.currentframe()))
         )
-        data = yaml.safe_load(open(f"{this_directory}/pipeline_settings.yaml"))
+        data = yaml.safe_load(open(f"{this_directory}/pipeline-settings.yaml"))
         # layer the custom settings on top of the default configuration settings of graphrag
         parameters = create_graphrag_config(data, ".")
 
@@ -340,7 +340,7 @@ async def local_query(request: GraphRequest):
     this_directory = os.path.dirname(
         os.path.abspath(inspect.getfile(inspect.currentframe()))
     )
-    data = yaml.safe_load(open(f"{this_directory}/pipeline_settings.yaml"))
+    data = yaml.safe_load(open(f"{this_directory}/pipeline-settings.yaml"))
     # layer the custom settings on top of the default configuration settings of graphrag
     parameters = create_graphrag_config(data, ".")
 

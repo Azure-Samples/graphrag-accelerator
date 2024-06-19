@@ -20,10 +20,11 @@ ingress:
   className: "nginx"
   host: graphrag.graphrag.io
   annotations:
-    nginx.ingress.kubernetes.io/send-timeout: "900"
-    nginx.ingress.kubernetes.io/proxy-connect-timeout: "900"
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "900"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "900"
+    nginx.ingress.kubernetes.io/send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-next-upstream-timeout: "3600"
   tls: []
 
 graphragConfig:

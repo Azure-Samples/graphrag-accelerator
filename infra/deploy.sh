@@ -16,7 +16,6 @@ GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT=""
 
 requiredParams=(
     CONTAINER_REGISTRY_SERVER
-    GRAPHRAG_IMAGE
     LOCATION
     GRAPHRAG_API_BASE
     GRAPHRAG_API_VERSION
@@ -162,6 +161,10 @@ populateOptionalParams () {
         GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT="https://cognitiveservices.azure.com/.default"
         printf "\tsetting GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT=$GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT\n"
     fi
+    if [ -z "$GRAPHRAG_IMAGE" ]; then
+        GRAPHRAG_IMAGE="graphrag:backend"
+        printf "\tsetting GRAPHRAG_IMAGE=$GRAPHRAG_IMAGE\n"
+    fi
     printf "Done.\n"
 }
 
@@ -240,7 +243,8 @@ deployAzureResources () {
         --parameters "apimName=$APIM_NAME" \
         --parameters "publisherName=$PUBLISHER_NAME" \
         --parameters "aksSshRsaPublicKey=$SSH_PUBLICKEY" \
-        --parameters "publisherEmail=$PUBLISHER_EMAIL")
+        --parameters "publisherEmail=$PUBLISHER_EMAIL" \
+        --parameters "enablePrivateEndpoints=$ENABLE_PRIVATE_ENDPOINTS")
     exitIfCommandFailed $? "Error deploying Azure resources..."
     AZURE_OUTPUTS=$(jq -r .properties.outputs <<< $AZURE_DEPLOY_RESULTS)
     exitIfCommandFailed $? "Error parsing outputs from Azure resource deployment..."
@@ -456,18 +460,100 @@ deployGraphragAPI () {
     rm core/apim/graphrag-openapi.json
 }
 
-##### START EXECUTION #####
-if [ $# -ne 1 ]; then
-    echo "Usage: deploy.sh <params file>"
-    exit 1
-fi
+grantDevAccessToAzureResources() {
+    # This function is used to grant the deployer of this script "developer" access to GraphRAG Azure resources
+    # by assigning the necessary RBAC roles for Azure Storage, AI Search, and CosmosDB to the signed-in user.
+    # This will grant the deployer access to the storage account, cosmos db, and AI search services in the resource group via the Azure portal.
+    echo "Granting deployer developer access to Azure resources..."
 
-PARAMS_FILE=$1
+    # get subscription id of the active subscription
+    local azureAccount=$(az account show -o json)
+    local subscriptionId=$(jq -r .id <<< $azureAccount)
+    exitIfValueEmpty $subscriptionId "Subscription ID not found"
+
+    # get principal/object id of the signed in user
+    local azureUserDetails=$(az ad signed-in-user show -o json)
+    local principalId=$(jq -r .id <<< $azureUserDetails)
+    exitIfValueEmpty $principalId "Principal ID not found"
+
+    # assign storage account roles
+    local storageAccountDetails=$(az storage account list --resource-group $RESOURCE_GROUP -o json)
+    local storageAccountName=$(jq -r .[0].name <<< $storageAccountDetails)
+    exitIfValueEmpty $storageAccountName "Storage account not found"
+    az role assignment create --role "Storage Blob Data Contributor" --assignee $principalId --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Storage/storageAccounts/$storageAccountName" > /dev/null
+    az role assignment create --role "Storage Queue Data Contributor" --assignee $principalId --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Storage/storageAccounts/$storageAccountName" > /dev/null
+
+    # assign cosmos db role
+    local cosmosDbDetails=$(az cosmosdb list --resource-group $RESOURCE_GROUP -o json)
+    local cosmosDbName=$(jq -r .[0].name <<< $cosmosDbDetails)
+    exitIfValueEmpty $cosmosDbName "CosmosDB account not found"
+    az cosmosdb sql role assignment create --account-name $cosmosDbName --resource-group $RESOURCE_GROUP --scope "/" --principal-id $principalId --role-definition-id /subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.DocumentDB/databaseAccounts/graphrag/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002 > /dev/null
+
+    # assign AI search roles
+    local searchServiceDetails=$(az search service list --resource-group $RESOURCE_GROUP -o json)
+    local searchServiceName=$(jq -r .[0].name <<< $searchServiceDetails)
+    exitIfValueEmpty $searchServiceName "AI Search service not found"
+    az role assignment create --role "Contributor" --assignee $principalId --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Search/searchServices/$searchServiceName" > /dev/null
+    az role assignment create --role "Search Index Data Contributor" --assignee $principalId --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Search/searchServices/$searchServiceName" > /dev/null
+    az role assignment create --role "Search Index Data Reader" --assignee $principalId --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Search/searchServices/$searchServiceName" > /dev/null
+}
+
+deployDockerImageToACR() {
+    printf "Deploying docker image '${GRAPHRAG_IMAGE}' to container registry '${CONTAINER_REGISTRY_SERVER}'..."
+    local SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" &> /dev/null && pwd 2> /dev/null; )";
+    az acr build --registry $CONTAINER_REGISTRY_SERVER -f $SCRIPT_DIR/../docker/Dockerfile-backend --image $GRAPHRAG_IMAGE $SCRIPT_DIR/../ > /dev/null 2>&1
+    exitIfCommandFailed $? "Error deploying docker image, exiting..."
+    printf " Done.\n"
+}
+
+################################################################################
+# Help menu                                                                    #
+################################################################################
+usage() {
+   echo
+   echo "Usage: bash $0 [-h|d|g] -p <deploy.parameters.json>"
+   echo "Description: Deployment script for the GraphRAG Solution Accelerator."
+   echo "options:"
+   echo "  -h     Print this help menu."
+   echo "  -d     Disable private endpoint usage."
+   echo "  -g     Developer user only. Grants deployer of this script access to Azure Storage, AI Search, and CosmosDB. Will also disable private endpoints (-d)."
+   echo "  -p     A JSON file containing the deployment parameters (deploy.parameters.json)."
+   echo
+}
+# print usage if no arguments are supplied
+[ $# -eq 0 ] && usage && exit 0
+# parse arguments
+ENABLE_PRIVATE_ENDPOINTS=true
+GRANT_DEV_ACCESS=0 # false
+PARAMS_FILE=""
+while getopts ":dgp:h" option; do
+    case "${option}" in
+        d)
+            ENABLE_PRIVATE_ENDPOINTS=false
+            ;;
+        g)
+            ENABLE_PRIVATE_ENDPOINTS=false
+            GRANT_DEV_ACCESS=1 # true
+            ;;
+        p)
+            PARAMS_FILE=${OPTARG}
+            ;;
+        h | *)
+            usage
+            exit 0
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+# check if required arguments are supplied
 if [ ! -f $PARAMS_FILE ]; then
-    echo "Parameters file $PARAMS_FILE not found"
+    echo "Error: invalid required argument."
+    usage
     exit 1
 fi
-
+################################################################################
+# Main Program                                                                 #
+################################################################################
 checkRequiredTools
 
 populateParams $PARAMS_FILE
@@ -475,7 +561,10 @@ populateParams $PARAMS_FILE
 # Create resource group
 createResourceGroupIfNotExists $LOCATION $RESOURCE_GROUP
 
-# AKS ssh key setup
+# Deploy the graphrag backend docker image to ACR
+deployDockerImageToACR
+
+# Generate ssh key for AKS
 createSshkeyIfNotExists $RESOURCE_GROUP
 
 # Deploy Azure resources
@@ -484,20 +573,24 @@ deployAzureResources
 # Setup RBAC roles to access external services already deployed.
 AKS_NAME=$(jq -r .azure_aks_name.value <<< $AZURE_OUTPUTS)
 exitIfValueEmpty "$AKS_NAME" "Unable to parse AKS name from azure deployment outputs, exiting..."
-# setup RBAC for managed identity to access the AOAI instance
 assignAOAIRoleToManagedIdentity
-# setup RBAC for AKS to access the container registry
 assignAKSPullRoleToRegistry $RESOURCE_GROUP $AKS_NAME $CONTAINER_REGISTRY_SERVER
 
 # Deploy kubernetes resources
 setupAksCredentials $RESOURCE_GROUP $AKS_NAME
 populateAksVnetInfo $RESOURCE_GROUP $AKS_NAME
-linkPrivateDnsToAks
+if [ "$ENABLE_PRIVATE_ENDPOINTS" = "true" ]; then
+    linkPrivateDnsToAks
+fi
 peerVirtualNetworks
 deployHelmChart
 deployGraphragDnsRecord
 
 # Import GraphRAG API into APIM
 deployGraphragAPI
+
+if [ $GRANT_DEV_ACCESS -eq 1 ]; then
+    grantDevAccessToAzureResources
+fi
 
 echo "SUCCESS: GraphRAG deployment to resource group $RESOURCE_GROUP complete"

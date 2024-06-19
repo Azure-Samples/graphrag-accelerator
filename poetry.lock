@@ -1166,13 +1166,13 @@ tests = ["pytest", "pytest-cov", "pytest-xdist"]
 
 [[package]]
 name = "dask"
-version = "2024.6.0"
+version = "2024.6.1"
 description = "Parallel PyData with Task Scheduling"
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "dask-2024.6.0-py3-none-any.whl", hash = "sha256:de0ced6cd46dbc6c01120c8870457af46d667940805a4be063a74dd467466804"},
-    {file = "dask-2024.6.0.tar.gz", hash = "sha256:6882ce7e485336d707e540080ed48e01f9c09485d52a2928ea05f9a9e44bb433"},
+    {file = "dask-2024.6.1-py3-none-any.whl", hash = "sha256:3560c2cebd4ebfe3f51d0eaee51adc080a72f8a4d0c58ba97ded139c0fc158c5"},
+    {file = "dask-2024.6.1.tar.gz", hash = "sha256:30f074860e9855cacbe67d7abe7fcd3c863d3f82e5469a0ef46d7512caeede07"},
 ]
 
 [package.dependencies]
@@ -1193,24 +1193,27 @@ array = ["numpy (>=1.21)"]
 complete = ["dask[array,dataframe,diagnostics,distributed]", "lz4 (>=4.3.2)", "pyarrow (>=7.0)", "pyarrow-hotfix"]
 dataframe = ["dask-expr (>=1.1,<1.2)", "dask[array]", "pandas (>=1.3)"]
 diagnostics = ["bokeh (>=2.4.2)", "jinja2 (>=2.10.3)"]
-distributed = ["distributed (==2024.6.0)"]
+distributed = ["distributed (==2024.6.1)"]
 test = ["pandas[test]", "pre-commit", "pytest", "pytest-cov", "pytest-rerunfailures", "pytest-timeout", "pytest-xdist"]
 
 [[package]]
 name = "dask-expr"
-version = "1.1.3"
+version = "1.1.4"
 description = "High Level Expressions for Dask"
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "dask_expr-1.1.3-py3-none-any.whl", hash = "sha256:e6ad2fab9ffe7dbe0fc52451b5a0dc5588f36cd5677168cfb0b73c70f05e465f"},
-    {file = "dask_expr-1.1.3.tar.gz", hash = "sha256:ce8e44dfed30b4d9e6a549d0ed8cb5798273645fb9a16733d0687dc84615a94b"},
+    {file = "dask_expr-1.1.4-py3-none-any.whl", hash = "sha256:f517098b650d622b06363848dfcccf833ead7ec2c4c67c0831aa7e5db23347ff"},
+    {file = "dask_expr-1.1.4.tar.gz", hash = "sha256:751409a304e697fbd920e3035bdc9af2111194dff5e699bfb25a193286f1e606"},
 ]
 
 [package.dependencies]
-dask = "2024.6.0"
+dask = "2024.6.1"
 pandas = ">=2"
 pyarrow = ">=7.0.0"
+
+[package.extras]
+analyze = ["crick", "distributed"]
 
 [[package]]
 name = "datashaper"
@@ -2030,7 +2033,7 @@ description = ""
 optional = false
 python-versions = ">=3.10,<3.13"
 files = [
-    {file = "graphrag-0.0.1-py3-none-any.whl", hash = "sha256:9be824fc561cf4ca38f986168aa1b500d5d49132300a791413e4ecfdbd6b2a49"},
+    {file = "graphrag-0.0.1-py3-none-any.whl", hash = "sha256:95594bae8ba8b504fd745024699eb2f2325ba6a50600dd59191da76bc7fa1cd4"},
 ]
 
 [package.dependencies]
@@ -3809,13 +3812,13 @@ signedtoken = ["cryptography (>=3.0.0)", "pyjwt (>=2.0.0,<3)"]
 
 [[package]]
 name = "openai"
-version = "1.35.0"
+version = "1.35.1"
 description = "The official Python library for the openai API"
 optional = false
 python-versions = ">=3.7.1"
 files = [
-    {file = "openai-1.35.0-py3-none-any.whl", hash = "sha256:1c1c19ddc8c1238aee501a12d5100250e59ff49f24148f699a49664945e28fc0"},
-    {file = "openai-1.35.0.tar.gz", hash = "sha256:c420ce141a5ca4f243b3249ce9e2587c93399321e77d1661be302fd5b9db1854"},
+    {file = "openai-1.35.1-py3-none-any.whl", hash = "sha256:53ef8935cf916dc7ece67fee5a8a09fc4db5aadf4d6e95b5b7f767f3c4432e4d"},
+    {file = "openai-1.35.1.tar.gz", hash = "sha256:d85973adc2f4fbb11ba20bfd948e3340b8352f6b8a02f1fa1c387c8eefac8d9d"},
 ]
 
 [package.dependencies]
