@@ -35,19 +35,16 @@ from src.api.azure_clients import (
 from src.api.common import (
     delete_blob_container,
     retrieve_original_blob_container_name,
-    retrieve_original_entity_config_name,
     sanitize_name,
     validate_blob_container_name,
     verify_subscription_key_exist,
 )
-from src.api.index_configuration import get_entity
 from src.models import (
     BaseResponse,
     IndexNameList,
     IndexStatusResponse,
     PipelineJob,
 )
-from src.prompts import graph_extraction_prompt
 from src.reporting import ReporterSingleton
 from src.reporting.load_reporter import load_pipeline_reporter
 from src.reporting.pipeline_job_workflow_callbacks import PipelineJobWorkflowCallbacks
@@ -83,7 +80,6 @@ async def setup_indexing_pipeline(
     entity_extraction_prompt: UploadFile | None = None,
     community_report_prompt: UploadFile | None = None,
     summarize_descriptions_prompt: UploadFile | None = None,
-    entity_config_name: str | None = None,
 ):
     _blob_service_client = BlobServiceClientSingleton().get_instance()
     pipelinejob = PipelineJob()
@@ -106,39 +102,6 @@ async def setup_indexing_pipeline(
             detail=f"Data container '{storage_name}' does not exist.",
         )
 
-    # check for entity configuration existence
-    sanitized_entity_config_name = sanitize_name(entity_config_name)
-    if entity_config_name:
-        entity_container_client = get_database_container_client(
-            database_name="graphrag", container_name="entities"
-        )
-        try:
-            entity_container_client.read_item(  # noqa
-                item=sanitized_entity_config_name,
-                partition_key=sanitized_entity_config_name,
-            )
-        except Exception:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Entity configuration '{entity_config_name}' does not exist.",
-            )
-
-    # if entity_extraction_prompt:
-    #     print(entity_extraction_prompt)
-    #     print(entity_extraction_prompt.filename)
-    #     with open("myentity.txt", "wb") as outfile:
-    #         shutil.copyfileobj(entity_extraction_prompt.file, outfile)
-    # if community_report_prompt:
-    #     print(community_report_prompt)
-    #     print(community_report_prompt.filename)
-    #     with open("mycommunity.txt", "wb") as outfile:
-    #         shutil.copyfileobj(community_report_prompt.file, outfile)
-    # if summarize_descriptions_prompt:
-    #     print(summarize_descriptions_prompt)
-    #     print(summarize_descriptions_prompt.filename)
-    #     with open("mysummary.txt", "wb") as outfile:
-    #         shutil.copyfileobj(summarize_descriptions_prompt.file, outfile)
-
     # check for existing index job
     # it is okay if job doesn't exist, but if it does,
     # it must not be scheduled or running
@@ -159,7 +122,9 @@ async def setup_indexing_pipeline(
         existing_job.status = PipelineJobState.SCHEDULED
         existing_job.percent_complete = 0
         existing_job.progress = ""
-        existing_job.all_workflows = existing_job.completed_workflows = existing_job.failed_workflows = []
+        existing_job.all_workflows = existing_job.completed_workflows = (
+            existing_job.failed_workflows
+        ) = []
         existing_job.entity_extraction_prompt = None
         existing_job.community_report_prompt = None
         existing_job.summarize_descriptions_prompt = None
@@ -180,14 +145,13 @@ async def setup_indexing_pipeline(
         if summarize_descriptions_prompt
         else None
     )
-    # print(f"ENTITY EXTRACTION PROMPT:\n{entity_extraction_prompt_content}")
-    # print(f"COMMUNITY REPORT PROMPT:\n{community_report_prompt_content}")
-    # print(f"SUMMARIZE DESCRIPTIONS PROMPT:\n{summarize_descriptions_prompt_content}")
+    print(f"ENTITY EXTRACTION PROMPT:\n{entity_extraction_prompt_content}")
+    print(f"COMMUNITY REPORT PROMPT:\n{community_report_prompt_content}")
+    print(f"SUMMARIZE DESCRIPTIONS PROMPT:\n{summarize_descriptions_prompt_content}")
     pipelinejob.create_item(
         id=sanitized_index_name,
         index_name=sanitized_index_name,
         storage_name=sanitized_storage_name,
-        entity_config_name=sanitized_entity_config_name,
         entity_extraction_prompt=entity_extraction_prompt_content,
         community_report_prompt=community_report_prompt_content,
         summarize_descriptions_prompt=summarize_descriptions_prompt_content,
@@ -230,7 +194,6 @@ async def setup_indexing_pipeline(
             index_name=index_name,
             service_account_name=pod.spec.service_account_name,
         )
-        print(f"Created job manifest:\n{job_manifest}")
         try:
             batch_v1 = client.BatchV1Api()
             batch_v1.create_namespaced_job(
@@ -310,44 +273,32 @@ async def _start_indexing_pipeline(
             outfile.write(pipeline_job.entity_extraction_prompt)
         os.environ["GRAPHRAG_ENTITY_EXTRACTION_PROMPT_FILE"] = fname
         # data["entity_extraction"]["prompt"] = fname
-        # data["entity_extraction"]["entity_types"] = None # TODO: check if this is needed
+    # else:
+    #     data["entity_extraction"]["prompt"] = None
     if pipeline_job.community_report_prompt:
         fname = "community-report-prompt.txt"
         with open(fname, "w") as outfile:
             outfile.write(pipeline_job.community_report_prompt)
-        # os.environ["GRAPHRAG_COMMUNITY_REPORT_PROMPT_FILE"] = fname
-        data["community_reports"]["prompt"] = fname
-    else:
-        data["community_reports"]["prompt"] = None
+        os.environ["GRAPHRAG_COMMUNITY_REPORT_PROMPT_FILE"] = fname
+        # data["community_reports"]["prompt"] = fname
+    # else:
+    #     data["community_reports"]["prompt"] = None
     if pipeline_job.summarize_descriptions_prompt:
         fname = "summarize-descriptions-prompt.txt"
         with open(fname, "w") as outfile:
             outfile.write(pipeline_job.summarize_descriptions_prompt)
-        # os.environ["GRAPHRAG_SUMMARIZE_DESCRIPTIONS_PROMPT_FILE"] = fname
-        data["summarize_descriptions"]["prompt"] = fname
-    else:
-        data["summarize_descriptions"]["prompt"] = None
-
-    # if entity_config_name was provided, load entity configuration and incorporate into pipeline
-    # otherwise, set prompt and entity types to None to use the default values provided by graphrag
-    entity_config_name = retrieve_original_entity_config_name(pipeline_job.entity_config_name)
-    print(f"ENTITY CONFIG NAME: {entity_config_name}")
-    if entity_config_name:
-        entity_configuration = get_entity(entity_config_name)
-        with open("entity-extraction-prompt.txt", "w") as f:
-            prompt = graph_extraction_prompt.get_prompt(
-                entity_types=entity_configuration.entity_types,
-                entity_examples=entity_configuration.entity_examples,
-            )
-            f.write(prompt)
-        data["entity_extraction"]["prompt"] = "entity-extraction-prompt.txt"
-        data["entity_extraction"]["entity_types"] = entity_configuration.entity_types
+        os.environ["GRAPHRAG_SUMMARIZE_DESCRIPTIONS_PROMPT_FILE"] = fname
+        # data["summarize_descriptions"]["prompt"] = fname
+    # else:
+    #     data["summarize_descriptions"]["prompt"] = None
 
     # set placeholder values to None if they have not been set
-    if data["entity_extraction"]["prompt"] == "PLACEHOLDER":
-        data["entity_extraction"]["prompt"] = None
-    if data["entity_extraction"]["entity_types"] == "PLACEHOLDER":
-        data["entity_extraction"]["entity_types"] = None
+    # if data["entity_extraction"]["prompt"] == "PLACEHOLDER":
+    #     data["entity_extraction"]["prompt"] = None
+    # if data["community_reports"]["prompt"] == "PLACEHOLDER":
+    #     data["community_reports"]["prompt"] = None
+    # if data["summarize_descriptions"]["prompt"] == "PLACEHOLDER":
+    #     data["summarize_descriptions"]["prompt"] = None
 
     # generate the default pipeline from default parameters and override with custom settings
     parameters = create_graphrag_config(data, ".")
@@ -371,8 +322,8 @@ async def _start_indexing_pipeline(
     print("#################### PIPELINE CONFIG:")
     print(pipeline_config)
 
+    # run the pipeline
     try:
-        # run the pipeline
         async for workflow_result in run_pipeline_with_config(
             config_or_path=pipeline_config,
             callbacks=workflow_callbacks,
@@ -384,7 +335,7 @@ async def _start_indexing_pipeline(
                 pipeline_job.failed_workflows.append(workflow_result.workflow)
                 pipeline_job.update_db()
 
-        # jobs are done, check if any failed
+        # if job is done, check if any workflow steps failed
         if len(pipeline_job.failed_workflows) > 0:
             pipeline_job.status = PipelineJobState.FAILED
         else:
@@ -416,6 +367,7 @@ async def _start_indexing_pipeline(
         del workflow_callbacks  # garbage collect
         if pipeline_job.status == PipelineJobState.FAILED:
             exit(1)  # signal to AKS that indexing job failed
+
     except Exception as e:
         pipeline_job.status = PipelineJobState.FAILED
 
@@ -628,9 +580,6 @@ async def get_index_job_status(index_name: str):
             index_name=retrieve_original_blob_container_name(pipeline_job.index_name),
             storage_name=retrieve_original_blob_container_name(
                 pipeline_job.storage_name
-            ),
-            entity_config_name=retrieve_original_entity_config_name(
-                pipeline_job.entity_config_name
             ),
             status=pipeline_job.status.value,
             percent_complete=pipeline_job.percent_complete,

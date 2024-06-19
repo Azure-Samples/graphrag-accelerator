@@ -15,7 +15,6 @@ GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT=""
 
 requiredParams=(
     CONTAINER_REGISTRY_SERVER
-    GRAPHRAG_IMAGE
     LOCATION
     GRAPHRAG_API_BASE
     GRAPHRAG_API_VERSION
@@ -156,6 +155,10 @@ populateOptionalParams () {
     if [ -z "$GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT" ]; then
         GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT="https://cognitiveservices.azure.com/.default"
         printf "\tsetting GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT=$GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT\n"
+    fi
+    if [ -z "$GRAPHRAG_IMAGE" ]; then
+        GRAPHRAG_IMAGE="graphrag:backend"
+        printf "\tsetting GRAPHRAG_IMAGE=$GRAPHRAG_IMAGE\n"
     fi
     printf "Done.\n"
 }
@@ -489,6 +492,14 @@ grantDevAccessToAzureResources() {
     az role assignment create --role "Search Index Data Reader" --assignee $principalId --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Search/searchServices/$searchServiceName" > /dev/null
 }
 
+deployDockerImageToACR() {
+    printf "Deploying docker image '${GRAPHRAG_IMAGE}' to container registry '${CONTAINER_REGISTRY_SERVER}'..."
+    local SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" &> /dev/null && pwd 2> /dev/null; )";
+    az acr build --registry $CONTAINER_REGISTRY_SERVER -f $SCRIPT_DIR/../docker/Dockerfile-backend --image $GRAPHRAG_IMAGE $SCRIPT_DIR/../ > /dev/null 2>&1
+    exitIfCommandFailed $? "Error deploying docker image, exiting..."
+    printf " Done.\n"
+}
+
 ################################################################################
 # Help menu                                                                    #
 ################################################################################
@@ -544,7 +555,10 @@ populateParams $PARAMS_FILE
 # Create resource group
 createResourceGroupIfNotExists $LOCATION $RESOURCE_GROUP
 
-# generate ssh key for AKS
+# Deploy the graphrag backend docker image to ACR
+deployDockerImageToACR
+
+# Generate ssh key for AKS
 createSshkeyIfNotExists $RESOURCE_GROUP
 
 # Deploy Azure resources

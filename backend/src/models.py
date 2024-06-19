@@ -5,7 +5,6 @@ from dataclasses import dataclass, field
 from typing import (
     Any,
     List,
-    Optional,
 )
 
 from azure.cosmos.exceptions import CosmosHttpResponseError
@@ -75,7 +74,6 @@ class IndexStatusResponse(BaseModel):
     status_code: int
     index_name: str
     storage_name: str
-    entity_config_name: Optional[str | None] = None
     status: str
     percent_complete: float
     progress: str
@@ -111,7 +109,6 @@ class PipelineJob:
     _entity_extraction_prompt: str = field(default=None, init=False)
     _community_report_prompt: str = field(default=None, init=False)
     _summarize_descriptions_prompt: str = field(default=None, init=False)
-    _entity_config_name: str = field(default=None, init=False)
     _all_workflows: List[str] = field(default_factory=list, init=False)
     _completed_workflows: List[str] = field(default_factory=list, init=False)
     _failed_workflows: List[str] = field(default_factory=list, init=False)
@@ -132,7 +129,6 @@ class PipelineJob:
         id: str,
         index_name: str,
         storage_name: str,
-        entity_config_name: str,
         entity_extraction_prompt: str | None = None,
         community_report_prompt: str | None = None,
         summarize_descriptions_prompt: str | None = None,
@@ -145,7 +141,6 @@ class PipelineJob:
             id (str): The ID of the pipeline job.
             index_name (str): The name of the index.
             storage_name (str): The name of the storage.
-            entity_config_name (str): The name of the entity configuration.
             entity_extraction_prompt (str): The entity extraction prompt.
             community_prompt (str): The community prompt.
             summarize_descriptions_prompt (str): The prompt for summarizing descriptions.
@@ -170,16 +165,13 @@ class PipelineJob:
         assert storage_name is not None, "storage_name cannot be None."
         assert len(storage_name) > 0, "storage_name cannot be empty."
 
-        instance = cls.__new__(
-            cls, id, index_name, storage_name, entity_config_name, **kwargs
-        )
+        instance = cls.__new__(cls, id, index_name, storage_name, **kwargs)
         instance._id = id
         instance._index_name = index_name
         instance._storage_name = storage_name
         instance._entity_extraction_prompt = entity_extraction_prompt
         instance._community_report_prompt = community_report_prompt
         instance._summarize_descriptions_prompt = summarize_descriptions_prompt
-        instance._entity_config_name = entity_config_name
         instance._all_workflows = kwargs.get("all_workflows", [])
         instance._completed_workflows = kwargs.get("completed_workflows", [])
         instance._failed_workflows = kwargs.get("failed_workflows", [])
@@ -221,7 +213,6 @@ class PipelineJob:
         instance._summarize_descriptions_prompt = db_item.get(
             "summarize_descriptions_prompt"
         )
-        instance._entity_config_name = db_item.get("entity_config_name")
         instance._all_workflows = db_item.get("all_workflows", [])
         instance._completed_workflows = db_item.get("completed_workflows", [])
         instance._failed_workflows = db_item.get("failed_workflows", [])
@@ -256,7 +247,6 @@ class PipelineJob:
             "id": self._id,
             "index_name": self._index_name,
             "storage_name": self._storage_name,
-            "entity_config_name": self._entity_config_name,
             "all_workflows": self._all_workflows,
             "completed_workflows": self._completed_workflows,
             "failed_workflows": self._failed_workflows,
@@ -296,30 +286,12 @@ class PipelineJob:
         self.update_db()
 
     @property
-    def entity_config_name(self) -> str:
-        return self._entity_config_name
-
-    @entity_config_name.setter
-    def entity_config_name(self, entity_config_name: str) -> None:
-        self._entity_config_name = entity_config_name
-        self.update_db()
-
-    @property
     def storage_name(self) -> str:
         return self._storage_name
 
     @storage_name.setter
     def storage_name(self, storage_name: str) -> None:
         self._storage_name = storage_name
-        self.update_db()
-
-    @property
-    def entity_config_name(self) -> str:
-        return self._entity_config_name
-
-    @entity_config_name.setter
-    def entity_config_name(self, entity_config_name: str) -> None:
-        self._entity_config_name = entity_config_name
         self.update_db()
 
     @property
