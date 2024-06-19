@@ -37,6 +37,9 @@ param aksNamespace string = 'graphrag'
 @description('Public key to allow access to AKS Linux nodes.')
 param aksSshRsaPublicKey string
 
+@description('Whether to enable private endpoints.')
+param enablePrivateEndpoints bool = false
+
 param apimName string = ''
 param storageAccountName string = ''
 param cosmosDbName string = ''
@@ -108,6 +111,7 @@ module cosmosdb 'core/cosmosdb/cosmosdb.bicep' = {
   params: {
     cosmosDbName: !empty(cosmosDbName) ? cosmosDbName : '${abbrs.documentDBDatabaseAccounts}${resourceBaseNameFinal}'
     location: rg.location
+    publicNetworkAccess: enablePrivateEndpoints ? 'Disabled' : 'Enabled'
     principalId: workloadIdentity.outputs.principal_id
   }
 }
@@ -118,6 +122,7 @@ module aiSearch 'core/ai-search/ai-search.bicep' = {
   params: {
     name: !empty(aiSearchName) ? aiSearchName : '${abbrs.searchSearchServices}${resourceBaseNameFinal}'
     location: rg.location
+    publicNetworkAccess: enablePrivateEndpoints ? 'disabled' : 'enabled'
     roleAssignments: [
       {
         principalId: workloadIdentity.outputs.principal_id
@@ -144,6 +149,7 @@ module storage 'core/blob/storage.bicep' = {
   params: {
     name: !empty(storageAccountName) ? storageAccountName : '${abbrs.storageStorageAccounts}${replace(resourceBaseNameFinal, '-', '')}'
     location: rg.location
+    publicNetworkAccess: enablePrivateEndpoints ? 'Disabled' : 'Enabled'
     tags: tags
     roleAssignments: [
       {
@@ -157,7 +163,6 @@ module storage 'core/blob/storage.bicep' = {
         roleDefinitionId: roles.storageQueueDataContributor
       }
     ]
-    publicNetworkAccess: 'Disabled'
     deleteRetentionPolicy: {
       enabled: true
       days: 5
@@ -221,7 +226,7 @@ module privateDnsZone 'core/vnet/private-dns-zone.bicep' = {
   }
 }
 
-module privatelinkPrivateDns 'core/vnet/privatelink-private-dns-zones.bicep' = {
+module privatelinkPrivateDns 'core/vnet/privatelink-private-dns-zones.bicep' = if (enablePrivateEndpoints) {
   name: 'privatelink-private-dns-zones'
   scope: rg
   params: {
@@ -231,7 +236,7 @@ module privatelinkPrivateDns 'core/vnet/privatelink-private-dns-zones.bicep' = {
   }
 }
 
-module azureMonitorPrivateLinkScope 'core/monitor/private-link-scope.bicep' = {
+module azureMonitorPrivateLinkScope 'core/monitor/private-link-scope.bicep' = if (enablePrivateEndpoints) {
   name: 'azureMonitorPrivateLinkScope'
   scope: rg
   params: {
@@ -243,7 +248,7 @@ module azureMonitorPrivateLinkScope 'core/monitor/private-link-scope.bicep' = {
   }
 }
 
-module cosmosDbPrivateEndpoint 'core/vnet/private-endpoint.bicep' = {
+module cosmosDbPrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePrivateEndpoints) {
   name: 'cosmosDbPrivateEndpoint'
   scope: rg
   params: {
@@ -252,11 +257,11 @@ module cosmosDbPrivateEndpoint 'core/vnet/private-endpoint.bicep' = {
     privateLinkServiceId: cosmosdb.outputs.id
     subnetId: apim.outputs.defaultSubnetId
     groupId: 'Sql'
-    privateDnsZoneConfigs: privatelinkPrivateDns.outputs.cosmosDbPrivateDnsZoneConfigs
+    privateDnsZoneConfigs: enablePrivateEndpoints ? privatelinkPrivateDns.outputs.cosmosDbPrivateDnsZoneConfigs : []
   }
 }
 
-module blobStoragePrivateEndpoint 'core/vnet/private-endpoint.bicep' = {
+module blobStoragePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePrivateEndpoints) {
   name: 'blobStoragePrivateEndpoint'
   scope: rg
   params: {
@@ -265,11 +270,11 @@ module blobStoragePrivateEndpoint 'core/vnet/private-endpoint.bicep' = {
     privateLinkServiceId: storage.outputs.id
     subnetId: apim.outputs.defaultSubnetId
     groupId: 'blob'
-    privateDnsZoneConfigs: privatelinkPrivateDns.outputs.blobStoragePrivateDnsZoneConfigs
+    privateDnsZoneConfigs: enablePrivateEndpoints ? privatelinkPrivateDns.outputs.blobStoragePrivateDnsZoneConfigs : []
   }
 }
 
-module queueStoragePrivateEndpoint 'core/vnet/private-endpoint.bicep' = {
+module queueStoragePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePrivateEndpoints) {
   name: 'queueStoragePrivateEndpoint'
   scope: rg
   params: {
@@ -278,11 +283,11 @@ module queueStoragePrivateEndpoint 'core/vnet/private-endpoint.bicep' = {
     privateLinkServiceId: storage.outputs.id
     subnetId: apim.outputs.defaultSubnetId
     groupId: 'queue'
-    privateDnsZoneConfigs: privatelinkPrivateDns.outputs.queueStoragePrivateDnsZoneConfigs
+    privateDnsZoneConfigs: enablePrivateEndpoints ? privatelinkPrivateDns.outputs.queueStoragePrivateDnsZoneConfigs : []
   }
 }
 
-module aiSearchPrivateEndpoint 'core/vnet/private-endpoint.bicep' = {
+module aiSearchPrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePrivateEndpoints) {
   name: 'aiSearchPrivateEndpoint'
   scope: rg
   params: {
@@ -291,20 +296,20 @@ module aiSearchPrivateEndpoint 'core/vnet/private-endpoint.bicep' = {
     privateLinkServiceId: aiSearch.outputs.id
     subnetId: apim.outputs.defaultSubnetId
     groupId: 'searchService'
-    privateDnsZoneConfigs: privatelinkPrivateDns.outputs.aiSearchPrivateDnsZoneConfigs
+    privateDnsZoneConfigs: enablePrivateEndpoints ? privatelinkPrivateDns.outputs.aiSearchPrivateDnsZoneConfigs : []
   }
 }
 
-module privateLinkScopePrivateEndpoint 'core/vnet/private-endpoint.bicep' = {
+module privateLinkScopePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePrivateEndpoints) {
   name: 'privateLinkScopePrivateEndpoint'
   scope: rg
   params: {
     privateEndpointName: '${abbrs.privateEndpoint}pls-${resourceBaseNameFinal}'
     location: location
-    privateLinkServiceId: azureMonitorPrivateLinkScope.outputs.privateLinkScopeId
+    privateLinkServiceId: enablePrivateEndpoints ? azureMonitorPrivateLinkScope.outputs.privateLinkScopeId : ''
     subnetId: apim.outputs.defaultSubnetId
     groupId: 'azuremonitor'
-    privateDnsZoneConfigs: privatelinkPrivateDns.outputs.azureMonitorPrivateDnsZoneConfigs
+    privateDnsZoneConfigs: enablePrivateEndpoints ? privatelinkPrivateDns.outputs.azureMonitorPrivateDnsZoneConfigs : []
   }
 }
 
@@ -330,7 +335,7 @@ output azure_graphrag_url string = graphRagUrl
 output azure_workload_identity_client_id string = workloadIdentity.outputs.client_id
 output azure_workload_identity_principal_id string = workloadIdentity.outputs.principal_id
 output azure_workload_identity_name string = workloadIdentity.outputs.name
-output azure_private_dns_zones array = union(
+output azure_private_dns_zones array = enablePrivateEndpoints ? union(
   privatelinkPrivateDns.outputs.privateDnsZones,
   [privateDnsZone.outputs.dns_zone_name]
-)
+) : []

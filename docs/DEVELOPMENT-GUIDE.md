@@ -44,23 +44,6 @@ Development is best done in a unix environment (Linux, Mac, or [Windows WSL](htt
 ### Deploying GraphRAG
 The GraphRAG service consist of two components (a `backend` application and a `frontend` application). GraphRAG can be launched in multiple ways depending on where in the application stack you are developing and debugging.
 
-- Local Development Option 1 - running uvicorn natively:
-
-    Navigate to the `backend` directory
-    ```
-    > export PYTHONPATH=<GraphRAG_repo>/backend
-    > uvicorn src.main:app --env-file <path_to_env_file> --host 0.0.0.0 --port 80
-    ```
-
-- Local Development Option 2 - as a docker container:
-
-    Navigate to the root directory of the repository
-    ```
-    > docker build -t graphrag:backend -f docker/Dockerfile-backend .
-    > docker run -d --env-file <path_to_env_file> -p 80:80 graphrag:backend
-    > docker logs <container_id> # prints log messages
-    ```
-
 - In Azure Kubernetes Service (AKS):
 
     Navigate to the root directory of the repository. First build and publish the `backend` docker image to an azure container registry.

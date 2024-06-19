@@ -13,9 +13,9 @@ from azure.search.documents.indexes import SearchIndexClient
 from datashaper import WorkflowCallbacksManager
 from fastapi import (
     APIRouter,
-    BackgroundTasks,
     Depends,
     HTTPException,
+    UploadFile,
 )
 from graphrag.config import create_graphrag_config
 from graphrag.index import create_pipeline_config
@@ -35,20 +35,16 @@ from src.api.azure_clients import (
 from src.api.common import (
     delete_blob_container,
     retrieve_original_blob_container_name,
-    retrieve_original_entity_config_name,
     sanitize_name,
     validate_blob_container_name,
     verify_subscription_key_exist,
 )
-from src.api.index_configuration import get_entity
 from src.models import (
     BaseResponse,
     IndexNameList,
-    IndexRequest,
     IndexStatusResponse,
     PipelineJob,
 )
-from src.prompts import graph_extraction_prompt
 from src.reporting import ReporterSingleton
 from src.reporting.load_reporter import load_pipeline_reporter
 from src.reporting.pipeline_job_workflow_callbacks import PipelineJobWorkflowCallbacks
@@ -78,83 +74,95 @@ if os.getenv("KUBERNETES_SERVICE_HOST"):
     response_model=BaseResponse,
     responses={200: {"model": BaseResponse}},
 )
-def setup_indexing_pipeline(
-    request: IndexRequest, background_tasks: BackgroundTasks = None
+async def setup_indexing_pipeline(
+    storage_name: str,
+    index_name: str,
+    entity_extraction_prompt: UploadFile | None = None,
+    community_report_prompt: UploadFile | None = None,
+    summarize_descriptions_prompt: UploadFile | None = None,
 ):
     _blob_service_client = BlobServiceClientSingleton().get_instance()
-    pipelinejob = PipelineJob()  # TODO: fix class so initiliazation is not required
+    pipelinejob = PipelineJob()
 
     # validate index name against blob container naming rules
-    sanitized_index_name = sanitize_name(request.index_name)
+    sanitized_index_name = sanitize_name(index_name)
     try:
         validate_blob_container_name(sanitized_index_name)
     except ValueError:
         raise HTTPException(
             status_code=500,
-            detail=f"Invalid index name: {request.index_name}",
+            detail=f"Invalid index name: {index_name}",
         )
 
     # check for data container existence
-    sanitized_storage_name = sanitize_name(request.storage_name)
+    sanitized_storage_name = sanitize_name(storage_name)
     if not _blob_service_client.get_container_client(sanitized_storage_name).exists():
         raise HTTPException(
             status_code=500,
-            detail=f"Data container '{request.storage_name}' does not exist.",
+            detail=f"Data container '{storage_name}' does not exist.",
         )
-
-    # check for entity configuration existence
-    sanitized_entity_config_name = sanitize_name(request.entity_config_name)
-    if request.entity_config_name:
-        entity_container_client = get_database_container_client(
-            database_name="graphrag", container_name="entities"
-        )
-        try:
-            entity_container_client.read_item(  # noqa
-                item=sanitized_entity_config_name,
-                partition_key=sanitized_entity_config_name,
-            )
-        except Exception:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Entity configuration '{request.entity_config_name}' does not exist.",
-            )
 
     # check for existing index job
     # it is okay if job doesn't exist, but if it does,
     # it must not be scheduled or running
-    if pipelinejob.item_exist(request.index_name):
-        existing_job = pipelinejob.load_item(request.index_name)
+    if pipelinejob.item_exist(sanitized_index_name):
+        existing_job = pipelinejob.load_item(sanitized_index_name)
         if (PipelineJobState(existing_job.status) == PipelineJobState.SCHEDULED) or (
             PipelineJobState(existing_job.status) == PipelineJobState.RUNNING
         ):
             raise HTTPException(
                 status_code=202,  # request has been accepted for processing but is not complete.
-                detail=f"an index with name {request.index_name} already exists and has not finished building.",
+                detail=f"an index with name {index_name} already exists and has not finished building.",
             )
         # if indexing job is in a failed state, delete the associated K8s job and pod to allow for a new job to be scheduled
         if PipelineJobState(existing_job.status) == PipelineJobState.FAILED:
-            _delete_k8s_job(f"indexing-job-{request.index_name}", "graphrag")
+            _delete_k8s_job(f"indexing-job-{sanitized_index_name}", "graphrag")
 
         # reset the job to scheduled state
         existing_job.status = PipelineJobState.SCHEDULED
         existing_job.percent_complete = 0
         existing_job.progress = ""
-    else:
-        # create or update state in cosmos db
-        pipelinejob.create_item(
-            id=sanitized_index_name,
-            index_name=sanitized_index_name,
-            storage_name=sanitized_storage_name,
-            entity_config_name=sanitized_entity_config_name,
-            status=PipelineJobState.SCHEDULED,
-        )
+        existing_job.all_workflows = existing_job.completed_workflows = (
+            existing_job.failed_workflows
+        ) = []
+        existing_job.entity_extraction_prompt = None
+        existing_job.community_report_prompt = None
+        existing_job.summarize_descriptions_prompt = None
+
+    # create or update state in cosmos db
+    entity_extraction_prompt_content = (
+        entity_extraction_prompt.file.read().decode("utf-8")
+        if entity_extraction_prompt
+        else None
+    )
+    community_report_prompt_content = (
+        community_report_prompt.file.read().decode("utf-8")
+        if community_report_prompt
+        else None
+    )
+    summarize_descriptions_prompt_content = (
+        summarize_descriptions_prompt.file.read().decode("utf-8")
+        if summarize_descriptions_prompt
+        else None
+    )
+    print(f"ENTITY EXTRACTION PROMPT:\n{entity_extraction_prompt_content}")
+    print(f"COMMUNITY REPORT PROMPT:\n{community_report_prompt_content}")
+    print(f"SUMMARIZE DESCRIPTIONS PROMPT:\n{summarize_descriptions_prompt_content}")
+    pipelinejob.create_item(
+        id=sanitized_index_name,
+        index_name=sanitized_index_name,
+        storage_name=sanitized_storage_name,
+        entity_extraction_prompt=entity_extraction_prompt_content,
+        community_report_prompt=community_report_prompt_content,
+        summarize_descriptions_prompt=summarize_descriptions_prompt_content,
+        status=PipelineJobState.SCHEDULED,
+    )
 
     """
     At this point, we know:
     1) the index name is valid
     2) the data container exists
-    3) the entity configuration exists.
-    4) there is no indexing job with this name currently running or a previous job has finished
+    3) there is no indexing job with this name currently running or a previous job has finished
     """
     # update or create new item in container-store in cosmosDB
     if not _blob_service_client.get_container_client(sanitized_index_name).exists():
@@ -166,55 +174,42 @@ def setup_indexing_pipeline(
     container_store_client.upsert_item(
         {
             "id": sanitized_index_name,
-            "human_readable_name": request.index_name,
+            "human_readable_name": index_name,
             "type": "index",
         }
     )
 
+    # schedule AKS job
     try:
-        # schedule AKS job if possible
-        if os.getenv("KUBERNETES_SERVICE_HOST"):  # only found if in AKS
-            config.load_incluster_config()
-            # get container image name
-            core_v1 = client.CoreV1Api()
-            pod_name = os.environ["HOSTNAME"]
-            pod = core_v1.read_namespaced_pod(
-                name=pod_name, namespace=os.environ["AKS_NAMESPACE"]
+        config.load_incluster_config()
+        # get container image name
+        core_v1 = client.CoreV1Api()
+        pod_name = os.environ["HOSTNAME"]
+        pod = core_v1.read_namespaced_pod(
+            name=pod_name, namespace=os.environ["AKS_NAMESPACE"]
+        )
+        # retrieve job manifest template and replace necessary values
+        job_manifest = _generate_aks_job_manifest(
+            docker_image_name=pod.spec.containers[0].image,
+            index_name=index_name,
+            service_account_name=pod.spec.service_account_name,
+        )
+        try:
+            batch_v1 = client.BatchV1Api()
+            batch_v1.create_namespaced_job(
+                body=job_manifest, namespace=os.environ["AKS_NAMESPACE"]
             )
-            # retrieve job manifest template and replace necessary values
-            job_manifest = _generate_aks_job_manifest(
-                docker_image_name=pod.spec.containers[0].image,
-                index_name=request.index_name,
-                storage_name=request.storage_name,
-                service_account_name=pod.spec.service_account_name,
-                entity_config_name=request.entity_config_name,
+        except ApiException as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"exception when calling BatchV1Api->create_namespaced_job: {str(e)}",
             )
-            print(f"Created job manifest:\n{job_manifest}")
-            try:
-                batch_v1 = client.BatchV1Api()
-                batch_v1.create_namespaced_job(
-                    body=job_manifest, namespace=os.environ["AKS_NAMESPACE"]
-                )
-            except ApiException as e:
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"exception when calling BatchV1Api->create_namespaced_job: {str(e)}",
-                )
-        else:  # run locally
-            if background_tasks:
-                background_tasks.add_task(
-                    _start_indexing_pipeline,
-                    request.index_name,
-                    request.storage_name,
-                    request.entity_config_name,
-                    request.webhook_url,
-                )
         return BaseResponse(status="indexing operation has been scheduled.")
     except Exception as e:
         reporter = ReporterSingleton().get_instance()
         job_details = {
-            "storage_name": request.storage_name,
-            "index_name": request.index_name,
+            "storage_name": storage_name,
+            "index_name": index_name,
         }
         reporter.on_error(
             "Error creating a new index",
@@ -222,25 +217,25 @@ def setup_indexing_pipeline(
         )
         raise HTTPException(
             status_code=500,
-            detail=f"Error occurred during setup of indexing job for '{request.index_name}'.",
+            detail=f"Error occurred during setup of indexing job for '{index_name}'.",
         )
 
 
 async def _start_indexing_pipeline(
     index_name: str,
-    storage_name: str,
-    entity_config_name: str | None = None,
     webhook_url: str | None = None,
 ):
-    # get sanitized names
+    # get sanitized name
     sanitized_index_name = sanitize_name(index_name)
-    sanitized_storage_name = sanitize_name(storage_name)
 
     reporter = ReporterSingleton().get_instance()
-    pipelinejob = PipelineJob()  # TODO: fix class so initiliazation is not required
+    pipelinejob = PipelineJob()
+    pipeline_job = pipelinejob.load_item(sanitized_index_name)
+    sanitized_storage_name = pipeline_job.storage_name
+    storage_name = retrieve_original_blob_container_name(sanitized_storage_name)
 
     # download nltk dependencies
-    bootstrap()  # todo: expose the quiet flag to the user
+    bootstrap()
 
     # create new reporters/callbacks just for this job
     reporters = []
@@ -259,7 +254,7 @@ async def _start_indexing_pipeline(
     this_directory = os.path.dirname(
         os.path.abspath(inspect.getfile(inspect.currentframe()))
     )
-    data = yaml.safe_load(open(f"{this_directory}/pipeline_settings.yaml"))
+    data = yaml.safe_load(open(f"{this_directory}/pipeline-settings.yaml"))
     # dynamically set some values
     data["input"]["container_name"] = sanitized_storage_name
     data["storage"]["container_name"] = sanitized_index_name
@@ -270,28 +265,46 @@ async def _start_indexing_pipeline(
             f"{sanitized_index_name}_description_embedding"
         )
 
-    # if entity_config_name was provided, load entity configuration and incorporate into pipeline
-    # otherwise, set prompt and entity types to None to use the default values provided by graphrag
-    if entity_config_name:
-        entity_configuration = get_entity(entity_config_name)
-        data["entity_extraction"]["entity_types"] = entity_configuration.entity_types
-        with open("entity-extraction-prompt.txt", "w") as f:
-            prompt = graph_extraction_prompt.get_prompt(
-                entity_types=entity_configuration.entity_types,
-                entity_examples=entity_configuration.entity_examples,
-            )
-            f.write(prompt)
-        data["entity_extraction"]["prompt"] = "entity-extraction-prompt.txt"
-    else:
-        data["entity_extraction"]["prompt"] = None
-        data["entity_extraction"]["entity_types"] = None
+    # set prompts for entity extraction, community report, and summarize descriptions.
+    # an environment variable is set to the file path of the prompt
+    if pipeline_job.entity_extraction_prompt:
+        fname = "entity-extraction-prompt.txt"
+        with open(fname, "w") as outfile:
+            outfile.write(pipeline_job.entity_extraction_prompt)
+        os.environ["GRAPHRAG_ENTITY_EXTRACTION_PROMPT_FILE"] = fname
+        # data["entity_extraction"]["prompt"] = fname
+    # else:
+    #     data["entity_extraction"]["prompt"] = None
+    if pipeline_job.community_report_prompt:
+        fname = "community-report-prompt.txt"
+        with open(fname, "w") as outfile:
+            outfile.write(pipeline_job.community_report_prompt)
+        os.environ["GRAPHRAG_COMMUNITY_REPORT_PROMPT_FILE"] = fname
+        # data["community_reports"]["prompt"] = fname
+    # else:
+    #     data["community_reports"]["prompt"] = None
+    if pipeline_job.summarize_descriptions_prompt:
+        fname = "summarize-descriptions-prompt.txt"
+        with open(fname, "w") as outfile:
+            outfile.write(pipeline_job.summarize_descriptions_prompt)
+        os.environ["GRAPHRAG_SUMMARIZE_DESCRIPTIONS_PROMPT_FILE"] = fname
+        # data["summarize_descriptions"]["prompt"] = fname
+    # else:
+    #     data["summarize_descriptions"]["prompt"] = None
+
+    # set placeholder values to None if they have not been set
+    # if data["entity_extraction"]["prompt"] == "PLACEHOLDER":
+    #     data["entity_extraction"]["prompt"] = None
+    # if data["community_reports"]["prompt"] == "PLACEHOLDER":
+    #     data["community_reports"]["prompt"] = None
+    # if data["summarize_descriptions"]["prompt"] == "PLACEHOLDER":
+    #     data["summarize_descriptions"]["prompt"] = None
 
     # generate the default pipeline from default parameters and override with custom settings
     parameters = create_graphrag_config(data, ".")
     pipeline_config = create_pipeline_config(parameters, True)
 
-    # create a new pipeline job object
-    pipeline_job = pipelinejob.load_item(sanitized_index_name)
+    # reset pipeline job details
     pipeline_job.status = PipelineJobState.RUNNING
     pipeline_job.all_workflows = []
     pipeline_job.completed_workflows = []
@@ -304,8 +317,13 @@ async def _start_indexing_pipeline(
         PipelineJobWorkflowCallbacks(pipeline_job)
     )
 
+    # print("#################### PIPELINE JOB:")
+    # pprint(pipeline_job.dump_model())
+    print("#################### PIPELINE CONFIG:")
+    print(pipeline_config)
+
+    # run the pipeline
     try:
-        # run the pipeline
         async for workflow_result in run_pipeline_with_config(
             config_or_path=pipeline_config,
             callbacks=workflow_callbacks,
@@ -317,7 +335,7 @@ async def _start_indexing_pipeline(
                 pipeline_job.failed_workflows.append(workflow_result.workflow)
                 pipeline_job.update_db()
 
-        # jobs are done, check if any failed
+        # if job is done, check if any workflow steps failed
         if len(pipeline_job.failed_workflows) > 0:
             pipeline_job.status = PipelineJobState.FAILED
         else:
@@ -391,10 +409,8 @@ async def _start_indexing_pipeline(
 
 def _generate_aks_job_manifest(
     docker_image_name: str,
-    storage_name: str,
     index_name: str,
     service_account_name: str,
-    entity_config_name: str | None = None,
 ) -> dict:
     """Generate an AKS Jobs manifest file with the specified parameters.
 
@@ -410,12 +426,7 @@ def _generate_aks_job_manifest(
         "python",
         "run-indexing-job.py",
         f"-i={index_name}",
-        f"-s={storage_name}",
     ]
-    if entity_config_name:
-        manifest["spec"]["template"]["spec"]["containers"][0]["command"].append(
-            f"-e={entity_config_name}"
-        )
     return manifest
 
 
@@ -569,9 +580,6 @@ async def get_index_job_status(index_name: str):
             index_name=retrieve_original_blob_container_name(pipeline_job.index_name),
             storage_name=retrieve_original_blob_container_name(
                 pipeline_job.storage_name
-            ),
-            entity_config_name=retrieve_original_entity_config_name(
-                pipeline_job.entity_config_name
             ),
             status=pipeline_job.status.value,
             percent_complete=pipeline_job.percent_complete,

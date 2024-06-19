@@ -5,6 +5,9 @@ param cosmosDbName string
 param location string = resourceGroup().location
 param principalId string
 
+@allowed([ 'Enabled', 'Disabled' ])
+param publicNetworkAccess string = 'Disabled'
+
 @description('Role definition id to assign to the principal.  Learn more: https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-setup-rbac')
 @allowed([
   '00000000-0000-0000-0000-000000000001' // Built-in role 'Azure Cosmos DB Built-in Data Reader'
@@ -25,7 +28,7 @@ resource cosmosDb 'Microsoft.DocumentDB/databaseAccounts@2022-11-15' = {
     type: 'SystemAssigned'
   }
   properties: {
-    publicNetworkAccess: 'Disabled'
+    publicNetworkAccess: publicNetworkAccess
     enableAutomaticFailover: false
     enableMultipleWriteLocations: false
     isVirtualNetworkFilterEnabled: false

@@ -73,9 +73,14 @@ embeddings:
     overwrite: True
     url: $AI_SEARCH_URL
 
-entity_extraction:
-  prompt: PLACEHOLDER
-  entity_types: PLACEHOLDER
+# entity_extraction:
+#   prompt: PLACEHOLDER
+
+# community_reports:
+#   prompt: PLACEHOLDER
+
+# summarize_descriptions:
+#   prompt: PLACEHOLDER
 
 snapshots:
   graphml: True
