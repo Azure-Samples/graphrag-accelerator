@@ -36,7 +36,7 @@ Login with Azure CLI and set the appropriate Azure subscription.
 # check what subscription you are logged into
 > az account show
 # set appropriate subscription if necessary
-> az account set --subscription "<subscription_name>"
+> az account set --subscription "<subscription_name> or <subscription id>"
 ```
 
 The Azure subscription that you deploy the accelerator in will require the `Microsoft.OperationsManagement` resource provider to be registered.
