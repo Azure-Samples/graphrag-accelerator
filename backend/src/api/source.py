@@ -7,6 +7,7 @@ import pandas as pd
 from azure.identity import DefaultAzureCredential
 from fastapi import APIRouter, Depends, HTTPException
 
+from src.api.azure_clients import BlobServiceClientSingleton
 from src.api.common import (
     sanitize_name,
     validate_index_file_exist,
@@ -20,6 +21,7 @@ from src.models import (
     TextUnitResponse,
 )
 from src.reporting import ReporterSingleton
+
 
 source_route = APIRouter(
     prefix="/source",
@@ -36,7 +38,8 @@ RELATIONSHIPS_TABLE = "output/create_final_relationships.parquet"
 TEXT_UNITS_TABLE = "output/create_base_text_units.parquet"
 DOCUMENTS_TABLE = "output/create_base_documents.parquet"
 storage_account_blob_url = os.environ["STORAGE_ACCOUNT_BLOB_URL"]
-storage_account_name = storage_account_blob_url.split("//")[1].split(".")[0]
+storage_account_name = "null"#storage_account_blob_url.split("//")[1].split(".")[0]
+storage_account_host = storage_account_blob_url.split("//")[1]
 
 
 @source_route.get(
@@ -54,6 +57,7 @@ async def get_report_info(index_name: str, report_id: str):
             f"abfs://{sanitized_index_name}/{COMMUNITY_REPORT_TABLE}",
             storage_options={
                 "account_name": storage_account_name,
+                "account_host": storage_account_host,
                 "credential": DefaultAzureCredential(),
             },
         )
@@ -84,6 +88,7 @@ async def get_chunk_info(index_name: str, text_unit_id: str):
             f"abfs://{sanitized_index_name}/{TEXT_UNITS_TABLE}",
             storage_options={
                 "account_name": storage_account_name,
+                "account_host": storage_account_host,
                 "credential": DefaultAzureCredential(),
             },
         )
@@ -91,6 +96,7 @@ async def get_chunk_info(index_name: str, text_unit_id: str):
             f"abfs://{sanitized_index_name}/{DOCUMENTS_TABLE}",
             storage_options={
                 "account_name": storage_account_name,
+                "account_host": storage_account_host,
                 "credential": DefaultAzureCredential(),
             },
         )
@@ -131,6 +137,7 @@ async def get_entity_info(index_name: str, entity_id: int):
             f"abfs://{sanitized_index_name}/{ENTITY_EMBEDDING_TABLE}",
             storage_options={
                 "account_name": storage_account_name,
+                "account_host": storage_account_host,
                 "credential": DefaultAzureCredential(),
             },
         )
@@ -171,6 +178,7 @@ async def get_claim_info(index_name: str, claim_id: int):
             f"abfs://{sanitized_index_name}/{COVARIATES_TABLE}",
             storage_options={
                 "account_name": storage_account_name,
+                "account_host": storage_account_host,
                 "credential": DefaultAzureCredential(),
             },
         )
@@ -213,6 +221,7 @@ async def get_relationship_info(index_name: str, relationship_id: int):
             f"abfs://{sanitized_index_name}/{RELATIONSHIPS_TABLE}",
             storage_options={
                 "account_name": storage_account_name,
+                "account_host": storage_account_host,
                 "credential": DefaultAzureCredential(),
             },
         )
@@ -220,6 +229,7 @@ async def get_relationship_info(index_name: str, relationship_id: int):
             f"abfs://{sanitized_index_name}/{ENTITY_EMBEDDING_TABLE}",
             storage_options={
                 "account_name": storage_account_name,
+                "account_host": storage_account_host,
                 "credential": DefaultAzureCredential(),
             },
         )

@@ -22,14 +22,15 @@ def get_entities(
     entity_df = pd.read_parquet(
         entity_table_path,
         storage_options={
-            "account_name": BlobServiceClientSingleton.get_storage_account_name(),
+            "account_name": "null",#BlobServiceClientSingleton.get_storage_account_name(),
+            "account_host": BlobServiceClientSingleton.get_instance().url.split("//")[1],
             "credential": DefaultAzureCredential(),
         },
     )
     entity_embedding_df = pd.read_parquet(
         entity_embedding_table_path,
         storage_options={
-            "account_name": BlobServiceClientSingleton.get_storage_account_name(),
+            "account_host": "null",#BlobServiceClientSingleton.get_instance().url.split("//")[1],
             "credential": DefaultAzureCredential(),
         },
     )
@@ -44,14 +45,16 @@ def get_reports(
     entity_df = pd.read_parquet(
         entity_table_path,
         storage_options={
-            "account_name": BlobServiceClientSingleton.get_storage_account_name(),
+            "account_name": "null",#BlobServiceClientSingleton.get_storage_account_name(),
+            "account_host": BlobServiceClientSingleton.get_instance().url.split("//")[1],
             "credential": DefaultAzureCredential(),
         },
     )
     report_df = pd.read_parquet(
         community_report_table_path,
         storage_options={
-            "account_name": BlobServiceClientSingleton.get_storage_account_name(),
+            "account_name": "null",#BlobServiceClientSingleton.get_storage_account_name(),
+            "account_host": BlobServiceClientSingleton.get_instance().url.split("//")[1],
             "credential": DefaultAzureCredential(),
         },
     )
@@ -62,7 +65,8 @@ def get_relationships(relationships_table_path: str) -> pd.DataFrame:
     relationship_df = pd.read_parquet(
         relationships_table_path,
         storage_options={
-            "account_name": BlobServiceClientSingleton.get_storage_account_name(),
+            "account_name": "null",#BlobServiceClientSingleton.get_storage_account_name(),
+            "account_host": BlobServiceClientSingleton.get_instance().url.split("//")[1],
             "credential": DefaultAzureCredential(),
         },
     )
@@ -73,7 +77,8 @@ def get_covariates(covariate_table_path: str) -> pd.DataFrame:
     covariate_df = pd.read_parquet(
         covariate_table_path,
         storage_options={
-            "account_name": BlobServiceClientSingleton.get_storage_account_name(),
+            "account_name": "null",#BlobServiceClientSingleton.get_storage_account_name(),
+            "account_host": BlobServiceClientSingleton.get_instance().url.split("//")[1],
             "credential": DefaultAzureCredential(),
         },
     )
@@ -84,7 +89,8 @@ def get_text_units(text_unit_table_path: str) -> pd.DataFrame:
     text_unit_df = pd.read_parquet(
         text_unit_table_path,
         storage_options={
-            "account_name": BlobServiceClientSingleton.get_storage_account_name(),
+            "account_name": "null",#BlobServiceClientSingleton.get_storage_account_name(),
+            "account_host": BlobServiceClientSingleton.get_instance().url.split("//")[1],
             "credential": DefaultAzureCredential(),
         },
     )
