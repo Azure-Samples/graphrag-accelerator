@@ -30,7 +30,8 @@ def get_entities(
     entity_embedding_df = pd.read_parquet(
         entity_embedding_table_path,
         storage_options={
-            "account_host": "null",#BlobServiceClientSingleton.get_instance().url.split("//")[1],
+            "account_name": "null",#BlobServiceClientSingleton.get_storage_account_name(),
+            "account_host": BlobServiceClientSingleton.get_instance().url.split("//")[1],
             "credential": DefaultAzureCredential(),
         },
     )
