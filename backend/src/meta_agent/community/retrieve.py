@@ -44,7 +44,8 @@ from graphrag.vector_stores.base import (
 )
 
 cognitive_services_endpoint = os.environ.get(
-    "COGNITIVE_SERVICES_ENDPOINT", "https://cognitiveservices.azure.com/.default"
+    "GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT",
+    "https://cognitiveservices.azure.com/.default",
 )
 token_provider = get_bearer_token_provider(
     DefaultAzureCredential(), cognitive_services_endpoint
@@ -321,8 +322,9 @@ class MultiAzureAISearch(BaseVectorStore):
         docs = []
         for collection_idx, collection_name in enumerate(self.collections):
             add_on = "-" + str(collection_idx)
+            audience = os.environ["AI_SEARCH_AUDIENCE"]
             db_connection = SearchClient(
-                self.url, collection_name, DefaultAzureCredential()
+                self.url, collection_name, DefaultAzureCredential(), audience=audience,
             )
             response = db_connection.search(
                 vector_queries=[vectorized_query],

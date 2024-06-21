@@ -4,9 +4,9 @@
 # this yaml file serves as a configuration template for the graphrag indexing jobs
 # some values are hardcoded while others will be dynamically set
 input:
-  type: text
+  type: blob
+  file_type: text
   file_pattern: .*\.txt$
-  storage_type: blob
   storage_account_blob_url: $STORAGE_ACCOUNT_BLOB_URL
   container_name: PLACEHOLDER
   base_dir: .
@@ -35,6 +35,7 @@ llm:
   api_version: $GRAPHRAG_API_VERSION
   model: $GRAPHRAG_LLM_MODEL
   deployment_name: $GRAPHRAG_LLM_DEPLOYMENT_NAME
+  cognitive_services_endpoint: $GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT
   model_supports_json: True
   tokens_per_minute: 80000
   requests_per_minute: 480
@@ -56,6 +57,7 @@ embeddings:
     batch_size: 16
     model: $GRAPHRAG_EMBEDDING_MODEL
     deployment_name: $GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME
+    cognitive_services_endpoint: $GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT
     tokens_per_minute: 350000
     concurrent_requests: 25
     requests_per_minute: 2100
@@ -70,10 +72,16 @@ embeddings:
     title_column: name
     overwrite: True
     url: $AI_SEARCH_URL
+    audience: $AI_SEARCH_AUDIENCE
 
-entity_extraction:
-  prompt: PLACEHOLDER
-  entity_types: PLACEHOLDER
+# entity_extraction:
+#   prompt: PLACEHOLDER
+
+# community_reports:
+#   prompt: PLACEHOLDER
+
+# summarize_descriptions:
+#   prompt: PLACEHOLDER
 
 snapshots:
   graphml: True

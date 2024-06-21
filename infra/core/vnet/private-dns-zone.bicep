@@ -18,7 +18,6 @@ resource vnets 'Microsoft.Network/virtualNetworks@2023-06-01' existing = [for vn
   name: vnetName
 }]
 
-
 resource dnsZoneLinks 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = [for (vnetName, index) in vnetNames: {
   name: vnetName
   location: 'global'
