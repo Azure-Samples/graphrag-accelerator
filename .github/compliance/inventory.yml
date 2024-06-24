@@ -1,5 +1,0 @@
-inventory:
-- source: DirectOwners
-  items:
-  - id: newmancheng@microsoft.com
-  isProduction: false
