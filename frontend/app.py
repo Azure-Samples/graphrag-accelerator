@@ -277,14 +277,12 @@ async def app():
                 request = {
                     "storage_name": final_storage_name,
                     "index_name": index_name,
-                    "webhook_url": "https://microsoft.webhook.office.com/webhookb2/a94db49a-f3c1-4926-83f8-485ebbbaf588@72f988bf-86f1-41af-91ab-2d7cd011db47/IncomingWebhook/5302358a97e2496298846d9b290c07ea/cfda7d8e-3ba2-4885-b4b5-92b205133529",
                 }
             else:
                 request = {
                     "storage_name": final_storage_name,
                     "index_name": index_name,
                     "entity_config_name": final_entity_name,
-                    "webhook_url": "https://microsoft.webhook.office.com/webhookb2/a94db49a-f3c1-4926-83f8-485ebbbaf588@72f988bf-86f1-41af-91ab-2d7cd011db47/IncomingWebhook/5302358a97e2496298846d9b290c07ea/cfda7d8e-3ba2-4885-b4b5-92b205133529",
                 }
 
             url = api_url + "/index"

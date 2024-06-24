@@ -48,7 +48,6 @@ from src.models import (
 from src.reporting import ReporterSingleton
 from src.reporting.load_reporter import load_pipeline_reporter
 from src.reporting.pipeline_job_workflow_callbacks import PipelineJobWorkflowCallbacks
-from src.reporting.reporter_singleton import send_webhook
 from src.reporting.typing import Reporters
 from src.typing import PipelineJobState
 
@@ -223,8 +222,7 @@ async def setup_indexing_pipeline(
 
 
 async def _start_indexing_pipeline(
-    index_name: str,
-    webhook_url: str | None = None,
+    index_name: str
 ):
     # get sanitized name
     sanitized_index_name = sanitize_name(index_name)
@@ -354,17 +352,6 @@ async def _start_indexing_pipeline(
             details={"status_message": "Indexing pipeline complete."},
         )
 
-        # send webhook to teams chat
-        send_webhook(
-            url=webhook_url,
-            summary=f"Index '{index_name}' completed successfully",
-            title=f"Congratulations, your indexing job, '{index_name}', completed successfully",
-            subtitle=f"Container: {storage_name}",
-            index_name=index_name,
-            note="No errors were found",
-            job_status="Complete",
-            reporter=workflow_callbacks,
-        )
         del workflow_callbacks  # garbage collect
         if pipeline_job.status == PipelineJobState.FAILED:
             exit(1)  # signal to AKS that indexing job failed
@@ -390,17 +377,6 @@ async def _start_indexing_pipeline(
             cause=str(e),
             stack=traceback.format_exc(),
             details=error_details,
-        )
-        # send webhook to teams chat
-        send_webhook(
-            url=webhook_url,
-            summary=f"Index '{index_name}' failed to complete.",
-            title=f"Unfortunately your index, '{index_name}', has failed.",
-            subtitle=f"Container: {storage_name}",
-            index_name=index_name,
-            note=f"Error Details: {error_details['error_details']}",
-            job_status="Failed",
-            reporter=workflow_callbacks,
         )
         raise HTTPException(
             status_code=500,
