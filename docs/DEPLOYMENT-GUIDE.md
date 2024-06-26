@@ -20,25 +20,13 @@ TIP: If you open this repository inside a devcontainer (i.e. VSCode Dev Containe
 The setup/deployment process has been mostly automated with a shell script and Bicep files (infrastructure as code). Azure CLI will deploy all necessary Azure resources using these Bicep files. The deployment is configurable using values defined in `infra/deploy.parameters.json`. To the utmost extent, we have provided default values but users are still expected to modify some values.
 
 
-## 0. Activate Azure ## 1. Deploy Azure OpenAI Service
-You will need access to a deployed Azure OpenAI resource. Documentation on how to deploy an Azure OpenAI service resource can be found [here](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/create-resource?pivots=web-portal). Ensure deployments for the `gpt-4-turbo` model and `text-embedding-ada-002` embedding model are setup. Take note of the model deployment name and model name.
-
-As a starting point, we recommend the following quota thresholds be setup for this solution accelerator to run.
-| Model Name | TPM Threshold |
+## 1. Activate Required Azure Permissions 
+You will need the following <a href="https://learn.microsoft.com/en-us/azure/role-based-access-control/overview">Azure Role Based Access </a>permissions at the Subscription level to deploy GraphRAG.  By default, resources are deployed with <a href="https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview">Azure Managed Identities </a>in place, in keeping with security best practices.  Due to this enhanced security configuration, higher level permissions are required in order to create the appropriate GraphRAG resources: 
+| Permission | Scope |
 | :--- | ---: |
-gpt-4 turbo            | 80K
-text-embedding-ada-002 | 300K
+Contributor            | Subscription
+Role Based Access Control (RBAC) Administrator | Subscription  
 
-## 2. Login to Azure
-Login with Azure CLI and set the appropriate Azure subscription.
-```shell
-# login to Azure - may need to use use the "--use-device-code" flag if using a remote host/virtual machine
-az login
-# check what subscription you are logged into
-az account show
-# set appropriate subscription
-az account set --subscription "<subscription_name>"
-```
 
 Note: The Azure subscription that you deploy this solution accelerator in will require the `Microsoft.OperationsManagement` resource provider to be registered.
 This can be accomplished via the [Azure Portal](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/resource-providers-and-types#azure-ortal) or with the following [Azure CLI](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/resource-providers-and-types#azure-cli) commands:
@@ -50,14 +38,34 @@ az provider register --namespace Microsoft.OperationsManagement
 az provider show --namespace Microsoft.OperationsManagement -o table
 ```
 
-## 3. Create a Resource Group
+## 2. Deploy Azure OpenAI Service
+You will need access to a deployed Azure OpenAI resource. Documentation on how to deploy an Azure OpenAI service resource can be found [here](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/create-resource?pivots=web-portal). Ensure deployments for the `gpt-4-turbo` model and `text-embedding-ada-002` embedding model are setup. Take note of the model deployment name and model name.
+
+As a starting point, we recommend the following quota thresholds be setup for this solution accelerator to run.
+| Model Name | TPM Threshold |
+| :--- | ---: |
+gpt-4 turbo            | 80K
+text-embedding-ada-002 | 300K
+
+## 3. Login to Azure
+Login with Azure CLI and set the appropriate Azure subscription.
+```shell
+# login to Azure - may need to use use the "--use-device-code" flag if using a remote host/virtual machine
+az login
+# check what subscription you are logged into
+az account show
+# set appropriate subscription
+az account set --subscription "<subscription_name> or <subscription id>"
+```
+
+## 4. Create a Resource Group
 A resource group can be created via the [Azure Portal](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/manage-resource-groups-portal) or Azure CLI.
 
 ```shell
 az group create --name <my_resource_group> --location <my_location>
 ```
 
-## 4. Fill out `infra/deploy.parameters.json`
+## 5. Fill out `infra/deploy.parameters.json`
 
 In the `deploy.parameters.json` file, provide values for the following required variables, if not already filled out.
 
@@ -80,7 +88,7 @@ In the `deploy.parameters.json` file, provide values for the following required 
 `AISEARCH_AUDIENCE`                    |                                    | No  | Audience for AAD for AI Search. Will default to `https://search.azure.com/` for Azure Commercial cloud but should be overriden for deployments in other Azure clouds.D
 `REPORTERS`                            |                                    | No  | The type of logging to enable. If not provided, logging will be saved to a file in Azure Storage and to the console in AKS.
 
-## 5. Deploy solution accelerator to the resource group
+## 6. Deploy solution accelerator to the resource group
 ```shell
 cd infra
 bash deploy.sh -h # view help menu for additional options
@@ -88,5 +96,5 @@ bash deploy.sh -p deploy.parameters.json
 ```
 When deploying for the first time, it will take ~40-50 minutes to deploy. Subsequent runs of this command will be faster.
 
-## 6. Use GraphRAG
+## 7. Use GraphRAG
 Once the deployment has finished, check out our [`Hello World`](../notebooks/HelloWorld.ipynb) notebook for a demonstration of how to use the GraphRAG API. To access the API documentation, visit `<APIM_gateway_url>/manpage/docs` in your browser. You can find the `APIM_gateway_url` by looking in the Azure Portal for the deployed APIM instance.
