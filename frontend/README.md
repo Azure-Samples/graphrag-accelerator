@@ -2,17 +2,11 @@
 
 Add the following variables to a `.env` file
 
-* APIM_SUBSCRIPTION_KEY
 * DEPLOYMENT_URL
-* AI_SEARCH_URL
-* AI_SEARCH_KEY
-* DEPLOYER_EMAIL
+* APIM_SUBSCRIPTION_KEY
+* DEPLOYER_EMAIL (optional - will default to `deployer@email.com`)
 
-The frontend can run natively as a streamlit app:
-```
-> streamlit run app.py --server.port 8080
-```
-or as a docker container:
+The frontend is a streamlit app that can be run as a docker container:
 ```
 # cd to the root directory of the repo
 > docker build -t graphrag:frontend -f docker/Dockerfile-frontend .

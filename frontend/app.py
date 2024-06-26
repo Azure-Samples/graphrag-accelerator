@@ -370,7 +370,7 @@ async def app():
     # Display text in the gray box
     container_placeholder = st.markdown(content, unsafe_allow_html=False)
 
-    deployer_email = os.environ["DEPLOYER_EMAIL"]
+    deployer_email = os.environ.get("DEPLOYER_EMAIL", "deployer@email.com")
     footer = f"""
         <div class="footer">
             <p> Responses may be inaccurate; please review all responses for accuracy. Learn more about Azure OpenAI code of conduct <a href="https://learn.microsoft.com/en-us/legal/cognitive-services/openai/code-of-conduct"> here</a>. </br> For feedback, email us at <a href="mailto:{deployer_email}">{deployer_email}</a>.</p>
