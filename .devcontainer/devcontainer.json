@@ -1,0 +1,85 @@
+{
+	"name": "graphrag-accelerator",
+	"build": {
+		"dockerfile": "./Dockerfile",
+		"args": {
+			"DOCKER_GROUP_ID": "${localEnv:DOCKER_GROUP_ID}"
+		}
+	},
+	"forwardPorts": [ 7071 ],
+	"runArgs": [
+		"--network", "host" // use host networking so that the dev container can access the API when running the container locally
+	],
+	"remoteUser": "vscode",
+	"remoteEnv": {
+        // We add the .venv to the beginning of the path env in the Dockerfile
+        // so that we use the proper python, however vscode rewrites/overwrites
+        // the PATH in the image and puts /usr/local/bin in front of our .venv
+        // path. This fixes that issue.
+        "PATH": "${containerEnv:PATH}",
+        // Add src folder to PYTHONPATH so that we can import modules that
+        // are in the source dir
+        "PYTHONPATH": "/graphrag-accelerator/backend/:$PATH"
+    },
+	"mounts": [
+		// Keep command history
+		"type=volume,source=graphrag-bashhistory,target=/home/vscode/command_history",
+		"type=volume,source=graphrag-devcontainer-vscode-server,target=/home/vscode/.vscode-server/extensions",
+		// Mounts the login details from the host machine so azcli works seamlessly in the container
+		// "type=bind,source=${localEnv:HOME}/.azure,target=/home/vscode/.azure",
+		// Mounts the ssh details from the host machine - this allows the container to connect to ssh hosts
+		"type=bind,source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh",
+		// Mount docker socket for docker builds
+		"type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock"
+	],
+	"customizations": {
+		"vscode": {
+			// Set *default* container specific settings.json values on container create.
+			"settings": {
+				"python.pythonPath": "/graphrag-accelerator/.venv/bin/python",
+				"python.defaultInterpreterPath": "/graphrag-accelerator/.venv/bin/python",
+				"python.languageServer": "Pylance",
+				"files.watcherExclude": {
+					"**/.git/objects/**": true,
+					"**/.git/subtree-cache/**": true,
+					"**/node_modules/*/**": true,
+					"**/.python_packages/*/**": true
+				},
+				"files.associations": {
+					"*.workbook": "[jsonc]"
+				},
+				"ruff.interpreter": [
+					"/graphrag-accelerator/.venv/bin/python"
+				],
+				"ruff.lint.args": [
+					"--config",
+					"/graphrag-accelerator/pyproject.toml"
+				],
+				"ruff.lint.run": "onType"
+			},
+			// Add the IDs of extensions you want installed when the container is created.
+			"extensions": [
+				"donjayamanne.githistory",
+				"codezombiech.gitignore",
+				"GitHub.copilot",
+				"GitHub.copilot-chat",
+				"ms-azuretools.vscode-docker",
+				"ms-azuretools.vscode-bicep",
+				"ms-dotnettools.vscode-dotnet-runtime",
+				"ms-kubernetes-tools.vscode-kubernetes-tools",
+				"ms-python.python",
+				"ms-python.vscode-pylance",
+				"ms-toolsai.datawrangler",
+				"ms-toolsai.jupyter",
+				"ms-toolsai.jupyter-keymap",
+				"ms-toolsai.vscode-jupyter-cell-tags",
+				"ms-toolsai.vscode-jupyter-slideshow",
+				"ziyasal.vscode-open-in-github",
+				"charliermarsh.ruff"
+			]
+		}
+	},
+	"postCreateCommand": "bash /usr/local/bin/entrypoint.sh",
+	"workspaceMount": "source=${localWorkspaceFolder},target=/graphrag-accelerator,type=bind,consistency=cached",
+	"workspaceFolder": "/graphrag-accelerator"
+}

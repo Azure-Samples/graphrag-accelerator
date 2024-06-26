@@ -1,0 +1,34 @@
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - task: PoliCheck@2
+    displayName: 'Run PoliCheck'
+    inputs:
+      targetType: 'F'
+      targetArgument: '$(Build.SourcesDirectory)'
+      result: 'PoliCheck.xml'
+      toolVersion: Latest
+  - script: docker build -t graphrag:backend -f docker/Dockerfile-backend .
+    displayName: 'Build backend docker image'
+  - script: docker build -t graphrag:frontend -f docker/Dockerfile-frontend .
+    displayName: 'Build frontend docker image'
+  # Component Governance does not support pyproject.toml yet.
+  # For that reason, use toml-to-requirements to export the
+  # dependencies into a requirements.txt file.
+  - script: |
+      pip install toml-to-requirements
+      toml-to-req --toml-file pyproject.toml --poetry --optional-lists dev,test,backend,frontend
+      # toml-to-req is not perfect. It will leave wildcard characters in the requirements.txt file which we remove
+      sed -i 's/\*//g' requirements.txt
+    displayName: 'Export python dependencies to requirements.txt'
+  - task: ComponentGovernanceComponentDetection@0
+    displayName: 'Component Governance - Component Detection'
+    inputs:
+      scanType: 'Register'
+      verbosity: 'Verbose'
+      alertWarningLevel: 'High'
+      dockerImagesToScan: graphrag:backend,graphrag:frontend
