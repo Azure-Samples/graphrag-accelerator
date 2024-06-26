@@ -1,8 +1,12 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+@description('The name of the CosmosDB resource.')
 param cosmosDbName string
+
+@description('The location of the CosmosDB resource.')
 param location string = resourceGroup().location
+
 param principalId string
 
 @allowed([ 'Enabled', 'Disabled' ])

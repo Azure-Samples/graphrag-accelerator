@@ -1,16 +1,22 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-/* DEPLOYMENT ARTIFACTS - a single resource group with the following resources:
-Cosmos DB
+/*
+This bicep script can be used as a starting point and customized to fit the specific needs of an Azure environment.
+
+The script should be executed as a group deployment using Azure CLI (az deployment group ...)
+
+The script will deploy the following resources in a specified resource group:
+AI Search
+CosmosDB
 Blob Storage
 AKS
 API Management
 Log Analytics
+Private Endpoints
+Managed Identity
 */
-targetScope = 'subscription'
 
-// Allows script to pass empty value by default
 @description('Unique name to append to each resource')
 param resourceBaseName string = ''
 var resourceBaseNameFinal = !empty(resourceBaseName) ? resourceBaseName : toLower(uniqueString('${subscription().id}/resourceGroups/${graphRagName}'))
@@ -20,8 +26,8 @@ var resourceBaseNameFinal = !empty(resourceBaseName) ? resourceBaseName : toLowe
 @description('Name of the resource group that GraphRAG will be deployed in.')
 param graphRagName string
 
-@description('Location for all resources')
-param location string = deployment().location
+@description('Cloud location for all resources')
+param location string = resourceGroup().location
 
 @minLength(1)
 @description('Name of the publisher of the API Management instance')
@@ -31,14 +37,14 @@ param publisherName string
 @description('Email address of the publisher of the API Management instance')
 param publisherEmail string
 
-@description('The AKS namespace the workload idenitty service account will be created in.')
+@description('The AKS namespace the workload identity service account will be created in.')
 param aksNamespace string = 'graphrag'
 
 @description('Public key to allow access to AKS Linux nodes.')
 param aksSshRsaPublicKey string
 
 @description('Whether to enable private endpoints.')
-param enablePrivateEndpoints bool = false
+param enablePrivateEndpoints bool = true
 
 param apimName string = ''
 param storageAccountName string = ''
@@ -80,26 +86,21 @@ var roles = {
   )
 }
 
-resource rg 'Microsoft.Resources/resourceGroups@2023-07-01' = {
-  name: graphRagName
-  location: location
-}
-
 module log 'core/log-analytics/log.bicep' = {
   name: 'log'
-  scope: rg
+  scope: resourceGroup()
   params:{
     name: '${abbrs.operationalInsightsWorkspaces}${resourceBaseNameFinal}'
-    location: rg.location
+    location: location
   }
 }
 
 module aks 'core/aks/aks.bicep' = {
   name: 'aks'
-  scope: rg
+  scope: resourceGroup()
   params:{
     clusterName: '${abbrs.containerServiceManagedClusters}${resourceBaseNameFinal}'
-    location: rg.location
+    location: location
     sshRSAPublicKey: aksSshRsaPublicKey
     logAnalyticsWorkspaceId: log.outputs.id
   }
@@ -107,10 +108,10 @@ module aks 'core/aks/aks.bicep' = {
 
 module cosmosdb 'core/cosmosdb/cosmosdb.bicep' = {
   name: 'cosmosdb'
-  scope: rg
+  scope: resourceGroup()
   params: {
     cosmosDbName: !empty(cosmosDbName) ? cosmosDbName : '${abbrs.documentDBDatabaseAccounts}${resourceBaseNameFinal}'
-    location: rg.location
+    location: location
     publicNetworkAccess: enablePrivateEndpoints ? 'Disabled' : 'Enabled'
     principalId: workloadIdentity.outputs.principal_id
   }
@@ -118,10 +119,10 @@ module cosmosdb 'core/cosmosdb/cosmosdb.bicep' = {
 
 module aiSearch 'core/ai-search/ai-search.bicep' = {
   name: 'aisearch'
-  scope: rg
+  scope: resourceGroup()
   params: {
     name: !empty(aiSearchName) ? aiSearchName : '${abbrs.searchSearchServices}${resourceBaseNameFinal}'
-    location: rg.location
+    location: location
     publicNetworkAccess: enablePrivateEndpoints ? 'disabled' : 'enabled'
     roleAssignments: [
       {
@@ -145,10 +146,10 @@ module aiSearch 'core/ai-search/ai-search.bicep' = {
 
 module storage 'core/blob/storage.bicep' = {
   name: 'storage'
-  scope: rg
+  scope: resourceGroup()
   params: {
     name: !empty(storageAccountName) ? storageAccountName : '${abbrs.storageStorageAccounts}${replace(resourceBaseNameFinal, '-', '')}'
-    location: rg.location
+    location: location
     publicNetworkAccess: enablePrivateEndpoints ? 'Disabled' : 'Enabled'
     tags: tags
     roleAssignments: [
@@ -173,14 +174,14 @@ module storage 'core/blob/storage.bicep' = {
 
 module apim 'core/apim/apim.bicep' = {
   name: 'apim'
-  scope: rg
+  scope: resourceGroup()
   params: {
     apiManagementName: !empty(apimName) ? apimName : '${abbrs.apiManagementService}${resourceBaseNameFinal}'
     appInsightsName: '${abbrs.insightsComponents}${resourceBaseNameFinal}'
     nsgName: '${abbrs.networkNetworkSecurityGroups}${resourceBaseNameFinal}'
     publicIpName: '${abbrs.networkPublicIPAddresses}${resourceBaseNameFinal}'
     virtualNetworkName: '${abbrs.networkVirtualNetworks}${resourceBaseNameFinal}'
-    location: rg.location
+    location: location
     sku: 'Developer'
     skuCount: 1 // TODO expose in param for premium sku
     availabilityZones: [] // TODO expose in param for premium sku
@@ -192,7 +193,7 @@ module apim 'core/apim/apim.bicep' = {
 
 module graphragApi 'core/apim/apim.graphrag-documentation.bicep' = {
   name: 'apimservice'
-  scope: rg
+  scope: resourceGroup()
   params: {
     apimname: apim.outputs.name
     backendUrl: graphRagUrl
@@ -201,7 +202,7 @@ module graphragApi 'core/apim/apim.graphrag-documentation.bicep' = {
 
 module workloadIdentity 'core/identity/identity.bicep' = {
   name: 'workloadIdentity'
-  scope: rg
+  scope: resourceGroup()
   params: {
     name: workloadIdentityName
     location: location
@@ -217,7 +218,7 @@ module workloadIdentity 'core/identity/identity.bicep' = {
 
 module privateDnsZone 'core/vnet/private-dns-zone.bicep' = {
   name: 'private-dns-zone'
-  scope: rg
+  scope: resourceGroup()
   params: {
     name: dnsDomain
     vnetNames: [
@@ -228,7 +229,7 @@ module privateDnsZone 'core/vnet/private-dns-zone.bicep' = {
 
 module privatelinkPrivateDns 'core/vnet/privatelink-private-dns-zones.bicep' = if (enablePrivateEndpoints) {
   name: 'privatelink-private-dns-zones'
-  scope: rg
+  scope: resourceGroup()
   params: {
     linkedVnetResourceIds: [
       apim.outputs.vnetId
@@ -238,7 +239,7 @@ module privatelinkPrivateDns 'core/vnet/privatelink-private-dns-zones.bicep' = i
 
 module azureMonitorPrivateLinkScope 'core/monitor/private-link-scope.bicep' = if (enablePrivateEndpoints) {
   name: 'azureMonitorPrivateLinkScope'
-  scope: rg
+  scope: resourceGroup()
   params: {
     privateLinkScopeName: 'pls-${resourceBaseNameFinal}'
     privateLinkScopedResources: [
@@ -250,7 +251,7 @@ module azureMonitorPrivateLinkScope 'core/monitor/private-link-scope.bicep' = if
 
 module cosmosDbPrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePrivateEndpoints) {
   name: 'cosmosDbPrivateEndpoint'
-  scope: rg
+  scope: resourceGroup()
   params: {
     privateEndpointName: '${abbrs.privateEndpoint}cosmos-${cosmosdb.outputs.name}'
     location: location
@@ -263,7 +264,7 @@ module cosmosDbPrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePr
 
 module blobStoragePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePrivateEndpoints) {
   name: 'blobStoragePrivateEndpoint'
-  scope: rg
+  scope: resourceGroup()
   params: {
     privateEndpointName: '${abbrs.privateEndpoint}blob-${storage.outputs.name}'
     location: location
@@ -276,7 +277,7 @@ module blobStoragePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enabl
 
 module queueStoragePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePrivateEndpoints) {
   name: 'queueStoragePrivateEndpoint'
-  scope: rg
+  scope: resourceGroup()
   params: {
     privateEndpointName: '${abbrs.privateEndpoint}queue-${storage.outputs.name}'
     location: location
@@ -289,7 +290,7 @@ module queueStoragePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enab
 
 module aiSearchPrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePrivateEndpoints) {
   name: 'aiSearchPrivateEndpoint'
-  scope: rg
+  scope: resourceGroup()
   params: {
     privateEndpointName: '${abbrs.privateEndpoint}search-${aiSearch.outputs.name}'
     location: location
@@ -302,7 +303,7 @@ module aiSearchPrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePr
 
 module privateLinkScopePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePrivateEndpoints) {
   name: 'privateLinkScopePrivateEndpoint'
-  scope: rg
+  scope: resourceGroup()
   params: {
     privateEndpointName: '${abbrs.privateEndpoint}pls-${resourceBaseNameFinal}'
     location: location
