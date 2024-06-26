@@ -35,7 +35,7 @@ Login with Azure CLI and set the appropriate Azure subscription.
 az login
 # check what subscription you are logged into
 az account show
-# set appropriate subscription if necessary
+# set appropriate subscription
 az account set --subscription "<subscription_name>"
 ```
 
