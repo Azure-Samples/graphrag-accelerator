@@ -1,8 +1,12 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+@description('The name of the Storage Account resource.')
 param name string
+
+@description('The location of the Storage Account resource.')
 param location string = resourceGroup().location
+
 param tags object = {}
 
 @allowed([ 'Hot', 'Cool', 'Premium' ])

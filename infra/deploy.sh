@@ -13,9 +13,9 @@ APIM_NAME=""
 RESOURCE_BASE_NAME=""
 REPORTERS=""
 GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT=""
+CONTAINER_REGISTRY_SERVER=""
 
 requiredParams=(
-    CONTAINER_REGISTRY_SERVER
     LOCATION
     GRAPHRAG_API_BASE
     GRAPHRAG_API_VERSION
@@ -236,8 +236,7 @@ deployAzureResources () {
     datetime="`date +%Y-%m-%d_%H-%M-%S`"
     deploy_name="graphrag-deploy-$datetime"
     echo "Deployment name: $deploy_name"
-    AZURE_DEPLOY_RESULTS=$(az deployment sub create --name "$deploy_name" --no-prompt -o json --location $LOCATION --template-file ./main.bicep \
-        --parameters "location=$LOCATION" \
+    AZURE_DEPLOY_RESULTS=$(az deployment group create --name "$deploy_name" --resource-group $RESOURCE_GROUP --no-prompt -o json --template-file ./main.bicep \
         --parameters "resourceBaseName=$RESOURCE_BASE_NAME" \
         --parameters "graphRagName=$RESOURCE_GROUP" \
         --parameters "apimName=$APIM_NAME" \
@@ -309,7 +308,7 @@ linkPrivateDnsToAks () {
     echo "...linking private DNS complete"
 }
 
-deployHelmChart () {
+installGraphRAGHelmChart () {
     printf "Deploying graphrag helm chart... "
     local workloadId=$(jq -r .azure_workload_identity_client_id.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$workloadId" "Unable to parse workload id from Azure outputs, exiting..."
@@ -451,7 +450,7 @@ deployGraphragAPI () {
 
     # download the openapi spec from the backend and import it into APIM
     az rest --method get --url $backendSwaggerUrl -o json > core/apim/graphrag-openapi.json 2>/dev/null
-    AZURE_GRAPHRAG_API_RESULT=$(az deployment group create -g $RESOURCE_GROUP --name graphrag-api --template-file core/apim/apim.graphrag-servicedef.bicep --no-prompt \
+    AZURE_GRAPHRAG_API_RESULT=$(az deployment group create --resource-group $RESOURCE_GROUP --name graphrag-api --template-file core/apim/apim.graphrag-servicedef.bicep --no-prompt \
         --parameters "backendUrl=$graphragUrl" \
         --parameters "name=GraphRAG" \
         --parameters "apimname=$apimName")
@@ -496,6 +495,26 @@ grantDevAccessToAzureResources() {
     az role assignment create --role "Contributor" --assignee $principalId --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Search/searchServices/$searchServiceName" > /dev/null
     az role assignment create --role "Search Index Data Contributor" --assignee $principalId --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Search/searchServices/$searchServiceName" > /dev/null
     az role assignment create --role "Search Index Data Reader" --assignee $principalId --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Search/searchServices/$searchServiceName" > /dev/null
+}
+
+createAcrIfNotExists() {
+    # check if container registry exists
+    if [ ! -z "$CONTAINER_REGISTRY_SERVER" ]; then
+        printf "Checking if container registry '$CONTAINER_REGISTRY_SERVER' exists... "
+        az acr show --name $CONTAINER_REGISTRY_SERVER > /dev/null 2>&1
+        exitIfCommandFailed $? "Container registry '$CONTAINER_REGISTRY_SERVER' not found, exiting..."
+        printf "Yes.\n"
+        return 0
+    fi
+    # else deploy a new container registry
+    printf "Creating container registry... "
+    AZURE_ACR_DEPLOY_RESULT=$(az deployment group create --resource-group $RESOURCE_GROUP --name "acr-deployment" --template-file core/acr/acr.bicep --only-show-errors --no-prompt -o json \
+        --parameters "name=$CONTAINER_REGISTRY_SERVER")
+    exitIfCommandFailed $? "Error creating container registry, exiting..."
+    CONTAINER_REGISTRY_SERVER=$(jq -r .properties.outputs.loginServer.value <<< $AZURE_ACR_DEPLOY_RESULT)
+    exitIfValueEmpty "$CONTAINER_REGISTRY_SERVER" "Unable to parse container registry login server from deployment, exiting..."
+    echo "Container registry '$CONTAINER_REGISTRY_SERVER' created."
+    printf "Done.\n"
 }
 
 deployDockerImageToACR() {
@@ -561,6 +580,9 @@ populateParams $PARAMS_FILE
 # Create resource group
 createResourceGroupIfNotExists $LOCATION $RESOURCE_GROUP
 
+# Create azure container registry if it does not exist
+createAcrIfNotExists
+
 # Deploy the graphrag backend docker image to ACR
 deployDockerImageToACR
 
@@ -570,7 +592,7 @@ createSshkeyIfNotExists $RESOURCE_GROUP
 # Deploy Azure resources
 deployAzureResources
 
-# Setup RBAC roles to access external services already deployed.
+# Setup RBAC roles to access an already deployed Azure OpenAI service.
 AKS_NAME=$(jq -r .azure_aks_name.value <<< $AZURE_OUTPUTS)
 exitIfValueEmpty "$AKS_NAME" "Unable to parse AKS name from azure deployment outputs, exiting..."
 assignAOAIRoleToManagedIdentity
@@ -583,10 +605,12 @@ if [ "$ENABLE_PRIVATE_ENDPOINTS" = "true" ]; then
     linkPrivateDnsToAks
 fi
 peerVirtualNetworks
-deployHelmChart
-deployGraphragDnsRecord
 
-# Import GraphRAG API into APIM
+# Install GraphRAG helm chart
+installGraphRAGHelmChart
+
+# Import and setup GraphRAG API in APIM
+deployGraphragDnsRecord
 deployGraphragAPI
 
 if [ $GRANT_DEV_ACCESS -eq 1 ]; then

@@ -31,31 +31,29 @@ text-embedding-ada-002 | 300K
 ## 2. Login to Azure
 Login with Azure CLI and set the appropriate Azure subscription.
 ```shell
-# login to Azure (if needed)
-> az login  # or az login --use-device-code if using a remote host/virtual machine
+# login to Azure - may need to use use the "--use-device-code" flag if using a remote host/virtual machine
+az login
 # check what subscription you are logged into
-> az account show
-# set appropriate subscription if necessary
-> az account set --subscription "<subscription_name>"
+az account show
+# set appropriate subscription
+az account set --subscription "<subscription_name>"
 ```
 
-The Azure subscription that you deploy the accelerator in will require the `Microsoft.OperationsManagement` resource provider to be registered.
-This can be accomplished via the [Portal](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/resource-providers-and-types#azure-ortal) or with the following [Azure CLI](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/resource-providers-and-types#azure-cli) commands:
+Note: The Azure subscription that you deploy this solution accelerator in will require the `Microsoft.OperationsManagement` resource provider to be registered.
+This can be accomplished via the [Azure Portal](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/resource-providers-and-types#azure-ortal) or with the following [Azure CLI](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/resource-providers-and-types#azure-cli) commands:
 
 ```shell
-# Register provider
+# register provider
 az provider register --namespace Microsoft.OperationsManagement
-# Verify provider was registered
+# verify provider was registered
 az provider show --namespace Microsoft.OperationsManagement -o table
 ```
 
-## 3. Create an Azure Container Registry (ACR)
-ACR may be deployed using the [Portal](https://learn.microsoft.com/en-us/azure/container-registry/container-registry-get-started-portal?tabs=azure-cli) or [Azure CLI](https://learn.microsoft.com/en-us/azure/container-registry/container-registry-get-started-azure-cli).
+## 3. Create a Resource Group
+A resource group can be created via the [Azure Portal](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/manage-resource-groups-portal) or Azure CLI.
 
 ```shell
-# create a new resource group and deploy ACR
-> az group create --name <my_resource_group> --location <my_location>
-> az acr create --resource-group <my_resource_group> --name <my_container_registry> --sku Standard
+az group create --name <my_resource_group> --location <my_location>
 ```
 
 ## 4. Fill out `infra/deploy.parameters.json`
@@ -66,7 +64,7 @@ In the `deploy.parameters.json` file, provide values for the following required 
 | :--- | :--- | --- | ---: |
 `RESOURCE_GROUP`                       | <my_resource_group>                | Yes | The resource group that GraphRAG will be deployed in. Will get created automatically if the resource group does not exist.
 `LOCATION`                             | <my_location>                      | Yes | The azure cloud region to deploy GraphRAG resources in.
-`CONTAINER_REGISTRY_SERVER`            | <my_container_registry>.azurecr.io | Yes | Name of the Azure Container Registry where the `graphrag` docker image is hosted.
+`CONTAINER_REGISTRY_SERVER`            | <my_container_registry>.azurecr.io | No  | Name of an existing Azure Container Registry where the `graphrag` backend docker image is hosted. Will get created automatically if not provided.
 `GRAPHRAG_IMAGE`                       | graphrag:backend                   | No  | The name and tag of the graphrag docker image in the container registry. Will default to `graphrag:backend`.
 `GRAPHRAG_API_BASE`                    |                                    | Yes | Azure OpenAI service endpoint.
 `GRAPHRAG_API_VERSION`                 | 2023-03-15-preview                 | Yes | Azure OpenAI API version.
@@ -81,11 +79,11 @@ In the `deploy.parameters.json` file, provide values for the following required 
 `AISEARCH_AUDIENCE`                    |                                    | No  | Audience for AAD for AI Search. Will default to `https://search.azure.com/` for Azure Commercial cloud but should be overriden for deployments in other Azure clouds.D
 `REPORTERS`                            |                                    | No  | The type of logging to enable. If not provided, logging will be saved to a file in Azure Storage and to the console in AKS.
 
-## 5. Deploy the solution accelerator
-```
-> cd infra
-> bash deploy.sh -h # view help menu for additional options
-> bash deploy.sh -p deploy.parameters.json
+## 5. Deploy solution accelerator to the resource group
+```shell
+cd infra
+bash deploy.sh -h # view help menu for additional options
+bash deploy.sh -p deploy.parameters.json
 ```
 When deploying for the first time, it will take ~40-50 minutes to deploy. Subsequent runs of this command will be faster.
 
