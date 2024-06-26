@@ -2,7 +2,7 @@
 
 This guide will walk through the steps required to deploy GraphRAG in Azure.
 
-### Installation Requirements
+### Installation Tool Requirements
 The deployment process requires the following tools to be installed:
 
 * [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) >= v2.55.0
@@ -15,11 +15,12 @@ The deployment process requires the following tools to be installed:
 * [kubectl](https://kubernetes.io/docs/tasks/tools) - k8s command line tool
 * [yq](https://github.com/mikefarah/yq?tab=readme-ov-file#install) >= v4.40.7 - yaml file parser
 
-TIP: If you open this repository inside a devcontainer (i.e. VSCode Dev Containers or Codespaces), all required tools for deployment will already be available.
+TIP: If you open this repository inside a devcontainer (i.e. VSCode Dev Containers or Codespaces), all required tools for deployment will already be available. Opening a devcontainer using VS Code requires <a href="https://docs.docker.com/engine/install/" target="_blank" >Docker to be installed</a>.  
 
 The setup/deployment process has been mostly automated with a shell script and Bicep files (infrastructure as code). Azure CLI will deploy all necessary Azure resources using these Bicep files. The deployment is configurable using values defined in `infra/deploy.parameters.json`. To the utmost extent, we have provided default values but users are still expected to modify some values.
 
-## 1. Deploy Azure OpenAI Service
+
+## 0. Activate Azure ## 1. Deploy Azure OpenAI Service
 You will need access to a deployed Azure OpenAI resource. Documentation on how to deploy an Azure OpenAI service resource can be found [here](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/create-resource?pivots=web-portal). Ensure deployments for the `gpt-4-turbo` model and `text-embedding-ada-002` embedding model are setup. Take note of the model deployment name and model name.
 
 As a starting point, we recommend the following quota thresholds be setup for this solution accelerator to run.
