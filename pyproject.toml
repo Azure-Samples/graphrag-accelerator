@@ -1,0 +1,89 @@
+[tool.poetry]
+name = "graphrag-solution-accelerator"
+version = "0.1.0"
+description = ""
+authors = [
+    "Josh Bradley <joshbradley@microsoft.com>",
+    "Newman Cheng <newmancheng@microsoft.com>",
+    "Christine DiFonzo <cdifonzo@microsoft.com>",
+    "Gabriel Nieves <gnievesponce@microsoft.com>",
+    "Douglas Orbaker <dorbaker@microsoft.com>",
+    "Chris Sanchez <chrissanchez@microsoft.com>",
+    "Katy Smith <katysmith@microsoft.com>",
+    "Shane Solomon <shane.solomon@microsoft.com>",
+]
+readme = "README.md"
+license = "MIT"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "~3.10"
+
+[tool.poetry.group.dev.dependencies]
+detect-secrets = ">=1.5.0"
+devtools = ">=0.12.2"
+flake8 = ">=6.1.0"
+ipython = "*"
+jupyter = "*"
+pre-commit = ">=3.6.0"
+ruff = ">=0.1.13"
+
+[tool.poetry.group.test.dependencies]
+pytest = ">=8.2.1"
+wikipedia = ">=1.4.0"
+
+[tool.poetry.group.backend.dependencies]
+adlfs = ">=2023.10.0"
+applicationinsights = ">=0.11.10"
+attrs = ">=23.2.0"
+azure-core = ">=1.30.1"
+azure-cosmos = ">=4.5.1"
+azure-identity = ">=1.15.0"
+azure-search-documents = ">=11.4.0"
+azure-storage-blob = ">=12.19.0"
+datashaper = ">=0.0.46"
+environs = ">=9.5.0"
+fastapi = ">=0.110.0"
+fastparquet = ">=2023.10.1"
+fsspec = ">=2024.2.0"
+graphrag = {path = "backend/graphrag-wheel/graphrag-0.0.1-py3-none-any.whl"}
+graspologic = ">=3.3.0"
+httpx = ">=0.25.2"
+kubernetes = ">=29.0.0"
+networkx = ">=3.2.1"
+nltk = "*"
+opencensus = ">=0.11.4"
+opencensus-context = ">=0.1.3"
+opencensus-ext-azure = ">=1.1.13"
+pandas = ">=2.2.1"
+pyaml-env = ">=1.2.1"
+pyarrow = ">=15.0.0"
+pydantic = ">=1.10.14"
+python-multipart = ">=0.0.6"
+requests = "*"
+rich = ">=13.7.1"
+tiktoken = ">=0.6.0"
+uvicorn = ">=0.23.2"
+urllib3 = ">=2.2.2"
+
+[tool.poetry.group.frontend.dependencies]
+python-dotenv = ">=0.19.1"
+requests = "*"
+streamlit = ">=0.88.0"
+streamlit-nested-layout = "==0.1.1"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+indent-width = 4
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E402", "E501", "F821"]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
