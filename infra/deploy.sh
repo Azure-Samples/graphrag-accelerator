@@ -403,7 +403,7 @@ waitForGraphragExternalIp () {
 
 waitForGraphrag () {
     local backendSwaggerUrl=$1
-    local -i maxTries=10
+    local -i maxTries=20
     local available="false"
     printf "Checking for GraphRAG availability"
     for ((i=0;i < $maxTries; i++)); do
@@ -412,7 +412,7 @@ waitForGraphrag () {
             available="true"
             break
         fi
-        sleep 10
+        sleep 20
         printf "."
     done
     if [ $available == "true" ]; then

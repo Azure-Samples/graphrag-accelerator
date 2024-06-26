@@ -32,45 +32,6 @@ class ReporterSingleton:
             )
         return cls._instance
 
-
-def send_webhook(
-    url: str,
-    summary: str,
-    title: str,
-    subtitle: str,
-    index_name: str,
-    note: str,
-    job_status: str,
-    reporter: NoopWorkflowCallbacks | None = None,
-) -> bool:
-    if _is_valid_url(url):
-        try:
-            payload = {
-                "@type": "MessageCard",
-                "@context": "http://schema.org/extensions",
-                "themeColor": "0076D7",
-                "summary": summary,
-                "sections": [
-                    {
-                        "activityTitle": f"**{title}**",
-                        "activitySubtitle": subtitle,
-                        "facts": [
-                            {"name": "Index Name", "value": index_name},
-                            {"name": "Note", "value": note},
-                            {"name": "Status", "value": job_status},
-                        ],
-                        "markdown": True,
-                    }
-                ],
-            }
-            requests.post(url, json=payload)
-        except Exception as e:
-            if reporter is not None:
-                reporter.on_warning(f"Error sending webhook: {e}", details=payload)
-            return False
-    return True
-
-
 def _is_valid_url(url: str) -> bool:
     try:
         result = urlparse(url)
