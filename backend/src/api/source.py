@@ -7,7 +7,6 @@ import pandas as pd
 from azure.identity import DefaultAzureCredential
 from fastapi import APIRouter, Depends, HTTPException
 
-from src.api.azure_clients import BlobServiceClientSingleton
 from src.api.common import (
     sanitize_name,
     validate_index_file_exist,
@@ -21,7 +20,6 @@ from src.models import (
     TextUnitResponse,
 )
 from src.reporting import ReporterSingleton
-
 
 source_route = APIRouter(
     prefix="/source",
