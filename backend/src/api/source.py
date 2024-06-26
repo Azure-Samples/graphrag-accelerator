@@ -37,6 +37,12 @@ TEXT_UNITS_TABLE = "output/create_base_text_units.parquet"
 DOCUMENTS_TABLE = "output/create_base_documents.parquet"
 storage_account_blob_url = os.environ["STORAGE_ACCOUNT_BLOB_URL"]
 storage_account_name = storage_account_blob_url.split("//")[1].split(".")[0]
+storage_account_host = storage_account_blob_url.split("//")[1]
+storage_options = {
+    "account_name": storage_account_name,
+    "account_host": storage_account_host,
+    "credential": DefaultAzureCredential(),
+}
 
 
 @source_route.get(
@@ -52,10 +58,7 @@ async def get_report_info(index_name: str, report_id: str):
     try:
         report_table = pd.read_parquet(
             f"abfs://{sanitized_index_name}/{COMMUNITY_REPORT_TABLE}",
-            storage_options={
-                "account_name": storage_account_name,
-                "credential": DefaultAzureCredential(),
-            },
+            storage_options=storage_options,
         )
         row = report_table[report_table.community == report_id]
         return ReportResponse(text=row["full_content"].values[0])
@@ -82,17 +85,11 @@ async def get_chunk_info(index_name: str, text_unit_id: str):
     try:
         text_unit_table = pd.read_parquet(
             f"abfs://{sanitized_index_name}/{TEXT_UNITS_TABLE}",
-            storage_options={
-                "account_name": storage_account_name,
-                "credential": DefaultAzureCredential(),
-            },
+            storage_options=storage_options,
         )
         docs = pd.read_parquet(
             f"abfs://{sanitized_index_name}/{DOCUMENTS_TABLE}",
-            storage_options={
-                "account_name": storage_account_name,
-                "credential": DefaultAzureCredential(),
-            },
+            storage_options=storage_options,
         )
         links = {
             el["id"]: el["title"]
@@ -129,10 +126,7 @@ async def get_entity_info(index_name: str, entity_id: int):
     try:
         entity_table = pd.read_parquet(
             f"abfs://{sanitized_index_name}/{ENTITY_EMBEDDING_TABLE}",
-            storage_options={
-                "account_name": storage_account_name,
-                "credential": DefaultAzureCredential(),
-            },
+            storage_options=storage_options,
         )
         row = entity_table[entity_table.human_readable_id == entity_id]
         return EntityResponse(
@@ -169,10 +163,7 @@ async def get_claim_info(index_name: str, claim_id: int):
     try:
         claims_table = pd.read_parquet(
             f"abfs://{sanitized_index_name}/{COVARIATES_TABLE}",
-            storage_options={
-                "account_name": storage_account_name,
-                "credential": DefaultAzureCredential(),
-            },
+            storage_options=storage_options,
         )
         claims_table.human_readable_id = claims_table.human_readable_id.astype(
             float
@@ -211,17 +202,11 @@ async def get_relationship_info(index_name: str, relationship_id: int):
     try:
         relationship_table = pd.read_parquet(
             f"abfs://{sanitized_index_name}/{RELATIONSHIPS_TABLE}",
-            storage_options={
-                "account_name": storage_account_name,
-                "credential": DefaultAzureCredential(),
-            },
+            storage_options=storage_options,
         )
         entity_table = pd.read_parquet(
             f"abfs://{sanitized_index_name}/{ENTITY_EMBEDDING_TABLE}",
-            storage_options={
-                "account_name": storage_account_name,
-                "credential": DefaultAzureCredential(),
-            },
+            storage_options=storage_options,
         )
         row = relationship_table[
             relationship_table.human_readable_id == str(relationship_id)

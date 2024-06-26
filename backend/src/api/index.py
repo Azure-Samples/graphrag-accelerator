@@ -522,9 +522,9 @@ async def delete_index(index_name: str):
             pass
 
         index_client = SearchIndexClient(
-            endpoint=ai_search_url, 
-            credential=DefaultAzureCredential(), 
-            audience=ai_search_audience
+            endpoint=ai_search_url,
+            credential=DefaultAzureCredential(),
+            audience=ai_search_audience,
         )
         ai_search_index_name = f"{sanitized_index_name}_description_embedding"
         if ai_search_index_name in index_client.list_index_names():
