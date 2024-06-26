@@ -38,7 +38,7 @@ DOCUMENTS_TABLE = "output/create_base_documents.parquet"
 storage_account_blob_url = os.environ["STORAGE_ACCOUNT_BLOB_URL"]
 storage_account_name = storage_account_blob_url.split("//")[1].split(".")[0]
 storage_account_host = storage_account_blob_url.split("//")[1]
-storage_options={
+storage_options = {
     "account_name": storage_account_name,
     "account_host": storage_account_host,
     "credential": DefaultAzureCredential(),

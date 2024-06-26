@@ -13,11 +13,12 @@ from graphrag.query.indexer_adapters import (
 
 from src.api.azure_clients import BlobServiceClientSingleton
 
-storage_options={
+storage_options = {
     "account_name": BlobServiceClientSingleton.get_storage_account_name(),
     "account_host": BlobServiceClientSingleton.get_instance().url.split("//")[1],
     "credential": DefaultAzureCredential(),
 }
+
 
 def get_entities(
     entity_table_path: str,
