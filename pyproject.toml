@@ -64,6 +64,7 @@ requests = "*"
 rich = ">=13.7.1"
 tiktoken = ">=0.6.0"
 uvicorn = ">=0.23.2"
+urllib3 = ">=2.2.2"
 
 [tool.poetry.group.frontend.dependencies]
 python-dotenv = ">=0.19.1"
