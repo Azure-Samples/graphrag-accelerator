@@ -62,9 +62,9 @@ async def get_report_info(index_name: str, report_id: str):
         )
         row = report_table[report_table.community == report_id]
         return ReportResponse(text=row["full_content"].values[0])
-    except Exception as e:
+    except Exception:
         reporter = ReporterSingleton().get_instance()
-        reporter.on_error(f"Could not get report. Exception: {str(e)}")
+        reporter.on_error("Could not get report.")
         raise HTTPException(
             status_code=500,
             detail=f"Error retrieving report '{report_id}' from index '{index_name}'.",
@@ -104,9 +104,9 @@ async def get_chunk_info(index_name: str, text_unit_id: str):
         return TextUnitResponse(
             text=row["chunk"].values[0], source_document=row["source_doc"].values[0]
         )
-    except Exception as e:
+    except Exception:
         reporter = ReporterSingleton().get_instance()
-        reporter.on_error(f"Could not get text chunk. Exception: {str(e)}")
+        reporter.on_error("Could not get text chunk.")
         raise HTTPException(
             status_code=500,
             detail=f"Error retrieving text chunk '{text_unit_id}' from index '{index_name}'.",
@@ -134,9 +134,9 @@ async def get_entity_info(index_name: str, entity_id: int):
             description=row["description"].values[0],
             text_units=row["text_unit_ids"].values[0].tolist(),
         )
-    except Exception as e:
+    except Exception:
         reporter = ReporterSingleton().get_instance()
-        reporter.on_error(f"Could not get entity. Exception: {str(e)}")
+        reporter.on_error("Could not get entity")
         raise HTTPException(
             status_code=500,
             detail=f"Error retrieving entity '{entity_id}' from index '{index_name}'.",
@@ -179,9 +179,9 @@ async def get_claim_info(index_name: str, claim_id: int):
             text_unit_id=row["text_unit_id"].values[0],
             document_ids=row["document_ids"].values[0].tolist(),
         )
-    except Exception as e:
+    except Exception:
         reporter = ReporterSingleton().get_instance()
-        reporter.on_error(f"Could not get claim. Exception: {str(e)}")
+        reporter.on_error("Could not get claim.")
         raise HTTPException(
             status_code=500,
             detail=f"Error retrieving claim '{claim_id}' from index '{index_name}'.",
@@ -225,9 +225,9 @@ async def get_relationship_info(index_name: str, relationship_id: int):
                 x[0] for x in row["text_unit_ids"].to_list()
             ],  # extract text_unit_ids from a list of panda series
         )
-    except Exception as e:
+    except Exception:
         reporter = ReporterSingleton().get_instance()
-        reporter.on_error(f"Could not get relationship. Exception: {str(e)}")
+        reporter.on_error("Could not get relationship.")
         raise HTTPException(
             status_code=500,
             detail=f"Error retrieving relationship '{relationship_id}' from index '{index_name}'.",

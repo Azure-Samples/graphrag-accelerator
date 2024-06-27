@@ -131,10 +131,10 @@ async def global_query(request: GraphRequest):
         ]
 
         return GraphResponse(result=result.response, context_data=result.context_data)
-    except Exception as e:
+    except Exception:
         reporter = ReporterSingleton().get_instance()
-        reporter.on_error(f"Could not perform global search. Exception: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        reporter.on_error("Could not perform global search.")
+        raise HTTPException(status_code=500, detail=None)
 
 
 @query_route.post(

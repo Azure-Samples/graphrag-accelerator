@@ -61,9 +61,9 @@ async def get_all_entitys():
         )
         for item in entity_container.read_all_items():
             items.append(item["human_readable_name"])
-    except Exception as e:
+    except Exception:
         reporter = ReporterSingleton.get_instance()
-        reporter.on_error(f"Error getting all entity configurations: {str(e)}")
+        reporter.on_error("Error getting all entity configurations")
     return EntityNameList(entity_configuration_name=items)
 
 
@@ -147,8 +147,8 @@ async def update_entity(request: EntityConfiguration):
             item=sanitized_config_name,
             partition_key=sanitized_config_name,
         )
-    except Exception as e:
-        reporter.on_error(f"Error getting entity type: {str(e)}")
+    except Exception:
+        reporter.on_error("Error getting entity type")
         reporter.on_error(
             f"Item with entity configuration name '{request.entity_configuration_name}' not found."
         )
@@ -181,8 +181,8 @@ async def update_entity(request: EntityConfiguration):
                 for i in request.entity_examples
             ]
         entity_container.replace_item(sanitized_config_name, existing_item)
-    except Exception as e:
-        reporter.on_error(f"Error updating entity type: {str(e)}")
+    except Exception:
+        reporter.on_error("Error updating entity type")
     return BaseResponse(status="Success.")
 
 
@@ -210,8 +210,8 @@ async def get_entity(entity_configuration_name: str):
             entity_types=existing_item["entity_types"],
             entity_examples=existing_item["entity_examples"],
         )
-    except Exception as e:
-        reporter.on_error(f"Error getting entity type: {str(e)}")
+    except Exception:
+        reporter.on_error("Error getting entity type")
         reporter.on_error(
             f"Item with entity configuration name '{entity_configuration_name}' not found."
         )
@@ -240,8 +240,8 @@ async def delete_entity(entity_configuration_name: str):
             partition_key=sanitized_entity_config_name,
         )
         return BaseResponse(status="Success")
-    except Exception as e:
-        reporter.on_error(f"Error deleting entity: {str(e)}")
+    except Exception:
+        reporter.on_error("Error deleting entity")
         reporter.on_error(
             f"Item with entity configuration name '{entity_configuration_name}' not found."
         )

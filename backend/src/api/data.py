@@ -62,9 +62,9 @@ async def get_all_data_storage_containers():
         for item in container_store_client.read_all_items():
             if item["type"] == "data":
                 items.append(item["human_readable_name"])
-    except Exception as e:
+    except Exception:
         reporter = ReporterSingleton().get_instance()
-        reporter.on_error("Error getting list of blob containers.\nDetails: " + str(e))
+        reporter.on_error("Error getting list of blob containers.")
         raise HTTPException(
             status_code=500, detail="Error getting list of blob containers."
         )
@@ -185,9 +185,9 @@ async def upload_files(
             }
         )
         return BaseResponse(status="File upload successful.")
-    except Exception as e:
+    except Exception:
         reporter.on_error(
-            "Error uploading files.", details={"ErrorDetails": str(e), "files": files}
+            "Error uploading files.", details={"files": files}
         )
         raise HTTPException(
             status_code=500,
@@ -219,11 +219,11 @@ async def delete_files(storage_name: str):
             item=sanitized_storage_name,
             partition_key=sanitized_storage_name,
         )
-    except Exception as e:
+    except Exception:
         reporter = ReporterSingleton().get_instance()
         reporter.on_error(
             f"Error deleting container {storage_name}.",
-            details={"ErrorDetails": str(e), "Container": storage_name},
+            details={"Container": storage_name},
         )
         raise HTTPException(
             status_code=500, detail=f"Error deleting container '{storage_name}'."
