@@ -54,7 +54,7 @@ def main():
                 f.write(content)
             print(f"Saving wiki article '{title}' to {filename}")
         except Exception:
-            print("Error fetching wiki article {title}")
+            print(f"Error fetching wiki article {title}")
 
 
 if __name__ == "__main__":
