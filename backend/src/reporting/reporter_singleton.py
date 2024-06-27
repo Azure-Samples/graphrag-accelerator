@@ -4,8 +4,7 @@
 import os
 from urllib.parse import urlparse
 
-import requests
-from datashaper import NoopWorkflowCallbacks, WorkflowCallbacks
+from datashaper import WorkflowCallbacks
 
 from src.reporting.load_reporter import load_pipeline_reporter_from_list
 from src.reporting.typing import Reporters
@@ -31,6 +30,7 @@ class ReporterSingleton:
                 reporting_dir="", reporters=reporters
             )
         return cls._instance
+
 
 def _is_valid_url(url: str) -> bool:
     try:
