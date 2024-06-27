@@ -185,7 +185,7 @@ async def app():
                     response = requests.post(
                         api_url + "/data",
                         headers=headers_upload,
-                        files=dict(file_payloads),
+                        files=file_payloads,
                         params={"storage_name": input_storage_name},
                     )
                     if response.status_code == 200:
