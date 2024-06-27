@@ -347,14 +347,14 @@ async def _start_indexing_pipeline(index_name: str):
         workflow_callbacks.on_error(
             message=f"Index Name: {index_name}, Container Name: {storage_name}\n",
             cause=None,
-            stack=traceback.format_exc(),
+            stack=None,
             details=error_details,
         )
         # log error in global index directory logs
         reporter.on_error(
             f"Index Name: {index_name}, Container Name: {storage_name}\n {str(e)} \n",
             cause=str(e),
-            stack=traceback.format_exc(),
+            stack=None,
             details=error_details,
         )
         raise HTTPException(
@@ -512,7 +512,7 @@ async def delete_index(index_name: str):
     except Exception:
         reporter.on_error(
             message=f"Error encountered while deleting all data for index {index_name}.",
-            stack=traceback.format_exc(),
+            stack=None,
             details={"container": index_name},
         )
         raise HTTPException(
