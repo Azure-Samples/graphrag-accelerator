@@ -14,8 +14,7 @@ steps:
   # dependencies into a requirements.txt file.
   - script: |
       pip install toml-to-requirements
-      # toml-to-req --toml-file pyproject.toml --poetry --optional-lists dev,test,backend,frontend
-      toml-to-req --toml-file pyproject.toml --poetry
+      toml-to-req --toml-file pyproject.toml --poetry --optional-lists dev,test,backend,frontend
       # toml-to-req is not perfect. It will leave wildcard characters in the requirements.txt file which we remove
       sed -i 's/\*//g' requirements.txt
     displayName: 'Export python dependencies to requirements.txt'
