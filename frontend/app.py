@@ -44,8 +44,7 @@ def get_storage_data(api_url: str) -> dict | None:
         else:
             st.error(f"Error: {response.status_code}")
             return None
-    except Exception as e:
-        st.error(f"Error: {str(e)}")
+    except Exception:
         return None
 
 
@@ -58,8 +57,7 @@ def get_entity_data(api_url: str) -> dict | None:
         else:
             st.error(f"Error: {response.status_code}")
             return None
-    except Exception as e:
-        st.error(f"Error: {str(e)}")
+    except Exception:
         return None
 
 
@@ -72,8 +70,7 @@ def get_indexes_data(api_url: str) -> dict | None:
         else:
             st.error(f"Error: {response.status_code}")
             return None
-    except Exception as e:
-        st.error(f"Error: {str(e)}")
+    except Exception:
         return None
 
 
@@ -105,8 +102,7 @@ async def query_index(index_name: list[str], query_type: str, query: str):
         else:
             st.error(f"Error: {response.status_code} {response.json()}")
             return None
-    except Exception as e:
-        st.error(f"Error: {str(e)}")
+    except Exception:
         return None
 
 
@@ -120,8 +116,7 @@ def get_source_entity(index_name: str, entity_id: str) -> dict | None:
         else:
             st.error(f"Error: {response.status_code} {response.json()}")
             return None
-    except Exception as e:
-        st.error(f"Error: {str(e)}")
+    except Exception:
         return None
 
 
@@ -144,8 +139,8 @@ async def app():
         data_containers = [""]
         try:
             data_containers = data_containers + data["storage_name"]
-        except Exception as e:
-            print(f"No data containers found, continuing...\nException: {str(e)}")
+        except Exception:
+            print("No data containers found, continuing...")
 
         disable_other_input = False
 
@@ -206,9 +201,9 @@ async def app():
             st.session_state["entity_config"] = ["DEFAULT"] + get_entity_data(api_url)[
                 "entity_configuration_name"
             ]
-        except Exception as e:
+        except Exception:
             st.session_state.entity_config = [""]
-            print(f"No entity configurations found, continuing...\nException: {str(e)}")
+            print("No entity configurations found, continuing...")
 
         disable_entity_input = False
         st.session_state.update(st.session_state)
@@ -304,8 +299,8 @@ async def app():
         options_indexes = [""]
         try:
             options_indexes = options_indexes + indexes["index_name"]
-        except Exception as e:
-            print(f"No indexes found, continuing...\nException: {str(e)}")
+        except Exception:
+            print("No indexes found, continuing...")
 
         index_name_select = st.sidebar.selectbox(
             "Select an index to check its status.", options_indexes
@@ -324,18 +319,18 @@ async def app():
                 try:
                     percent_complete = status_response_text["percent_complete"]
                     st.success(f"Status: {status_response_text['status']}")
-                except Exception as e:
-                    print(f"Error: {str(e)}")
+                except Exception:
+                    pass
                 try:
                     progress_bar.progress(float(percent_complete) / 100)
                     st.success(f"Percent Complete: {percent_complete}% ")
-                except Exception as e:
-                    print(f"Error: {str(e)}")
+                except Exception:
+                    pass
                 try:
                     progress_status = status_response_text["progress"]
                     st.success(f"Progress: {progress_status } ")
-                except Exception as e:
-                    print(f"Error: {str(e)}")
+                except Exception:
+                    pass
             else:
                 st.error(f"Status: No workflow associated with {index_name}")
 
@@ -446,11 +441,11 @@ async def app():
                             ):
                                 try:
                                     payload = json.loads(chunk)
-                                except json.JSONDecodeError as e:
+                                except json.JSONDecodeError:
                                     # In the event that a chunk is not a complete JSON object,
                                     # document it for further analysis.
-                                    print(chunk)
-                                    raise e
+                                    print("Error decoding JSON chunk.")
+                                    pass
 
                                 token = payload["token"]
                                 context = payload["context"]
@@ -577,8 +572,8 @@ async def app():
                                         st.dataframe(
                                             df_textinfo_rel, use_container_width=True
                                         )
-        except requests.exceptions.RequestException as e:
-            st.error(f"Error with query: {str(e)}")
+        except requests.exceptions.RequestException:
+            st.error("Error with query")
 
     if search_button:
         await search_button_clicked()
