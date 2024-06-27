@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 
 # this yaml file serves as a configuration template for the graphrag indexing jobs
-# some values are hardcoded while others will be dynamically set
+# some values are hardcoded while others denoted by PLACEHOLDER will be dynamically set
 input:
   type: blob
   file_type: text
@@ -74,14 +74,14 @@ embeddings:
     url: $AI_SEARCH_URL
     audience: $AI_SEARCH_AUDIENCE
 
-# entity_extraction:
-#   prompt: PLACEHOLDER
+entity_extraction:
+  prompt: PLACEHOLDER
 
-# community_reports:
-#   prompt: PLACEHOLDER
+community_reports:
+  prompt: PLACEHOLDER
 
-# summarize_descriptions:
-#   prompt: PLACEHOLDER
+summarize_descriptions:
+  prompt: PLACEHOLDER
 
 snapshots:
   graphml: True

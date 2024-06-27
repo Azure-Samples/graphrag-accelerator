@@ -102,34 +102,7 @@ async def setup_indexing_pipeline(
             detail=f"Data container '{storage_name}' does not exist.",
         )
 
-    # check for existing index job
-    # it is okay if job doesn't exist, but if it does,
-    # it must not be scheduled or running
-    if pipelinejob.item_exist(sanitized_index_name):
-        existing_job = pipelinejob.load_item(sanitized_index_name)
-        if (PipelineJobState(existing_job.status) == PipelineJobState.SCHEDULED) or (
-            PipelineJobState(existing_job.status) == PipelineJobState.RUNNING
-        ):
-            raise HTTPException(
-                status_code=202,  # request has been accepted for processing but is not complete.
-                detail=f"an index with name {index_name} already exists and has not finished building.",
-            )
-        # if indexing job is in a failed state, delete the associated K8s job and pod to allow for a new job to be scheduled
-        if PipelineJobState(existing_job.status) == PipelineJobState.FAILED:
-            _delete_k8s_job(f"indexing-job-{sanitized_index_name}", "graphrag")
-
-        # reset the job to scheduled state
-        existing_job.status = PipelineJobState.SCHEDULED
-        existing_job.percent_complete = 0
-        existing_job.progress = ""
-        existing_job.all_workflows = existing_job.completed_workflows = (
-            existing_job.failed_workflows
-        ) = []
-        existing_job.entity_extraction_prompt = None
-        existing_job.community_report_prompt = None
-        existing_job.summarize_descriptions_prompt = None
-
-    # create or update state in cosmos db
+    # check for prompts
     entity_extraction_prompt_content = (
         entity_extraction_prompt.file.read().decode("utf-8")
         if entity_extraction_prompt
@@ -145,18 +118,45 @@ async def setup_indexing_pipeline(
         if summarize_descriptions_prompt
         else None
     )
-    print(f"ENTITY EXTRACTION PROMPT:\n{entity_extraction_prompt_content}")
-    print(f"COMMUNITY REPORT PROMPT:\n{community_report_prompt_content}")
-    print(f"SUMMARIZE DESCRIPTIONS PROMPT:\n{summarize_descriptions_prompt_content}")
-    pipelinejob.create_item(
-        id=sanitized_index_name,
-        index_name=sanitized_index_name,
-        storage_name=sanitized_storage_name,
-        entity_extraction_prompt=entity_extraction_prompt_content,
-        community_report_prompt=community_report_prompt_content,
-        summarize_descriptions_prompt=summarize_descriptions_prompt_content,
-        status=PipelineJobState.SCHEDULED,
-    )
+
+    # check for existing index job
+    # it is okay if job doesn't exist, but if it does,
+    # it must not be scheduled or running
+    if pipelinejob.item_exist(sanitized_index_name):
+        existing_job = pipelinejob.load_item(sanitized_index_name)
+        if (PipelineJobState(existing_job.status) == PipelineJobState.SCHEDULED) or (
+            PipelineJobState(existing_job.status) == PipelineJobState.RUNNING
+        ):
+            raise HTTPException(
+                status_code=202,  # request has been accepted for processing but is not complete.
+                detail=f"an index with name {index_name} already exists and has not finished building.",
+            )
+        # if indexing job is in a failed state, delete the associated K8s job and pod to allow for a new job to be scheduled
+        if PipelineJobState(existing_job.status) == PipelineJobState.FAILED:
+            _delete_k8s_job(f"indexing-job-{sanitized_index_name}", "graphrag")
+        # reset the pipeline job details
+        existing_job._status = PipelineJobState.SCHEDULED
+        existing_job._percent_complete = 0
+        existing_job._progress = ""
+        existing_job._all_workflows = existing_job._completed_workflows = (
+            existing_job._failed_workflows
+        ) = []
+        existing_job._entity_extraction_prompt = entity_extraction_prompt_content
+        existing_job._community_report_prompt = community_report_prompt_content
+        existing_job._summarize_descriptions_prompt = (
+            summarize_descriptions_prompt_content
+        )
+        existing_job.update_db()
+    else:
+        pipelinejob.create_item(
+            id=sanitized_index_name,
+            index_name=sanitized_index_name,
+            storage_name=sanitized_storage_name,
+            entity_extraction_prompt=entity_extraction_prompt_content,
+            community_report_prompt=community_report_prompt_content,
+            summarize_descriptions_prompt=summarize_descriptions_prompt_content,
+            status=PipelineJobState.SCHEDULED,
+        )
 
     """
     At this point, we know:
@@ -167,7 +167,6 @@ async def setup_indexing_pipeline(
     # update or create new item in container-store in cosmosDB
     if not _blob_service_client.get_container_client(sanitized_index_name).exists():
         _blob_service_client.create_container(sanitized_index_name)
-
     container_store_client = get_database_container_client(
         database_name="graphrag", container_name="container-store"
     )
@@ -221,9 +220,7 @@ async def setup_indexing_pipeline(
         )
 
 
-async def _start_indexing_pipeline(
-    index_name: str
-):
+async def _start_indexing_pipeline(index_name: str):
     # get sanitized name
     sanitized_index_name = sanitize_name(index_name)
 
@@ -265,41 +262,29 @@ async def _start_indexing_pipeline(
         )
 
     # set prompts for entity extraction, community report, and summarize descriptions.
-    # an environment variable is set to the file path of the prompt
     if pipeline_job.entity_extraction_prompt:
         fname = "entity-extraction-prompt.txt"
         with open(fname, "w") as outfile:
             outfile.write(pipeline_job.entity_extraction_prompt)
-        os.environ["GRAPHRAG_ENTITY_EXTRACTION_PROMPT_FILE"] = fname
-        # data["entity_extraction"]["prompt"] = fname
-    # else:
-    #     data["entity_extraction"]["prompt"] = None
+        data["entity_extraction"]["prompt"] = fname
+    else:
+        data.pop("entity_extraction")
     if pipeline_job.community_report_prompt:
         fname = "community-report-prompt.txt"
         with open(fname, "w") as outfile:
             outfile.write(pipeline_job.community_report_prompt)
-        os.environ["GRAPHRAG_COMMUNITY_REPORT_PROMPT_FILE"] = fname
-        # data["community_reports"]["prompt"] = fname
-    # else:
-    #     data["community_reports"]["prompt"] = None
+        data["community_reports"]["prompt"] = fname
+    else:
+        data.pop("community_reports")
     if pipeline_job.summarize_descriptions_prompt:
         fname = "summarize-descriptions-prompt.txt"
         with open(fname, "w") as outfile:
             outfile.write(pipeline_job.summarize_descriptions_prompt)
-        os.environ["GRAPHRAG_SUMMARIZE_DESCRIPTIONS_PROMPT_FILE"] = fname
-        # data["summarize_descriptions"]["prompt"] = fname
-    # else:
-    #     data["summarize_descriptions"]["prompt"] = None
+        data["summarize_descriptions"]["prompt"] = fname
+    else:
+        data.pop("summarize_descriptions")
 
-    # set placeholder values to None if they have not been set
-    # if data["entity_extraction"]["prompt"] == "PLACEHOLDER":
-    #     data["entity_extraction"]["prompt"] = None
-    # if data["community_reports"]["prompt"] == "PLACEHOLDER":
-    #     data["community_reports"]["prompt"] = None
-    # if data["summarize_descriptions"]["prompt"] == "PLACEHOLDER":
-    #     data["summarize_descriptions"]["prompt"] = None
-
-    # generate the default pipeline from default parameters and override with custom settings
+    # generate the default pipeline and override with custom settings
     parameters = create_graphrag_config(data, ".")
     pipeline_config = create_pipeline_config(parameters, True)
 
@@ -315,11 +300,6 @@ async def _start_indexing_pipeline(
     cast(WorkflowCallbacksManager, workflow_callbacks).register(
         PipelineJobWorkflowCallbacks(pipeline_job)
     )
-
-    # print("#################### PIPELINE JOB:")
-    # pprint(pipeline_job.dump_model())
-    print("#################### PIPELINE CONFIG:")
-    print(pipeline_config)
 
     # run the pipeline
     try:
