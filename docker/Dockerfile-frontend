@@ -15,4 +15,4 @@ RUN pip install poetry \
 
 WORKDIR /frontend
 EXPOSE 8080
-CMD ["streamlit", "run", "app.py", "--server.port", "8080"]
+CMD ["streamlit", "run", "new_app.py", "--server.port", "8080"]

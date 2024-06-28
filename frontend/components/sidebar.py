@@ -1,12 +1,15 @@
 import json
-import sys
 
 import requests
 import streamlit as st
 
-sys.path.append("..")
-
-from app_utils.app_functions import get_entity_data, show_index_options
+# sys.path.append("..")
+from .functions import (
+    generate_and_extract_prompts,
+    show_index_options,
+    update_session_state_prompt_vars,
+)
+from .prompt_expander import prompt_expander_
 
 
 def sidebar_layout(
@@ -15,7 +18,7 @@ def sidebar_layout(
     """
     Returns code for sidebar layout.
     """
-    with st.sidebar:
+    with st.container(border=True):
         st.title("Index Pipeline")
         # image = Image.open("./static/Microsoft_logo.png")
         # st.sidebar.image(image, width=200)
@@ -75,61 +78,72 @@ def sidebar_layout(
                 input_storage_name = ""
 
         st.header(
-            "2. Entity Config",
+            "2. Generate Prompts",
             divider=True,
-            help="Create an entity configuration or select an existing entity configuration that has been previously created. The entity configuration directs the LLM what entities to extract by through annotated text examples. You may either use the form to input the necessary information, or enter a raw json configuration. Please ensure to enter the entity configuration name as well. ",
+            help="Generate fine tuned prompts for the LLM specific to your data and domain.",
         )
-
-        try:
-            st.session_state["entity_config"] = ["DEFAULT"] + get_entity_data(
-                api_url, headers
-            )["entity_configuration_name"]
-        except Exception as e:
-            st.session_state.entity_config = [""]
-            print(f"No entity configurations found, continuing...\nException: {str(e)}")
-
-        disable_entity_input = False
-        st.session_state.update(st.session_state)
-        entity_config_name_select = st.sidebar.selectbox(
-            "Select an existing entity configuration.",
-            st.session_state["entity_config"],
-            index=0,
-            key="entity_select_key",
+        select_storage_name2 = st.selectbox(
+            "Select an existing data storage.", data_containers, key="something-unique"
         )
-
-        if entity_config_name_select != "DEFAULT":
-            disable_entity_input = True
-
-        with st.expander("Create new entity configuration"):
-            if "entity_examples" not in st.session_state:
-                st.session_state["entity_examples"] = []
-
-            with open("./entity_config.json", "r") as file:
-                entity_data = json.load(file)
-            entity_data = json.dumps(entity_data)
-
-            entity_config_json = st.text_area(
-                "Raw Entity Config Json",
-                value=entity_data,
-                disabled=disable_entity_input,
+        triggered = st.button(label="Generate Prompts", key="prompt-generation")
+        if triggered:
+            generate_and_extract_prompts(
+                api_url=api_url,
+                headers=headers,
+                storage_name=select_storage_name2,
             )
+            update_session_state_prompt_vars(initial_setting=True)
+            prompt_expander_()
+        # try:
+        #     st.session_state["entity_config"] = ["DEFAULT"] + get_entity_data(
+        #         api_url, headers
+        #     )["entity_configuration_name"]
+        # except Exception as e:
+        #     st.session_state.entity_config = [""]
+        #     print(f"No entity configurations found, continuing...\nException: {str(e)}")
 
-            if st.button(
-                "Create Entity Configuration from JSON", disabled=disable_entity_input
-            ):
-                url = api_url + "/index/config/entity"
-                parsed_json = json.loads(entity_config_json)
-                response = requests.post(url, json=parsed_json, headers=headers)
-                if response.status_code == 200:
-                    st.success("Entity configuration created successfully!")
-                    new_entity_json = [parsed_json.get("entity_configuration_name", [])]
-                    st.session_state["entity_config"] += new_entity_json
+        # disable_entity_input = False
+        # st.session_state.update(st.session_state)
+        # entity_config_name_select = st.sidebar.selectbox(
+        #     "Select an existing entity configuration.",
+        #     st.session_state["entity_config"],
+        #     index=0,
+        #     key="entity_select_key",
+        # )
 
-                    print(st.session_state.entity_config)
-                else:
-                    st.error(
-                        f"Failed to create entity configuration. {json.loads(response.text)['detail']}"
-                    )
+        # if entity_config_name_select != "DEFAULT":
+        #     disable_entity_input = True
+
+        # with st.expander("Create new entity configuration"):
+        #     if "entity_examples" not in st.session_state:
+        #         st.session_state["entity_examples"] = []
+
+        #     with open("./entity_config.json", "r") as file:
+        #         entity_data = json.load(file)
+        #     entity_data = json.dumps(entity_data)
+
+        #     entity_config_json = st.text_area(
+        #         "Raw Entity Config Json",
+        #         value=entity_data,
+        #         disabled=disable_entity_input,
+        #     )
+
+        #     if st.button(
+        #         "Create Entity Configuration from JSON", disabled=disable_entity_input
+        #     ):
+        #         url = api_url + "/index/config/entity"
+        #         parsed_json = json.loads(entity_config_json)
+        #         response = requests.post(url, json=parsed_json, headers=headers)
+        #         if response.status_code == 200:
+        #             st.success("Entity configuration created successfully!")
+        #             new_entity_json = [parsed_json.get("entity_configuration_name", [])]
+        #             st.session_state["entity_config"] += new_entity_json
+
+        #             print(st.session_state.entity_config)
+        #         else:
+        #             st.error(
+        #                 f"Failed to create entity configuration. {json.loads(response.text)['detail']}"
+        #             )
 
         st.header(
             "3. Build Index",
@@ -140,6 +154,7 @@ def sidebar_layout(
         st.write(
             f"Selected Storage Container: {select_storage_name} {input_storage_name}"
         )
+        entity_config_name_select = "Entity Config JSON"
         st.write(f"Selected Entity Config:  {entity_config_name_select}")
         if st.button("Build Index"):
             if select_storage_name != "":
@@ -171,6 +186,7 @@ def sidebar_layout(
                 st.success("Job submitted successfully!")
             else:
                 st.error(f"Failed to submit job.\nStatus: {response.text}")
+
         st.divider()
         st.header(
             "Check Index Status",

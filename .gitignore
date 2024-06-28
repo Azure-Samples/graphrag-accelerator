@@ -5,7 +5,7 @@
 logs
 logs/*
 
-# ignore example directory crated by HelloWorld.ipynb
+# ignore example directory created by HelloWorld.ipynb
 example_files/
 files/
 .scripts/
@@ -20,6 +20,7 @@ __pycache__/
 
 # env files
 *.env*
+
 
 # Distribution / packaging
 .Python
