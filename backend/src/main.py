@@ -2,7 +2,6 @@
 # Licensed under the MIT License.
 
 import os
-import traceback
 
 from fastapi import (
     Depends,
