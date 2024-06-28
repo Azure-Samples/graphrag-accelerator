@@ -4,7 +4,6 @@
 import inspect
 import json
 import os
-import traceback
 from queue import Queue
 from threading import Thread
 
