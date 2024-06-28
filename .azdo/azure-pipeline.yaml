@@ -5,6 +5,8 @@ pool:
   vmImage: ubuntu-latest
 
 steps:
+  # Component Governance does not support pyproject.toml yet.
+  # For that reason, use toml-to-requirements to export dependencies into a requirements.txt file.
   - script: |
       pip install toml-to-requirements
       toml-to-req --toml-file pyproject.toml --poetry --optional-lists dev,test,backend,frontend
