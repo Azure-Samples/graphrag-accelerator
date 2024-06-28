@@ -54,9 +54,9 @@ async def retrieve_graphml_file(index_name: str):
             media_type="application/octet-stream",
             headers={"Content-Disposition": f"attachment; filename={graphml_filename}"},
         )
-    except Exception as e:
+    except Exception:
         reporter = ReporterSingleton().get_instance()
-        reporter.on_error(f"Could not retrieve graphml file: {str(e)}")
+        reporter.on_error("Could not retrieve graphml file")
         raise HTTPException(
             status_code=500,
             detail=f"Could not retrieve graphml file for index '{index_name}'.",
@@ -80,9 +80,9 @@ async def retrieve_graph_stats(index_name: str):
         bytes_io = BytesIO(blob_data)
         g = nx.read_graphml(bytes_io)
         return GraphDataResponse(nodes=len(g.nodes), edges=len(g.edges))
-    except Exception as e:
+    except Exception:
         reporter = ReporterSingleton().get_instance()
-        reporter.on_error(f"Could not retrieve graph data file: {str(e)}")
+        reporter.on_error("Could not retrieve graph data file")
         raise HTTPException(
             status_code=500,
             detail=f"Could not retrieve graph statistics for index '{index_name}'.",

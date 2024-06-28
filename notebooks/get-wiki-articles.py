@@ -53,8 +53,8 @@ def main():
             with open(filename, "w", encoding="utf-8") as f:
                 f.write(content)
             print(f"Saving wiki article '{title}' to {filename}")
-        except Exception as e:
-            print(f"Error fetching wiki article {title}: {e}")
+        except Exception:
+            print(f"Error fetching wiki article {title}")
 
 
 if __name__ == "__main__":
