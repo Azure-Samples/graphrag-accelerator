@@ -4,7 +4,6 @@
 import inspect
 import json
 import os
-import traceback
 from queue import Queue
 from threading import Thread
 
@@ -189,8 +188,6 @@ async def global_search_streaming(request: GraphRequest):
             stream_response(report_df=report_df, query=request.query),
             media_type="application/json",
         )
-    except Exception as e:
+    except Exception:
         # temporary logging of errors until reporters are in place
-        print(e)
-        print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=None)

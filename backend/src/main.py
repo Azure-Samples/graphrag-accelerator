@@ -2,7 +2,6 @@
 # Licensed under the MIT License.
 
 import os
-import traceback
 
 from fastapi import (
     Depends,
@@ -38,7 +37,6 @@ async def catch_all_exceptions_middleware(request: Request, call_next):
     try:
         return await call_next(request)
     except Exception:
-        print(traceback.format_exc())
         return Response("Unexpected internal server error", status_code=500)
 
 

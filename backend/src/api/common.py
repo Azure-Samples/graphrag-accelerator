@@ -52,9 +52,9 @@ def validate_index_file_exist(index_name: str, file_name: str):
             )
         )
         container_store_client.read_item(index_name, index_name)
-    except Exception as e:
+    except Exception:
         raise ValueError(
-            f"Container {index_name} is not a valid index.\nDetails: {str(e)}"
+            f"Container {index_name} is not a valid index."
         )
     # check for file existence
     index_container_client = blob_service_client.get_container_client(index_name)

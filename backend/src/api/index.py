@@ -4,7 +4,6 @@
 import asyncio
 import inspect
 import os
-import traceback
 from typing import cast
 
 import yaml
@@ -198,13 +197,13 @@ async def setup_indexing_pipeline(
             batch_v1.create_namespaced_job(
                 body=job_manifest, namespace=os.environ["AKS_NAMESPACE"]
             )
-        except ApiException as e:
+        except ApiException:
             raise HTTPException(
                 status_code=500,
-                detail=f"exception when calling BatchV1Api->create_namespaced_job: {str(e)}",
+                detail="exception when calling BatchV1Api->create_namespaced_job",
             )
         return BaseResponse(status="indexing operation has been scheduled.")
-    except Exception as e:
+    except Exception:
         reporter = ReporterSingleton().get_instance()
         job_details = {
             "storage_name": storage_name,
@@ -212,7 +211,7 @@ async def setup_indexing_pipeline(
         }
         reporter.on_error(
             "Error creating a new index",
-            details={"error_details": str(e), "job_details": job_details},
+            details={"job_details": job_details},
         )
         raise HTTPException(
             status_code=500,
@@ -336,26 +335,25 @@ async def _start_indexing_pipeline(index_name: str):
         if pipeline_job.status == PipelineJobState.FAILED:
             exit(1)  # signal to AKS that indexing job failed
 
-    except Exception as e:
+    except Exception:
         pipeline_job.status = PipelineJobState.FAILED
 
         # update failed state in cosmos db
         error_details = {
-            "error_details": str(e),
             "error_message": "Indexing pipeline failed.",
         }
         # log error in local index directory logs
         workflow_callbacks.on_error(
             message=f"Index Name: {index_name}, Container Name: {storage_name}\n",
-            cause=e,
-            stack=traceback.format_exc(),
+            cause=None,
+            stack=None,
             details=error_details,
         )
         # log error in global index directory logs
         reporter.on_error(
             f"Index Name: {index_name}, Container Name: {storage_name}\n {str(e)} \n",
             cause=str(e),
-            stack=traceback.format_exc(),
+            stack=None,
             details=error_details,
         )
         raise HTTPException(
@@ -405,9 +403,9 @@ async def get_all_indexes():
         for item in container_store_client.read_all_items():
             if item["type"] == "index":
                 items.append(item["human_readable_name"])
-    except Exception as e:
+    except Exception:
         reporter = ReporterSingleton().get_instance()
-        reporter.on_error(f"Error retrieving index names: {str(e)}")
+        reporter.on_error("Error retrieving index names")
     return IndexNameList(index_name=items)
 
 
@@ -437,10 +435,10 @@ def _delete_k8s_job(job_name: str, namespace: str) -> None:
     try:
         batch_v1 = client.BatchV1Api()
         batch_v1.delete_namespaced_job(name=job_name, namespace=namespace)
-    except Exception as e:
+    except Exception:
         reporter.on_error(
             f"Error deleting k8s job {job_name}.",
-            details={"error_details": str(e), "Container": job_name},
+            details={"Container": job_name},
         )
         pass
     try:
@@ -448,10 +446,10 @@ def _delete_k8s_job(job_name: str, namespace: str) -> None:
         job_pod = _get_pod_name(job_name, os.environ["AKS_NAMESPACE"])
         if job_pod:
             core_v1.delete_namespaced_pod(job_pod, namespace=namespace)
-    except Exception as e:
+    except Exception:
         reporter.on_error(
             f"Error deleting k8s pod for job {job_name}.",
-            details={"error_details": str(e), "Container": job_name},
+            details={"Container": job_name},
         )
         pass
 
@@ -510,11 +508,11 @@ async def delete_index(index_name: str):
         if ai_search_index_name in index_client.list_index_names():
             index_client.delete_index(ai_search_index_name)
 
-    except Exception as e:
+    except Exception:
         reporter.on_error(
             message=f"Error encountered while deleting all data for index {index_name}.",
-            stack=traceback.format_exc(),
-            details={"error_details": str(e), "container": index_name},
+            stack=None,
+            details={"container": index_name},
         )
         raise HTTPException(
             status_code=500, detail=f"Error deleting index '{index_name}'."
