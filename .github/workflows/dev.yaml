@@ -34,7 +34,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: build docker image
+      - name: Build docker image
         uses: docker/build-push-action@v2
         with:
           context: .devcontainer
@@ -46,7 +46,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: build docker image
+      - name: Build docker image
         uses: docker/build-push-action@v2
         with:
           context: .
@@ -59,7 +59,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: build docker image
+      - name: Build docker image
         uses: docker/build-push-action@v2
         with:
           context: .
