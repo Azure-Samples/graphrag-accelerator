@@ -5,9 +5,11 @@
 logs
 logs/*
 
-# ignore example directory created by HelloWorld.ipynb
+# ignore files created by the jupyter notebooks demos
 example_files/
 files/
+prompts
+testdata
 .scripts/
 
 # Byte-compiled / optimized / DLL files
