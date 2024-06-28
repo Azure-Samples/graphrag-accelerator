@@ -10,4 +10,4 @@ For a faster example with less data
 > python get-wiki-articles.py --short-summary --num-articles 1 testdata
 ```
 
-2. Follow instructions in the `HelloWorld.ipynb` notebook to explore the GraphRAG API, by building an index of the data in `testdata` and executing queries.
+2. Follow instructions in the `1-Quickstart.ipynb` notebook to explore the GraphRAG API, by building an index of the data in `testdata` and executing queries.

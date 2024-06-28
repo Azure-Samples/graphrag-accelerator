@@ -12,7 +12,7 @@ For FAQ, access instructions, and our roadmap, please visit `aka.ms/graphrag`
 
 ### Deployment Guide
 To deploy the solution accelerator, see the [deployment guide](docs/DEPLOYMENT-GUIDE.md). This will result in a full deployment of graphrag as an API.
-Afterwards, check out the [Hello World](notebooks/HelloWorld.ipynb) notebook for a demonstration of various API calls.
+Afterwards, check out the [Quickstart](notebooks/1-Quickstart.ipynb) notebook for a demonstration of various API calls.
 
 ## Development Guide
 Interested in contributing? Check out the [development guide](docs/DEVELOPMENT-GUIDE.md).

@@ -15,7 +15,7 @@ The deployment process requires the following tools to be installed:
 * [kubectl](https://kubernetes.io/docs/tasks/tools) - k8s command line tool
 * [yq](https://github.com/mikefarah/yq?tab=readme-ov-file#install) >= v4.40.7 - yaml file parser
 
-TIP: If you open this repository inside a devcontainer (i.e. VSCode Dev Containers or Codespaces), all required tools for deployment will already be available. Opening a devcontainer using VS Code requires <a href="https://docs.docker.com/engine/install/" target="_blank" >Docker to be installed</a>.  
+TIP: If you open this repository inside a devcontainer (i.e. VSCode Dev Containers or Codespaces), all required tools for deployment will already be available. Opening a devcontainer using VS Code requires <a href="https://docs.docker.com/engine/install/" target="_blank" >Docker to be installed</a>.
 
 The setup/deployment process has been mostly automated with a shell script and Bicep files (infrastructure as code). Azure CLI will deploy all necessary Azure resources using these Bicep files. The deployment is configurable using values defined in `infra/deploy.parameters.json`. To the utmost extent, we have provided default values but users are still expected to modify some values.
 
@@ -25,7 +25,7 @@ You will need the following <a href="https://learn.microsoft.com/en-us/azure/rol
 | Permission | Scope |
 | :--- | ---: |
 Contributor            | Subscription
-Role Based Access Control (RBAC) Administrator | Subscription  
+Role Based Access Control (RBAC) Administrator | Subscription
 
 #### Resource Provider
 The Azure subscription that you deploy this solution accelerator in will require the `Microsoft.OperationsManagement` resource provider to be registered.
@@ -99,4 +99,4 @@ bash deploy.sh -p deploy.parameters.json
 When deploying for the first time, it will take ~40-50 minutes to deploy. Subsequent runs of this command will be faster.
 
 ### 6. Use GraphRAG
-Once the deployment has finished, check out our [`Hello World`](../notebooks/HelloWorld.ipynb) notebook for a demonstration of how to use the GraphRAG API. To access the API documentation, visit `<APIM_gateway_url>/manpage/docs` in your browser. You can find the `APIM_gateway_url` by looking in the Azure Portal for the deployed APIM instance.
+Once the deployment has finished, check out our [`Quickstart`](../notebooks/1-Quickstart.ipynb) notebook for a demonstration of how to use the GraphRAG API. To access the API documentation, visit `<APIM_gateway_url>/manpage/docs` in your browser. You can find the `APIM_gateway_url` by looking in the Azure Portal for the deployed APIM instance.
