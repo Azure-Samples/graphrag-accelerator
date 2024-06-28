@@ -1,0 +1,41 @@
+name: Dev Build
+on:
+  workflow_dispatch: # triggered manually via the GitHub UI
+  pull_request:      # triggered when a PR is created or updated
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+    paths:             # only trigger on changes in specific directories
+      - '.github/**/*.yaml'
+      - 'backend/**'
+      - 'docker/**'
+      - 'infra/**'
+      - 'poetry.lock'
+      - 'pyproject.toml'
+jobs:
+  lint-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: pip install ruff
+      - run: |
+          ruff check
+  build-backend:
+    needs: [lint-check]
+    runs-on: ubuntu-latest
+    if: ${{ !github.event.pull_request.draft }}
+    steps:
+      - name: build docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: docker/Dockerfile-backend
+          push: false
+          tags: backend
