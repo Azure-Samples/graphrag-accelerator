@@ -186,7 +186,6 @@ def sidebar_layout(
                 st.success("Job submitted successfully!")
             else:
                 st.error(f"Failed to submit job.\nStatus: {response.text}")
-
         st.divider()
         st.header(
             "Check Index Status",
