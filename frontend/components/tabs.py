@@ -8,43 +8,46 @@ import requests
 import streamlit as st
 
 from .functions import get_source_entity, query_index, show_index_options
-from .sidebar import sidebar_layout
-
-
-def show_title(title: str = "Microsoft GraphRAG Copilot"):
-    return st.title(title)
+from .index_pipeline import IndexPipeline
 
 
 def get_main_tab() -> None:
     """
     Displays content of Main Tab
     """
-    url = "https://github.com/Azure-Samples/graphrag-accelerator/blob/main/docs/TRANSPARENCY.md"
+
+    url = "https://github.com/Azure-Samples/graphrag-accelerator/blob/main/TRANSPARENCY.md"
     content = f"""
     ##  Welcome to GraphRAG!
     Diving into complex information and uncovering semantic relationships utilizing generative AI has never been easier. Here's how you can get started with just a few clicks:
-    - *Set Up:* In the left pane, select or upload your data storage, configure entities, and name your index to begin building an index.
-    - *Explore:* On the query side, choose your index, specify the query type, and click search to see insights.
+    - **INDEXING:** On the **Index** tab:
+        1. Select or upload your data
+        2. Configure the LLM prompts to your doamin
+        3. Name your index and click "Build Index" to begin building a GraphRAG Index.
+    - **QUERYING:** On the **Query** tab:
+        1. Choose an existing index
+        2. Specify the query type
+        3. Hit "Enter" or click "Search" to view insights.
 
-    [GraphRAG]({url}) turns complex data tasks into a breeze, giving you insights at your fingertips.
+    [GraphRAG]({url}) combines the power of RAG with a Graph structure, giving you insights at your fingertips.
     """
     # Display text in the gray box
-    _ = st.markdown(content, unsafe_allow_html=False)
+    st.markdown(content, unsafe_allow_html=False)
 
 
 def get_index_tab(
-    data: dict, api_url: str, headers: dict, headers_upload: dict, indexes: list[str]
+    containers: dict,
+    api_url: str,
+    headers: dict,
+    headers_upload: dict,
+    indexes: list[str],
 ) -> None:
     """
     Displays content of Index tab
     """
-    sidebar_layout(
-        data=data,
-        api_url=api_url,
-        headers=headers,
-        headers_upload=headers_upload,
-        indexes=indexes,
-    )
+    pipeline = IndexPipeline(containers, api_url, headers, headers_upload)
+    pipeline.storage_data_step()
+    pipeline.prompt_config_step()
 
 
 def get_query_tab(api_url: str, headers: dict, indexes: list[str]) -> None:

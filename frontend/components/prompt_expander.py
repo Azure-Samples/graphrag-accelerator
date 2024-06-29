@@ -4,14 +4,7 @@ from .prompt_enum import PromptKeys
 
 css = """
 <style>
-    .element-container:has(>.stTextArea), .stTextArea {
-        display: block;
-        margin-left: auto;
-        margin-right: auto;
-    }
-    .stTextArea textarea {
-        height: 500px;
-    }
+
 </style>
 """
 

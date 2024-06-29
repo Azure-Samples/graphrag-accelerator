@@ -1,3 +1,4 @@
+from io import StringIO
 from pathlib import Path
 from typing import Optional
 from zipfile import ZipFile
@@ -13,6 +14,8 @@ def set_session_state_variables() -> None:
         value = key.value
         if value not in st.session_state:
             st.session_state[value] = ""
+    if "build_index_name" not in st.session_state:
+        st.session_state["build_index_name"] = ""
 
 
 def update_session_state_prompt_vars(
@@ -30,8 +33,10 @@ def update_session_state_prompt_vars(
 
 
 # Function to call the REST API and return storage data
-@st.cache_data
-def get_storage_data(api_url: str, headers: dict) -> dict | None:
+def get_storage_container_names(api_url: str, headers: dict) -> dict | None:
+    """
+    GET request to GraphRAG API for Azure Blob Storage Container names.
+    """
     try:
         response = requests.get(f"{api_url}/data", headers=headers)
         if response.status_code == 200:
@@ -45,7 +50,6 @@ def get_storage_data(api_url: str, headers: dict) -> dict | None:
 
 
 # Function to call the REST API and return existing entity config
-@st.cache_data
 def get_entity_data(api_url: str, headers: dict) -> dict | None:
     try:
         response = requests.get(f"{api_url}/index/config/entity", headers=headers)
@@ -62,6 +66,9 @@ def get_entity_data(api_url: str, headers: dict) -> dict | None:
 # Function to call the REST API and return existing entity config
 @st.cache_data
 def get_indexes_data(api_url: str, headers: dict) -> dict | None:
+    """
+    GET request to GraphRAG API for existing indexes.
+    """
     try:
         response = requests.get(f"{api_url}/index", headers=headers)
         if response.status_code == 200:
@@ -72,6 +79,46 @@ def get_indexes_data(api_url: str, headers: dict) -> dict | None:
     except Exception as e:
         st.error(f"Error: {str(e)}")
         return None
+
+
+def build_index(
+    api_url: str,
+    headers: dict,
+    storage_name: str,
+    index_name: str,
+    entity_extraction_prompt_filepath: str | StringIO = None,
+    community_prompt_filepath: str | StringIO = None,
+    summarize_description_prompt_filepath: str | StringIO = None,
+) -> requests.Response:
+    """Create a search index.
+    This function kicks off a job that builds a knowledge graph (KG) index from files located in a blob storage container.
+    """
+    url = api_url + "/index"
+    prompt_files = dict()
+    if entity_extraction_prompt_filepath:
+        prompt_files["entity_extraction_prompt"] = (
+            open(entity_extraction_prompt_filepath, "r")
+            if isinstance(entity_extraction_prompt_filepath, str)
+            else entity_extraction_prompt_filepath
+        )
+    if community_prompt_filepath:
+        prompt_files["community_report_prompt"] = (
+            open(community_prompt_filepath, "r")
+            if isinstance(community_prompt_filepath, str)
+            else community_prompt_filepath
+        )
+    if summarize_description_prompt_filepath:
+        prompt_files["summarize_descriptions_prompt"] = (
+            open(summarize_description_prompt_filepath, "r")
+            if isinstance(summarize_description_prompt_filepath, str)
+            else summarize_description_prompt_filepath
+        )
+    return requests.post(
+        url,
+        files=prompt_files if len(prompt_files) > 0 else None,
+        params={"index_name": index_name, "storage_name": storage_name},
+        headers=headers,
+    )
 
 
 async def query_index(
