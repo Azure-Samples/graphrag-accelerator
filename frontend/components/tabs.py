@@ -48,6 +48,8 @@ def get_index_tab(
     pipeline = IndexPipeline(containers, api_url, headers, headers_upload)
     pipeline.storage_data_step()
     pipeline.prompt_config_step()
+    pipeline.build_index_step()
+    pipeline.check_status_step()
 
 
 def get_query_tab(api_url: str, headers: dict, indexes: list[str]) -> None:
@@ -68,8 +70,11 @@ def get_query_tab(api_url: str, headers: dict, indexes: list[str]) -> None:
             options=show_index_options(indexes),
             help="Select the index(es) to query. The selected index(es) must have a complete status in order to yield query results without error. Use Check Index Status to confirm status.",
         )
-    search_bar = st.text_input("Query", key="search-query")
-    search_button = st.button("QUERY", type="primary")
+    col3, col4 = st.columns([0.8, 0.2])
+    with col3:
+        search_bar = st.text_input("Query", key="search-query")
+    with col4:
+        search_button = st.button("QUERY", type="primary")
 
     async def search_button_clicked():
         query_response = {}

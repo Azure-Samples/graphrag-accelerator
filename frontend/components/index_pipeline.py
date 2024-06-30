@@ -6,6 +6,8 @@ from components.enums import PromptKeys, StorageIndexVars
 from components.functions import (
     build_index,
     generate_and_extract_prompts,
+    get_indexes_data,
+    show_index_options,
     update_session_state_prompt_vars,
 )
 from components.prompt_expander import prompt_expander_
@@ -157,31 +159,77 @@ class IndexPipeline:
                 divider=True,
                 help="After selecting/creating a data storage container and the LLM prompts, enter an index name and select build index. Building an index will process the data with the LLM create a Knowledge Graph suitable for querying. To track the status of an indexing job, use the check index status below.",
             )
-        select_storage_name = st.session_state[StorageIndexVars.SELECTED_STORAGE.value]
-        input_storage_name = st.session_state[StorageIndexVars.INPUT_STORAGE.value]
-        index_name = st.text_input("Enter Index Name")
-        st.write(
-            f"Selected Storage Container: {select_storage_name} {input_storage_name}"
-        )
-        if st.button("Build Index"):
-            final_storage_name = select_storage_name or input_storage_name
-            st.write(final_storage_name)
-            entity_prompt = st.session_state[PromptKeys.ENTITY.value]
-            summarize_prompt = st.session_state[PromptKeys.SUMMARY.value]
-            community_prompt = st.session_state[PromptKeys.COMMUNITY.value]
-            print(entity_prompt, summarize_prompt, community_prompt)
-            url = self.api_url + "/index"
-            response = build_index(
-                api_url=url,
-                headers=self.headers,
-                storage_name=final_storage_name,
-                index_name=index_name,
-                entity_prompt=entity_prompt,
-                summarize_prompt=summarize_prompt,
-                community_prompt=community_prompt,
+            select_storage_name = st.session_state[
+                StorageIndexVars.SELECTED_STORAGE.value
+            ]
+            input_storage_name = st.session_state[StorageIndexVars.INPUT_STORAGE.value]
+            index_name = st.text_input("Enter Index Name")
+            st.write(
+                f"Selected Storage Container: {select_storage_name} {input_storage_name}"
+            )
+            if st.button("Build Index"):
+                final_storage_name = select_storage_name or input_storage_name
+                st.write(final_storage_name)
+                entity_prompt = st.session_state[PromptKeys.ENTITY.value]
+                summarize_prompt = st.session_state[PromptKeys.SUMMARY.value]
+                community_prompt = st.session_state[PromptKeys.COMMUNITY.value]
+                print(entity_prompt, summarize_prompt, community_prompt)
+                url = self.api_url + "/index"
+                response = build_index(
+                    api_url=url,
+                    headers=self.headers,
+                    storage_name=final_storage_name,
+                    index_name=index_name,
+                    entity_prompt=entity_prompt,
+                    summarize_prompt=summarize_prompt,
+                    community_prompt=community_prompt,
+                )
+
+                if response.status_code == 200:
+                    st.success("Job submitted successfully!")
+                else:
+                    st.error(f"Failed to submit job.\nStatus: {response.text}")
+
+    def check_status_step(self):
+        """
+        Checks the progress of a running indexing job.
+        """
+        _, col2, _ = st.columns(IndexPipeline.COLUMN_WIDTHS)
+        with col2:
+            st.header(
+                "4. Check Index Status",
+                divider=True,
+                help="Select the created index to check status at what steps it is at in indexing. Indexing must be complete in order to be able to execute queries.",
             )
 
-            if response.status_code == 200:
-                st.success("Job submitted successfully!")
-            else:
-                st.error(f"Failed to submit job.\nStatus: {response.text}")
+            indexes = get_indexes_data(self.api_url, self.headers)
+            options_indexes = show_index_options(indexes)
+            index_name_select = st.selectbox(
+                "Select an index to check its status.", options_indexes
+            )
+            progress_bar = st.progress(0, text="Index Job Progress")
+            if st.button("Check Status"):
+                status_url = self.api_url + f"/index/status/{index_name_select}"
+                status_response = requests.get(url=status_url, headers=self.headers)
+                status_response_text = json.loads(status_response.text)
+                if (
+                    status_response.status_code == 200
+                    and status_response_text["status"] != ""
+                ):
+                    try:
+                        percent_complete = status_response_text["percent_complete"]
+                        st.success(f"Status: {status_response_text['status']}")
+                    except Exception as e:
+                        print(e)
+                    try:
+                        progress_bar.progress(float(percent_complete) / 100)
+                        st.success(f"Percent Complete: {percent_complete}% ")
+                    except Exception as e:
+                        print(e)
+                    try:
+                        progress_status = status_response_text["progress"]
+                        st.success(f"Progress: {progress_status } ")
+                    except Exception:
+                        pass
+                else:
+                    st.error(f"Status: No workflow associated with {index_name_select}")
