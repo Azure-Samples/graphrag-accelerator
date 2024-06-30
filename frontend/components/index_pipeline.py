@@ -2,11 +2,12 @@ import json
 
 import requests
 import streamlit as st
+from components.enums import PromptKeys, StorageIndexVars
 from components.functions import (
+    build_index,
     generate_and_extract_prompts,
     update_session_state_prompt_vars,
 )
-from components.prompt_enum import PromptKeys
 from components.prompt_expander import prompt_expander_
 
 
@@ -63,6 +64,9 @@ class IndexPipeline:
 
             if select_storage_name != "":
                 disable_other_input = True
+                st.session_state[StorageIndexVars.SELECTED_STORAGE.value] = (
+                    select_storage_name
+                )
             st.write("Or...")
             with st.expander("Upload data to a storage container."):
                 # TODO: validate storage container name before uploading
@@ -73,6 +77,9 @@ class IndexPipeline:
                     help=IndexPipeline.container_naming_rules,
                 )
                 input_storage_name = input_storage_name.lower()
+                st.session_state[StorageIndexVars.INPUT_STORAGE.value] = (
+                    input_storage_name
+                )
                 file_upload = st.file_uploader(
                     "Upload Data",
                     type=["txt"],
@@ -122,7 +129,7 @@ class IndexPipeline:
             select_storage_name2 = st.selectbox(
                 "Select an existing data storage.",
                 container_names,
-                key="something-unique",
+                key="prompt-storage",
             )
             triggered = st.button(label="Generate Prompts", key="prompt-generation")
             if triggered:
@@ -138,3 +145,43 @@ class IndexPipeline:
                     prompt_values = [st.session_state[k] for k in prompt_keys]
                     if any(prompt_values):
                         prompt_expander_()
+
+    def build_index_step(self):
+        """
+        Creates the Build Index Step for the Indexing Pipeline.
+        """
+        _, col2, _ = st.columns(IndexPipeline.COLUMN_WIDTHS)
+        with col2:
+            st.header(
+                "3. Build Index",
+                divider=True,
+                help="After selecting/creating a data storage container and the LLM prompts, enter an index name and select build index. Building an index will process the data with the LLM create a Knowledge Graph suitable for querying. To track the status of an indexing job, use the check index status below.",
+            )
+        select_storage_name = st.session_state[StorageIndexVars.SELECTED_STORAGE.value]
+        input_storage_name = st.session_state[StorageIndexVars.INPUT_STORAGE.value]
+        index_name = st.text_input("Enter Index Name")
+        st.write(
+            f"Selected Storage Container: {select_storage_name} {input_storage_name}"
+        )
+        if st.button("Build Index"):
+            final_storage_name = select_storage_name or input_storage_name
+            st.write(final_storage_name)
+            entity_prompt = st.session_state[PromptKeys.ENTITY.value]
+            summarize_prompt = st.session_state[PromptKeys.SUMMARY.value]
+            community_prompt = st.session_state[PromptKeys.COMMUNITY.value]
+            print(entity_prompt, summarize_prompt, community_prompt)
+            url = self.api_url + "/index"
+            response = build_index(
+                api_url=url,
+                headers=self.headers,
+                storage_name=final_storage_name,
+                index_name=index_name,
+                entity_prompt=entity_prompt,
+                summarize_prompt=summarize_prompt,
+                community_prompt=community_prompt,
+            )
+
+            if response.status_code == 200:
+                st.success("Job submitted successfully!")
+            else:
+                st.error(f"Failed to submit job.\nStatus: {response.text}")

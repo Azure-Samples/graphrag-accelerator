@@ -1,6 +1,6 @@
 import streamlit as st
 
-from .prompt_enum import PromptKeys
+from .enums import PromptKeys
 
 css = """
 <style>

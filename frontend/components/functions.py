@@ -6,16 +6,21 @@ from zipfile import ZipFile
 import requests
 import streamlit as st
 
-from .prompt_enum import PromptKeys
+from .enums import PromptKeys, StorageIndexVars
 
 
 def set_session_state_variables() -> None:
+    """
+    Initalizes most session state variables for the app.
+    """
     for key in PromptKeys:
         value = key.value
         if value not in st.session_state:
             st.session_state[value] = ""
-    if "build_index_name" not in st.session_state:
-        st.session_state["build_index_name"] = ""
+    for key in StorageIndexVars:
+        value = key.value
+        if value not in st.session_state:
+            st.session_state[value] = ""
 
 
 def update_session_state_prompt_vars(
@@ -25,6 +30,9 @@ def update_session_state_prompt_vars(
     initial_setting: bool = False,
     prompt_dir: str = "./prompts",
 ) -> None:
+    """
+    Updates the session state variables for the LLM prompts.
+    """
     if initial_setting:
         summarize, entity_extract, community = get_prompts(prompt_dir)
     st.session_state[PromptKeys.SUMMARY.value] = summarize
