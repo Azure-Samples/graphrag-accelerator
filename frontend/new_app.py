@@ -40,9 +40,9 @@ def graphrag_app():
     with main_tab:
         tabs.get_main_tab()
     with index_tab:
-        tabs.get_index_tab(containers, api_url, headers, headers_upload, indexes)
+        tabs.get_index_tab(containers, api_url, headers, headers_upload)
     with query_tab:
-        tabs.get_query_tab(api_url, headers, indexes)
+        tabs.get_query_tab(api_url, headers)
 
     deployer_email = os.environ.get("DEPLOYER_EMAIL", "deployer@email.com")
     footer = f"""

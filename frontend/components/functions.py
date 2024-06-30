@@ -72,7 +72,6 @@ def get_entity_data(api_url: str, headers: dict) -> dict | None:
 
 
 # Function to call the REST API and return existing entity config
-@st.cache_data
 def get_indexes_data(api_url: str, headers: dict) -> dict | None:
     """
     GET request to GraphRAG API for existing indexes.
@@ -169,7 +168,12 @@ def get_source_entity(
         return None
 
 
-def show_index_options(indexes: dict) -> list[str]:
+def show_index_options(api_url: str, headers: dict) -> list[str]:
+    """
+    Makes a GET request to the GraphRAG API to get the existing indexes
+    and returns a list of index names.
+    """
+    indexes = get_indexes_data(api_url, headers)
     options_indexes = [""]
     try:
         options_indexes = options_indexes + indexes["index_name"]

@@ -1,4 +1,5 @@
 import json
+from io import StringIO
 
 import requests
 import streamlit as st
@@ -6,7 +7,6 @@ from components.enums import PromptKeys, StorageIndexVars
 from components.functions import (
     build_index,
     generate_and_extract_prompts,
-    get_indexes_data,
     show_index_options,
     update_session_state_prompt_vars,
 )
@@ -165,24 +165,25 @@ class IndexPipeline:
             input_storage_name = st.session_state[StorageIndexVars.INPUT_STORAGE.value]
             index_name = st.text_input("Enter Index Name")
             st.write(
-                f"Selected Storage Container: {select_storage_name} {input_storage_name}"
+                f"Selected Storage Container: :blue[{select_storage_name}] {input_storage_name}"
             )
             if st.button("Build Index"):
                 final_storage_name = select_storage_name or input_storage_name
                 st.write(final_storage_name)
-                entity_prompt = st.session_state[PromptKeys.ENTITY.value]
-                summarize_prompt = st.session_state[PromptKeys.SUMMARY.value]
-                community_prompt = st.session_state[PromptKeys.COMMUNITY.value]
+                entity_prompt = StringIO(st.session_state[PromptKeys.ENTITY.value])
+                summarize_prompt = StringIO(st.session_state[PromptKeys.SUMMARY.value])
+                community_prompt = StringIO(
+                    st.session_state[PromptKeys.COMMUNITY.value]
+                )
                 print(entity_prompt, summarize_prompt, community_prompt)
-                url = self.api_url + "/index"
                 response = build_index(
-                    api_url=url,
+                    api_url=self.api_url,
                     headers=self.headers,
                     storage_name=final_storage_name,
                     index_name=index_name,
-                    entity_prompt=entity_prompt,
-                    summarize_prompt=summarize_prompt,
-                    community_prompt=community_prompt,
+                    entity_extraction_prompt_filepath=entity_prompt,
+                    summarize_description_prompt_filepath=summarize_prompt,
+                    community_prompt_filepath=community_prompt,
                 )
 
                 if response.status_code == 200:
@@ -202,8 +203,7 @@ class IndexPipeline:
                 help="Select the created index to check status at what steps it is at in indexing. Indexing must be complete in order to be able to execute queries.",
             )
 
-            indexes = get_indexes_data(self.api_url, self.headers)
-            options_indexes = show_index_options(indexes)
+            options_indexes = show_index_options(self.api_url, self.headers)
             index_name_select = st.selectbox(
                 "Select an index to check its status.", options_indexes
             )
@@ -211,25 +211,42 @@ class IndexPipeline:
             if st.button("Check Status"):
                 status_url = self.api_url + f"/index/status/{index_name_select}"
                 status_response = requests.get(url=status_url, headers=self.headers)
-                status_response_text = json.loads(status_response.text)
+                status_response_text: dict = json.loads(status_response.text)
                 if (
                     status_response.status_code == 200
                     and status_response_text["status"] != ""
                 ):
                     try:
-                        percent_complete = status_response_text["percent_complete"]
-                        st.success(f"Status: {status_response_text['status']}")
+                        job_status = status_response_text["status"]
+                        status_message = f"Status: {status_response_text['status']}"
+                        _ = (
+                            st.success(status_message)
+                            if job_status in ["running", "complete"]
+                            else st.warning(status_message)
+                        )
                     except Exception as e:
                         print(e)
                     try:
+                        percent_complete = status_response_text["percent_complete"]
                         progress_bar.progress(float(percent_complete) / 100)
-                        st.success(f"Percent Complete: {percent_complete}% ")
+                        completion_message = f"Percent Complete: {percent_complete}% "
+                        _ = (
+                            st.warning(completion_message)
+                            if percent_complete < 100
+                            else st.success(completion_message)
+                        )
                     except Exception as e:
                         print(e)
                     try:
                         progress_status = status_response_text["progress"]
-                        st.success(f"Progress: {progress_status } ")
-                    except Exception:
-                        pass
+                        progress_status = progress_status if progress_status else "N/A"
+                        progress_message = f"Progress: {progress_status}"
+                        _ = (
+                            st.success(progress_message)
+                            if progress_status != "N/A"
+                            else st.warning(progress_message)
+                        )
+                    except Exception as e:
+                        print(e)
                 else:
                     st.error(f"Status: No workflow associated with {index_name_select}")

@@ -36,11 +36,7 @@ def get_main_tab() -> None:
 
 
 def get_index_tab(
-    containers: dict,
-    api_url: str,
-    headers: dict,
-    headers_upload: dict,
-    indexes: list[str],
+    containers: dict, api_url: str, headers: dict, headers_upload: dict
 ) -> None:
     """
     Displays content of Index tab
@@ -52,7 +48,7 @@ def get_index_tab(
     pipeline.check_status_step()
 
 
-def get_query_tab(api_url: str, headers: dict, indexes: list[str]) -> None:
+def get_query_tab(api_url: str, headers: dict) -> None:
     """
     Displays content of Query Tab
     """
@@ -65,9 +61,9 @@ def get_query_tab(api_url: str, headers: dict, indexes: list[str]) -> None:
             help="Select the query type - Each yeilds different results of specificity. Global queries focus on the entire graph structure. Local queries focus on a set of communities (subgraphs) in the graph that are more connected to each other than they are to the rest of the graph structure and can focus on very specific entities in the graph. Global streaming is a global query that displays results as they appear live.",
         )
     with col2:
-        select_index_search = st.multiselect(
+        select_index_search = st.selectbox(
             label="Index",
-            options=show_index_options(indexes),
+            options=show_index_options(api_url, headers),
             help="Select the index(es) to query. The selected index(es) must have a complete status in order to yield query results without error. Use Check Index Status to confirm status.",
         )
     col3, col4 = st.columns([0.8, 0.2])
