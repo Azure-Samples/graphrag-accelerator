@@ -10,7 +10,8 @@ import numpy as np
 import pandas as pd
 import requests
 import streamlit as st
-import streamlit_nested_layout  # noqa
+
+# import streamlit_nested_layout  # noqa
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -126,10 +127,10 @@ async def app():
     # Call the API and get data
     data = get_storage_data(api_url)
 
-    if "entity_config" not in st.session_state:
-        st.session_state["entity_config"] = ["DEFAULT"] + get_entity_data(api_url)[
-            "entity_configuration_name"
-        ]
+    # if "entity_config" not in st.session_state:
+    #     st.session_state["entity_config"] = ["DEFAULT"] + get_entity_data(api_url)[
+    #         "entity_configuration_name"
+    #     ]
 
     # Check if data is retrieved successfully
     with st.sidebar:
@@ -221,9 +222,9 @@ async def app():
             if "entity_examples" not in st.session_state:
                 st.session_state["entity_examples"] = []
 
-            with open("./entity_config.json", "r") as file:
-                entity_data = json.load(file)
-            entity_data = json.dumps(entity_data)
+            # with open("./entity_config.json", "r") as file:
+            #     entity_data = json.load(file)
+            entity_data = {"entity": "data"}  # json.dumps(entity_data)
 
             entity_config_json = st.text_area(
                 "Raw Entity Config Json",

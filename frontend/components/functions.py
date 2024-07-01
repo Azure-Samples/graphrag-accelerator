@@ -128,8 +128,8 @@ def build_index(
     )
 
 
-async def query_index(
-    index_name: list[str], query_type: str, query: str, api_url: str, headers: dict
+def query_index(
+    index_name: str, query_type: str, query: str, api_url: str, headers: dict
 ):
     try:
         request = {
@@ -144,11 +144,25 @@ async def query_index(
         if response.status_code == 200:
             return response.json()
         else:
-            st.error(f"Error: {response.status_code} {response.json()}")
-            return None
+            st.error(
+                f"Error with {query_type} search: {response.status_code} {response.json()}"
+            )
+    except Exception as e:
+        st.error(f"Error with {query_type} search: {str(e)}")
+
+
+def global_streaming_query(index_name: str, query: str, api_url: str, headers: dict):
+    url = f"{api_url}/experimental/query/global/streaming"
+    try:
+        query_response = requests.post(
+            url,
+            json={"index_name": index_name, "query": query},
+            headers=headers,
+            stream=True,
+        )
+        return query_response
     except Exception as e:
         st.error(f"Error: {str(e)}")
-        return None
 
 
 def get_source_entity(
@@ -161,11 +175,11 @@ def get_source_entity(
         if response.status_code == 200:
             return response.json()
         else:
-            st.error(f"Error: {response.status_code} {response.json()}")
-            return None
+            return response.json()
+        # else:
+        #     st.error(f"Error: {response.status_code} {response.json()}")
     except Exception as e:
         st.error(f"Error: {str(e)}")
-        return None
 
 
 def show_index_options(api_url: str, headers: dict) -> list[str]:

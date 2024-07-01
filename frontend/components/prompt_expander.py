@@ -2,15 +2,8 @@ import streamlit as st
 
 from .enums import PromptKeys
 
-css = """
-<style>
-
-</style>
-"""
-
 
 def prompt_expander_():
-    st.markdown(body=css, unsafe_allow_html=True)
     entity_ext_prompt = st.session_state[PromptKeys.ENTITY.value]
     summ_prompt = st.session_state[PromptKeys.SUMMARY.value]
     comm_report_prompt = st.session_state[PromptKeys.COMMUNITY.value]
@@ -62,6 +55,3 @@ def prompt_expander_():
                 st.session_state[PromptKeys.COMMUNITY.value] = (
                     community_prompt if community_prompt else comm_report_prompt
                 )
-        for i, k in enumerate(st.session_state):
-            print(f"KEY {i}: {k}")
-            print(f"VALUE: {st.session_state[k]}")

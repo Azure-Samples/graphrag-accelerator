@@ -85,7 +85,7 @@ Licensed under the MIT License.
 
 /* CSS */
 button[kind="primary"] {
-  background-color: #62be48;
+  background-color: #1d9445;
   border: 0;
   border-radius: 56px;
   color: #fff;
@@ -116,7 +116,7 @@ button[kind="primary"]:before {
   position: absolute;
   top: 0;
   transition: all .3s;
-  width: 92%;
+  width: 62%;
 }
 
 button[kind="primary"]:hover {
@@ -126,7 +126,8 @@ button[kind="primary"]:hover {
 
 @media (min-width: 768px) {
 button[kind="primary"] {
-    padding: 16px 48px;
+    padding: 15px 34px;
+    margin: 20px auto;
   }
 }
 
