@@ -129,7 +129,7 @@ class IndexPipeline:
                 help="Generate fine tuned prompts for the LLM specific to your data and domain.",
             )
             select_storage_name2 = st.selectbox(
-                "Select an existing data storage.",
+                "Select an existing Storage Container.",
                 container_names,
                 key="prompt-storage",
             )
