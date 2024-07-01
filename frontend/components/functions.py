@@ -5,8 +5,7 @@ from zipfile import ZipFile
 
 import requests
 import streamlit as st
-
-from .enums import PromptKeys, StorageIndexVars
+from enums import PromptKeys, StorageIndexVars
 
 
 def set_session_state_variables() -> None:
