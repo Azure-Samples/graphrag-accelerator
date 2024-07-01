@@ -83,5 +83,9 @@ community_reports:
 summarize_descriptions:
   prompt: PLACEHOLDER
 
+# claim extraction is disabled by default in the graphrag library so we enable it for the solution accelerator
+claim_extraction:
+  enabled: True
+
 snapshots:
   graphml: True
