@@ -82,15 +82,17 @@ query:
     httpGet:
       path: /manpage/docs
       port: http
+    failureThreshold: 50
     initialDelaySeconds: 30
-    periodSeconds: 10
+    periodSeconds: 20
 
   readinessProbe:
     httpGet:
       path: /manpage/docs
       port: http
+    failureThreshold: 50
     initialDelaySeconds: 30
-    periodSeconds: 10
+    periodSeconds: 20
 
   autoscaling:
     enabled: true
@@ -167,15 +169,17 @@ index:
     httpGet:
       path: /manpage/docs
       port: http
+    failureThreshold: 50
     initialDelaySeconds: 30
-    periodSeconds: 10
+    periodSeconds: 20
 
   readinessProbe:
     httpGet:
       path: /manpage/docs
       port: http
+    failureThreshold: 50
     initialDelaySeconds: 30
-    periodSeconds: 10
+    periodSeconds: 20
 
   autoscaling:
     enabled: true
