@@ -42,7 +42,7 @@ Development is best done in a unix environment (Linux, Mac, or [Windows WSL](htt
         - Most dependencies (packages or tools) should be added to the environment through the Dockerfile. This allows us to maintain a consistent development enviornment. If you need a tool added, please make the appropriate changes to the Dockerfile and submit a Pull Request.
 
 ### Deploying GraphRAG
-The GraphRAG service consist of two components (a `backend` application and a `frontend` application). GraphRAG can be launched in multiple ways depending on where in the application stack you are developing and debugging.
+The GraphRAG service consist of two components - a `backend` application and a `frontend` UI application (coming soon). GraphRAG can be launched in multiple ways depending on where in the application stack you are developing and debugging.
 
 - In Azure Kubernetes Service (AKS):
 
