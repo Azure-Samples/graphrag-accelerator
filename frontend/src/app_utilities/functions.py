@@ -193,12 +193,11 @@ def show_index_options(api_url: str, headers: dict) -> list[str]:
     and returns a list of index names.
     """
     indexes = get_indexes_data(api_url, headers)
-    options_indexes = [""]
     try:
-        options_indexes = options_indexes + indexes["index_name"]
+        options_indexes = indexes["index_name"]
+        return options_indexes
     except Exception as e:
         print(f"No indexes found, continuing...\nException: {str(e)}")
-    return options_indexes
 
 
 def _generate_prompts(

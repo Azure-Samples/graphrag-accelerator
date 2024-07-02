@@ -31,9 +31,8 @@ class IndexPipeline:
         """
         Parses the container names from the response from the API.
         """
-        container_names = [""]
         try:
-            container_names = container_names + self.containers["storage_name"]
+            container_names = self.containers["storage_name"]
         except Exception as e:
             print(f"No data containers found, continuing...\nException: {str(e)}")
         return container_names

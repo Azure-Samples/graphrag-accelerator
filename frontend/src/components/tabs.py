@@ -21,10 +21,10 @@ def get_main_tab() -> None:
     content = f"""
     ##  Welcome to GraphRAG!
     Diving into complex information and uncovering semantic relationships utilizing generative AI has never been easier. Here's how you can get started with just a few clicks:
-    - **PROMPT GENERATION:** (Optional Step)
+    - **PROMPT GENERATION:** (*Optional Step*)
         1. Generate fine-tuned prompts for the LLM specific to your data and domain.
         2. Simply select an existing Storage Container and click "Generate Prompts".
-    - **PROMPT CONFIGURATION:** (Optional Step)
+    - **PROMPT CONFIGURATION:** (*Optional Step*)
         1. Edit the generated prompts to better suit your needs.
         2. Once you are finished editing, click the "Save Prompts" button.
         3. Saving the prompts will store the prompts for use with the follow-on Indexing step.
@@ -53,9 +53,9 @@ def get_prompt_generation_tab(indexPipe: IndexPipeline) -> None:
         divider=True,
         help="Generate fine tuned prompts for the LLM specific to your data and domain.",
     )
+
     st.write(
-        "Generate Prompt instructions here.\n\
-             Feel free to skip this step if you have already generated prompts."
+        "**OPTIONAL STEP:** Select a storage container that contains your data. The LLM will use that data to generate domain-specific prompts for follow-on indexing."
     )
     select_storage_name2 = st.selectbox(
         "Select an existing Storage Container.",
@@ -167,7 +167,7 @@ def get_query_tab(api_url: str, headers: dict) -> None:
         select_index_search = st.selectbox(
             label="Index",
             options=show_index_options(api_url, headers),
-            index=1,
+            index=0,
             help="Select the index(es) to query. The selected index(es) must have a complete status in order to yield query results without error. Use Check Index Status to confirm status.",
         )
     col3, col4 = st.columns([0.8, 0.2])
