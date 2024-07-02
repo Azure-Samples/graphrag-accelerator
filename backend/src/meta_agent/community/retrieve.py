@@ -176,7 +176,7 @@ class CommunitySearchHelpers:
             relationships=relationships, entities=entities, ranking_attribute="rank"
         )
 
-        if covariate_df:
+        if covariate_df is not None:
             claims = read_covariates(
                 df=covariate_df,
                 id_col="id",
