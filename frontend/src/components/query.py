@@ -5,8 +5,7 @@ import numpy as np
 import pandas as pd
 import requests
 import streamlit as st
-
-from .functions import global_streaming_query, query_index
+from src.app_utilities.functions import global_streaming_query, query_index
 
 
 class GraphQuery:

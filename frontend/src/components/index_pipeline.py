@@ -3,14 +3,8 @@ from io import StringIO
 
 import requests
 import streamlit as st
-from components.enums import PromptKeys, StorageIndexVars
-from components.functions import (
-    build_index,
-    generate_and_extract_prompts,
-    show_index_options,
-    update_session_state_prompt_vars,
-)
-from components.prompt_expander import prompt_expander_
+from src.app_utilities.enums import PromptKeys, StorageIndexVars
+from src.app_utilities.functions import build_index, show_index_options
 
 
 class IndexPipeline:
@@ -58,7 +52,7 @@ class IndexPipeline:
             st.header(
                 "1. Data Storage",
                 divider=True,
-                help="Upload your own files to a new data storage container, or select an existing data storage created. This step creates a blob container and CosmosDB entry that will contain your data necessary for indexing.",
+                help="Select a Data Storage Container to upload data to or select an existing container to use for indexing. The data will be processed by the LLM to create a Knowledge Graph.",
             )
             select_storage_name = st.selectbox(
                 "Select an existing Storage Container.", container_names
@@ -116,37 +110,26 @@ class IndexPipeline:
                     disable_other_input = True
                     input_storage_name = ""
 
-    def prompt_config_step(self):
-        """
-        Builds the Prompt Configuration Step for the Indexing Pipeline.
-        """
-        container_names = self._parse_container_names()
+    def prompt_selection_step(self):
         _, col2, _ = st.columns(IndexPipeline.COLUMN_WIDTHS)
         with col2:
             st.header(
-                "2. Generate Prompts",
+                "2. Select LLM Prompts",
                 divider=True,
                 help="Generate fine tuned prompts for the LLM specific to your data and domain.",
             )
-            select_storage_name2 = st.selectbox(
-                "Select an existing Storage Container.",
-                container_names,
-                key="prompt-storage",
+            selection = st.radio(
+                label="Prompt Selection",
+                captions=[
+                    "Use the built-in default prompts",
+                    "Use the generated prompts from Steps 1 + 2",
+                ],
+                label_visibility="hidden",
+                options=["Use Default Prompts", "Use Generated Prompts"],
+                index=1,
+                key="prompt-radio",
             )
-            triggered = st.button(label="Generate Prompts", key="prompt-generation")
-            if triggered:
-                with st.spinner("Generating LLM prompts for GraphRAG..."):
-                    generate_and_extract_prompts(
-                        api_url=self.api_url,
-                        headers=self.headers,
-                        storage_name=select_storage_name2,
-                    )
-
-                    update_session_state_prompt_vars(initial_setting=True)
-                    prompt_keys = [e.value for e in PromptKeys]
-                    prompt_values = [st.session_state[k] for k in prompt_keys]
-                    if any(prompt_values):
-                        prompt_expander_()
+            _ = selection
 
     def build_index_step(self):
         """
@@ -155,9 +138,9 @@ class IndexPipeline:
         _, col2, _ = st.columns(IndexPipeline.COLUMN_WIDTHS)
         with col2:
             st.header(
-                "3. Build Index",
+                "2. Build Index",
                 divider=True,
-                help="After selecting/creating a data storage container and the LLM prompts, enter an index name and select build index. Building an index will process the data with the LLM create a Knowledge Graph suitable for querying. To track the status of an indexing job, use the check index status below.",
+                help="Building an index will process the data from step 1 and create a Knowledge Graph suitable for querying. The LLM will use either the default prompt configuration or the prompts that you generated previously. To track the status of an indexing job, use the check index status below.",
             )
             select_storage_name = st.session_state[
                 StorageIndexVars.SELECTED_STORAGE.value
@@ -169,13 +152,12 @@ class IndexPipeline:
             )
             if st.button("Build Index"):
                 final_storage_name = select_storage_name or input_storage_name
-                st.write(final_storage_name)
                 entity_prompt = StringIO(st.session_state[PromptKeys.ENTITY.value])
                 summarize_prompt = StringIO(st.session_state[PromptKeys.SUMMARY.value])
                 community_prompt = StringIO(
                     st.session_state[PromptKeys.COMMUNITY.value]
                 )
-                print(entity_prompt, summarize_prompt, community_prompt)
+
                 response = build_index(
                     api_url=self.api_url,
                     headers=self.headers,
@@ -198,7 +180,7 @@ class IndexPipeline:
         _, col2, _ = st.columns(IndexPipeline.COLUMN_WIDTHS)
         with col2:
             st.header(
-                "4. Check Index Status",
+                "3. Check Index Status",
                 divider=True,
                 help="Select the created index to check status at what steps it is at in indexing. Indexing must be complete in order to be able to execute queries.",
             )

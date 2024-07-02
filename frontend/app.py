@@ -3,13 +3,14 @@
 import os
 
 import streamlit as st
-from components import tabs
-from components.functions import (
+from dotenv import load_dotenv
+from src.app_utilities.functions import (
     get_indexes_data,
     get_storage_container_names,
     set_session_state_variables,
 )
-from dotenv import load_dotenv
+from src.components import tabs
+from src.components.index_pipeline import IndexPipeline
 
 _ = load_dotenv(override=True)
 
@@ -31,14 +32,27 @@ indexes = get_indexes_data(api_url, headers)
 containers = get_storage_container_names(api_url, headers)
 input_storage_name = ""
 select_storage_name = ""
+indexPipe = IndexPipeline(containers, api_url, headers, headers_upload)
 
 
 def graphrag_app():
     # main entry point
     st.title("Microsoft GraphRAG Copliot")
-    main_tab, index_tab, query_tab = st.tabs(["**Main**", "**Index**", "**Query**"])
+    main_tab, prompt_gen_tab, prompt_edit_tab, index_tab, query_tab = st.tabs(
+        [
+            "**Main**",
+            "**1. Prompt Generation**",
+            "**2. Prompt Configuration**",
+            "**3. Index**",
+            "**4. Query**",
+        ]
+    )
     with main_tab:
         tabs.get_main_tab()
+    with prompt_gen_tab:
+        tabs.get_prompt_generation_tab(indexPipe)
+    with prompt_edit_tab:
+        tabs.get_prompt_configuration_tab()
     with index_tab:
         tabs.get_index_tab(containers, api_url, headers, headers_upload)
     with query_tab:

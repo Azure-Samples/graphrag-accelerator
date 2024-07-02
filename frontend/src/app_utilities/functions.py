@@ -1,3 +1,4 @@
+import os
 from io import StringIO
 from pathlib import Path
 from typing import Optional
@@ -5,7 +6,7 @@ from zipfile import ZipFile
 
 import requests
 import streamlit as st
-from enums import PromptKeys, StorageIndexVars
+from src.app_utilities.enums import PromptKeys, StorageIndexVars
 
 
 def set_session_state_variables() -> None:
@@ -20,11 +21,13 @@ def set_session_state_variables() -> None:
         value = key.value
         if value not in st.session_state:
             st.session_state[value] = ""
+    if "saved_prompts" not in st.session_state:
+        st.session_state["saved_prompts"] = False
 
 
 def update_session_state_prompt_vars(
-    summarize: Optional[str] = None,
     entity_extract: Optional[str] = None,
+    summarize: Optional[str] = None,
     community: Optional[str] = None,
     initial_setting: bool = False,
     prompt_dir: str = "./prompts",
@@ -33,10 +36,13 @@ def update_session_state_prompt_vars(
     Updates the session state variables for the LLM prompts.
     """
     if initial_setting:
-        summarize, entity_extract, community = get_prompts(prompt_dir)
-    st.session_state[PromptKeys.SUMMARY.value] = summarize
-    st.session_state[PromptKeys.ENTITY.value] = entity_extract
-    st.session_state[PromptKeys.COMMUNITY.value] = community
+        entity_extract, summarize, community = get_prompts(prompt_dir)
+    if entity_extract:
+        st.session_state[PromptKeys.ENTITY.value] = entity_extract
+    if summarize:
+        st.session_state[PromptKeys.SUMMARY.value] = summarize
+    if community:
+        st.session_state[PromptKeys.COMMUNITY.value] = community
 
 
 # Function to call the REST API and return storage data
@@ -228,12 +234,31 @@ def generate_and_extract_prompts(
 ) -> None:
     _generate_prompts(api_url, headers, storage_name, zip_file_name, limit)
     _extract_prompts_from_zip(zip_file_name)
+    update_session_state_prompt_vars(initial_setting=True)
 
 
 def open_file(file_path: str | Path):
     with open(file_path, "r") as file:
         text = file.read()
     return text
+
+
+def zip_directory(directory_path: str, zip_path: str):
+    """
+    Zips all contents of a directory into a single zip file.
+
+    Parameters:
+    - directory_path: str, the path of the directory to zip
+    - zip_path: str, the path where the zip file will be created
+    """
+    root_dir_name = os.path.basename(directory_path.rstrip("/"))
+    with ZipFile(zip_path, "w") as zipf:
+        for root, _, files in os.walk(directory_path):
+            for file in files:
+                file_path = os.path.join(root, file)
+                relpath = os.path.relpath(file_path, start=directory_path)
+                arcname = os.path.join(root_dir_name, relpath)
+                zipf.write(file_path, arcname)
 
 
 def get_prompts(prompt_dir: str = "./prompts"):
@@ -243,13 +268,13 @@ def get_prompts(prompt_dir: str = "./prompts"):
     prompt_paths = [
         prompt for prompt in Path(prompt_dir).iterdir() if prompt.name.endswith(".txt")
     ]
-    summ_prompt = [
-        open_file(path) for path in prompt_paths if path.name.startswith("summ")
-    ][0]
     entity_ext_prompt = [
         open_file(path) for path in prompt_paths if path.name.startswith("entity")
+    ][0]
+    summ_prompt = [
+        open_file(path) for path in prompt_paths if path.name.startswith("summ")
     ][0]
     comm_report_prompt = [
         open_file(path) for path in prompt_paths if path.name.startswith("community")
     ][0]
-    return summ_prompt, entity_ext_prompt, comm_report_prompt
+    return entity_ext_prompt, summ_prompt, comm_report_prompt
