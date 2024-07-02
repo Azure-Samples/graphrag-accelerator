@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "graphrag-solution-accelerator"
-version = "0.0.1"
+version = "0.1.1"
 description = ""
 authors = [
     "Josh Bradley <joshbradley@microsoft.com>",
@@ -46,7 +46,7 @@ environs = ">=9.5.0"
 fastapi = ">=0.110.0"
 fastparquet = ">=2023.10.1"
 fsspec = ">=2024.2.0"
-graphrag = {path = "backend/graphrag-wheel/graphrag-0.0.1-py3-none-any.whl"}
+graphrag = "==0.1.1"
 graspologic = ">=3.3.0"
 httpx = ">=0.25.2"
 kubernetes = ">=29.0.0"
