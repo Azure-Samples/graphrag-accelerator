@@ -37,7 +37,7 @@ indexPipe = IndexPipeline(containers, api_url, headers, headers_upload)
 
 def graphrag_app():
     # main entry point
-    st.title("Microsoft GraphRAG Copliot")
+    st.title("Microsoft GraphRAG Copilot")
     main_tab, prompt_gen_tab, prompt_edit_tab, index_tab, query_tab = st.tabs(
         [
             "**Main**",
