@@ -272,8 +272,6 @@ async def generate_prompts(storage_name: str, limit: int = 5):
     this_directory = os.path.dirname(
         os.path.abspath(inspect.getfile(inspect.currentframe()))
     )
-    print("THIS DIRECTORY: ", this_directory)
-    print("CWD: ", os.getcwd())
 
     # write custom settings.yaml to a file and store in a temporary directory
     data = yaml.safe_load(open(f"{this_directory}/pipeline-settings.yaml"))
@@ -281,7 +279,6 @@ async def generate_prompts(storage_name: str, limit: int = 5):
     temp_dir = f"/tmp/{sanitized_storage_name}_prompt_tuning"
     shutil.rmtree(temp_dir, ignore_errors=True)
     os.makedirs(temp_dir, exist_ok=True)
-    print(f"TEMP SETTINGS DIR: {temp_dir}")
     with open(f"{temp_dir}/settings.yaml", "w") as f:
         yaml.dump(data, f, default_flow_style=False)
 
@@ -306,9 +303,6 @@ async def generate_prompts(storage_name: str, limit: int = 5):
         f"{temp_dir}/prompts"  # will become a zip file with the name prompts.zip
     )
     shutil.make_archive(temp_archive, "zip", root_dir=temp_dir, base_dir="prompts")
-    print(f"ARCHIVE: {temp_archive}.zip")
-    for f in os.listdir(temp_dir):
-        print(f"FILE: {f}")
 
     def iterfile(file_path: str):
         with open(file_path, mode="rb") as file_like:
