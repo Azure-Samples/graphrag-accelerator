@@ -1,8 +1,12 @@
 import os
 
 import streamlit as st
-from src.app_utilities.enums import PromptKeys
-from src.app_utilities.functions import generate_and_extract_prompts, show_index_options
+from src.app_utilities.enums import EnvVars, PromptKeys
+from src.app_utilities.functions import (
+    apim_health_check,
+    generate_and_extract_prompts,
+    show_index_options,
+)
 from src.components.index_pipeline import IndexPipeline
 from src.components.prompt_configuration import (
     edit_prompts,
@@ -12,7 +16,7 @@ from src.components.prompt_configuration import (
 from src.components.query import GraphQuery
 
 
-def get_main_tab() -> None:
+def get_main_tab(initialized: bool) -> None:
     """
     Displays content of Main Tab
     """
@@ -20,7 +24,8 @@ def get_main_tab() -> None:
     url = "https://github.com/Azure-Samples/graphrag-accelerator/blob/main/TRANSPARENCY.md"
     content = f"""
     ##  Welcome to GraphRAG!
-    Diving into complex information and uncovering semantic relationships utilizing generative AI has never been easier. Here's how you can get started with just a few clicks:
+    Diving into complex information and uncovering semantic relationships utilizing generative AI has never been easier.
+    Here's how you can get started with just a few clicks:
     - **PROMPT GENERATION:** (*Optional Step*)
         1. Generate fine-tuned prompts for the LLM specific to your data and domain.
         2. Simply select an existing Storage Container and click "Generate Prompts".
@@ -42,6 +47,30 @@ def get_main_tab() -> None:
     """
     # Display text in the gray box
     st.markdown(content, unsafe_allow_html=False)
+    if not initialized:
+        with st.sidebar:
+            st.title("Login")
+            with st.form(key="login-form", clear_on_submit=True):
+                apim_url = st.text_input("APIM Gateway URL", key="apim-url")
+                apim_sub_key = st.text_input(
+                    "APIM Subscription Key", key="subscription-key"
+                )
+                form_submit = st.form_submit_button("Login")
+                if form_submit:
+                    status_code = apim_health_check(apim_url, apim_sub_key)
+                    if status_code == 200:
+                        st.success("Login Successful")
+                        st.session_state[EnvVars.DEPLOYMENT_URL.value] = apim_url
+                        st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY.value] = (
+                            apim_sub_key
+                        )
+                        st.session_state["initialized"] = True
+                        st.rerun()
+                    else:
+                        st.error("Login Failed")
+                        st.error(
+                            "Please check the APIM Gateway URL and Subscription Key"
+                        )
 
 
 def get_prompt_generation_tab(indexPipe: IndexPipeline) -> None:

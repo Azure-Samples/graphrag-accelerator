@@ -6,7 +6,55 @@ from zipfile import ZipFile
 
 import requests
 import streamlit as st
-from src.app_utilities.enums import PromptKeys, StorageIndexVars
+from dotenv import find_dotenv, load_dotenv
+from src.app_utilities.enums import EnvVars, PromptKeys, StorageIndexVars
+
+
+def initialize_app(
+    env_file: str = ".env", css_file: str = "style.css"
+) -> tuple[str, str, str] | bool:
+    """
+    Initialize the Streamlit app with the necessary configurations.
+    """
+    # set page configuration
+    st.set_page_config(initial_sidebar_state="expanded", layout="wide")
+
+    # set custom CSS
+    with open(css_file) as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+    # initialize session state variables
+    set_session_state_variables()
+
+    # load environment variables
+    _ = load_dotenv(find_dotenv(filename=env_file), override=True)
+
+    # set key and deployment url variables
+    st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY.value] = os.getenv(
+        EnvVars.APIM_SUBSCRIPTION_KEY.value,
+        st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY.value],
+    )
+    st.session_state[EnvVars.DEPLOYMENT_URL.value] = os.getenv(
+        EnvVars.DEPLOYMENT_URL.value, st.session_state[EnvVars.DEPLOYMENT_URL.value]
+    )
+    if (
+        st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY.value]
+        and st.session_state[EnvVars.DEPLOYMENT_URL.value]
+    ):
+        st.session_state["headers"] = {
+            "Ocp-Apim-Subscription-Key": st.session_state[
+                EnvVars.APIM_SUBSCRIPTION_KEY.value
+            ],
+            "Content-Type": "application/json",
+        }
+        st.session_state["headers_upload"] = {
+            "Ocp-Apim-Subscription-Key": st.session_state[
+                EnvVars.APIM_SUBSCRIPTION_KEY.value
+            ]
+        }
+        return True
+    else:
+        return False
 
 
 def set_session_state_variables() -> None:
@@ -21,8 +69,14 @@ def set_session_state_variables() -> None:
         value = key.value
         if value not in st.session_state:
             st.session_state[value] = ""
+    for key in EnvVars:
+        value = key.value
+        if value not in st.session_state:
+            st.session_state[value] = ""
     if "saved_prompts" not in st.session_state:
         st.session_state["saved_prompts"] = False
+    if "initialized" not in st.session_state:
+        st.session_state["initialized"] = False
 
 
 def update_session_state_prompt_vars(
@@ -43,6 +97,23 @@ def update_session_state_prompt_vars(
         st.session_state[PromptKeys.SUMMARY.value] = summarize
     if community:
         st.session_state[PromptKeys.COMMUNITY.value] = community
+
+
+def apim_health_check(endpoint: str, key: str) -> int:
+    """
+    Check the health of the APIM endpoint.
+    """
+    url = endpoint + "/health"
+    headers = {
+        "Ocp-Apim-Subscription-Key": key,
+        "Content-Type": "application/json",
+    }
+    try:
+        response = requests.get(url, headers=headers)
+        return response.status_code
+    except Exception as e:
+        st.error(f"Error: {str(e)}")
+        return 500
 
 
 # Function to call the REST API and return storage data

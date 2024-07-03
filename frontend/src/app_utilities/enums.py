@@ -23,3 +23,8 @@ class StorageIndexVars(Enum):
     SELECTED_STORAGE = "selected_storage"
     INPUT_STORAGE = "input_storage"
     SELECTED_INDEX = "selected_index"
+
+
+class EnvVars(Enum):
+    APIM_SUBSCRIPTION_KEY = "APIM_SUBSCRIPTION_KEY"
+    DEPLOYMENT_URL = "DEPLOYMENT_URL"
