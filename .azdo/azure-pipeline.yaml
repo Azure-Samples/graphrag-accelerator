@@ -1,6 +1,7 @@
 trigger:
 - main
 
+# the `resources` specify the location and version of the 1ES Pipeline Template (PT).
 resources:
   repositories:
   - repository: 1ESPipelineTemplates
@@ -9,6 +10,7 @@ resources:
     ref: refs/tags/release
 
 extends:
+  # this pipeline extends an existing 1ES PT which injects various SDL and compliance tasks
   template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
   parameters:
     pool:
@@ -28,23 +30,10 @@ extends:
       - job: Component_Governance_Prep
         steps:
           # Component Governance does not support pyproject.toml yet.
-          # For that reason, use toml-to-requirements to export dependencies into a requirements.txt file.
+          # for this reason, use toml-to-requirements to export dependencies into a requirements.txt file.
           - script: |
               pip install toml-to-requirements
               toml-to-req --toml-file pyproject.toml --poetry --optional-lists dev,test,backend,frontend
               # toml-to-req is not perfect. It will leave wildcard characters in the requirements.txt file which we remove
               sed -i 's/\*//g' requirements.txt
-            displayName: 'Export python dependencies to requirements.txt'
-          # - task: ComponentGovernanceComponentDetection@0
-          #   displayName: 'Component Governance - Component Detection'
-          #   inputs:
-          #     scanType: 'Register'
-          #     verbosity: 'Verbose'
-          #     alertWarningLevel: 'High'
-          # - task: PoliCheck@2
-          #   displayName: 'Run PoliCheck'
-          #   inputs:
-          #     targetType: 'F'
-          #     targetArgument: '$(Build.SourcesDirectory)'
-          #     result: 'PoliCheck.xml'
-          #     toolVersion: Latest
+            displayName: 'Export python dependencies to requirements.txt for CG'
