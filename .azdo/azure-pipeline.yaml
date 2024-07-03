@@ -4,25 +4,44 @@ trigger:
 pool:
   vmImage: ubuntu-latest
 
-steps:
-  # Component Governance does not support pyproject.toml yet.
-  # For that reason, use toml-to-requirements to export dependencies into a requirements.txt file.
-  - script: |
-      pip install toml-to-requirements
-      toml-to-req --toml-file pyproject.toml --poetry --optional-lists dev,test,backend,frontend
-      # toml-to-req is not perfect. It will leave wildcard characters in the requirements.txt file which we remove
-      sed -i 's/\*//g' requirements.txt
-    displayName: 'Export python dependencies to requirements.txt'
-  - task: ComponentGovernanceComponentDetection@0
-    displayName: 'Component Governance - Component Detection'
-    inputs:
-      scanType: 'Register'
-      verbosity: 'Verbose'
-      alertWarningLevel: 'High'
-  # - task: PoliCheck@2
-  #   displayName: 'Run PoliCheck'
-  #   inputs:
-  #     targetType: 'F'
-  #     targetArgument: '$(Build.SourcesDirectory)'
-  #     result: 'PoliCheck.xml'
-  #     toolVersion: Latest
+resources:
+  repositories:
+  - repository: 1ESPipelineTemplates
+    type: git
+    name: 1ESPipelineTemplates/1ESPipelineTemplates
+    ref: refs/tags/release
+
+extends:
+  template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+  parameters:
+    sdl:
+      sourceAnalysisPool:
+        name: OCTO1ES_HostedPool
+        image: SMTOCTO1ESAgentWindowsVM
+        os: windows
+    stages:
+    - stage: stage
+      jobs:
+      - job: CG_Scan
+        steps:
+          # Component Governance does not support pyproject.toml yet.
+          # For that reason, use toml-to-requirements to export dependencies into a requirements.txt file.
+          - script: |
+              pip install toml-to-requirements
+              toml-to-req --toml-file pyproject.toml --poetry --optional-lists dev,test,backend,frontend
+              # toml-to-req is not perfect. It will leave wildcard characters in the requirements.txt file which we remove
+              sed -i 's/\*//g' requirements.txt
+            displayName: 'Export python dependencies to requirements.txt'
+          - task: ComponentGovernanceComponentDetection@0
+            displayName: 'Component Governance - Component Detection'
+            inputs:
+              scanType: 'Register'
+              verbosity: 'Verbose'
+              alertWarningLevel: 'High'
+          # - task: PoliCheck@2
+          #   displayName: 'Run PoliCheck'
+          #   inputs:
+          #     targetType: 'F'
+          #     targetArgument: '$(Build.SourcesDirectory)'
+          #     result: 'PoliCheck.xml'
+          #     toolVersion: Latest
