@@ -16,6 +16,8 @@ extends:
       image: SMTOCTO1ESAgentWindowsVM
       os: windows
     sdl:
+      policheck:
+        enabled: true
       sourceAnalysisPool:
         name: OCTO1ES_HostedPool
         image: SMTOCTO1ESAgentWindowsVM
