@@ -1,11 +1,6 @@
 trigger:
 - main
 
-pool:
-  name: OCTO1ES_HostedPool
-  image: SMTOCTO1ESAgentUbuntuVM
-  os: linux
-
 resources:
   repositories:
   - repository: 1ESPipelineTemplates
@@ -16,6 +11,10 @@ resources:
 extends:
   template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
   parameters:
+    pool:
+      name: OCTO1ES_HostedPool
+      image: SMTOCTO1ESAgentWindowsVM
+      os: windows
     sdl:
       sourceAnalysisPool:
         name: OCTO1ES_HostedPool
