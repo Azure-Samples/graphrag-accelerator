@@ -1,6 +1,11 @@
 trigger:
 - main
 
+pool:
+  name: OCTO1ES_HostedPool
+  image: SMTOCTO1ESAgentVM
+  os: linux
+
 resources:
   repositories:
   - repository: 1ESPipelineTemplates
