@@ -1,6 +1,11 @@
 trigger:
 - main
 
+pool:
+  name: OCTO1ES_HostedPool
+  image: SMTOCTO1ESAgentWindowsVM
+  os: windows
+
 resources:
   repositories:
   - repository: 1ESPipelineTemplates
@@ -11,10 +16,6 @@ resources:
 extends:
   template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
   parameters:
-    pool:
-      name: OCTO1ES_HostedPool
-      image: SMTOCTO1ESAgentWindowsVM
-      os: windows
     sdl:
       policheck:
         enabled: true
@@ -23,9 +24,9 @@ extends:
         image: SMTOCTO1ESAgentWindowsVM
         os: windows
     stages:
-    - stage: stage
+    - stage: Build
       jobs:
-      - job: CG_Scan
+      - job: Component_Governance_Prep
         steps:
           # Component Governance does not support pyproject.toml yet.
           # For that reason, use toml-to-requirements to export dependencies into a requirements.txt file.
@@ -35,12 +36,12 @@ extends:
               # toml-to-req is not perfect. It will leave wildcard characters in the requirements.txt file which we remove
               sed -i 's/\*//g' requirements.txt
             displayName: 'Export python dependencies to requirements.txt'
-          - task: ComponentGovernanceComponentDetection@0
-            displayName: 'Component Governance - Component Detection'
-            inputs:
-              scanType: 'Register'
-              verbosity: 'Verbose'
-              alertWarningLevel: 'High'
+          # - task: ComponentGovernanceComponentDetection@0
+          #   displayName: 'Component Governance - Component Detection'
+          #   inputs:
+          #     scanType: 'Register'
+          #     verbosity: 'Verbose'
+          #     alertWarningLevel: 'High'
           # - task: PoliCheck@2
           #   displayName: 'Run PoliCheck'
           #   inputs:
