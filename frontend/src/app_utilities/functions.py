@@ -7,6 +7,7 @@ from zipfile import ZipFile
 import requests
 import streamlit as st
 from dotenv import find_dotenv, load_dotenv
+from requests import Response
 from src.app_utilities.enums import EnvVars, PromptKeys, StorageIndexVars
 
 
@@ -99,176 +100,204 @@ def update_session_state_prompt_vars(
         st.session_state[PromptKeys.COMMUNITY.value] = community
 
 
-def apim_health_check(endpoint: str, key: str) -> int:
+class GraphragAPI:
     """
-    Check the health of the APIM endpoint.
+    Primary interface for making REST API call to GraphRAG API.
     """
-    url = endpoint + "/health"
-    headers = {
-        "Ocp-Apim-Subscription-Key": key,
-        "Content-Type": "application/json",
-    }
-    try:
-        response = requests.get(url, headers=headers)
-        return response.status_code
-    except Exception as e:
-        st.error(f"Error: {str(e)}")
-        return 500
 
+    def __init__(self, api_url: str, headers: dict, upload_headers: dict):
+        self.api_url = api_url
+        self.headers = headers
+        self.upload_headers = upload_headers
 
-# Function to call the REST API and return storage data
-def get_storage_container_names(api_url: str, headers: dict) -> dict | None:
-    """
-    GET request to GraphRAG API for Azure Blob Storage Container names.
-    """
-    try:
-        response = requests.get(f"{api_url}/data", headers=headers)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            st.error(f"Error: {response.status_code}")
-            return None
-    except Exception as e:
-        st.error(f"Error: {str(e)}")
-        return None
+    def get_storage_container_names(self) -> dict | None:
+        """
+        GET request to GraphRAG API for Azure Blob Storage Container names.
+        """
+        try:
+            response = requests.get(f"{self.api_url}/data", headers=self.headers)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                st.error(f"Error: {response.status_code}")
+                return response
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
 
-
-# Function to call the REST API and return existing entity config
-def get_entity_data(api_url: str, headers: dict) -> dict | None:
-    try:
-        response = requests.get(f"{api_url}/index/config/entity", headers=headers)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            st.error(f"Error: {response.status_code}")
-            return None
-    except Exception as e:
-        st.error(f"Error: {str(e)}")
-        return None
-
-
-# Function to call the REST API and return existing entity config
-def get_indexes_data(api_url: str, headers: dict) -> dict | None:
-    """
-    GET request to GraphRAG API for existing indexes.
-    """
-    try:
-        response = requests.get(f"{api_url}/index", headers=headers)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            st.error(f"Error: {response.status_code}")
-            return None
-    except Exception as e:
-        st.error(f"Error: {str(e)}")
-        return None
-
-
-def build_index(
-    api_url: str,
-    headers: dict,
-    storage_name: str,
-    index_name: str,
-    entity_extraction_prompt_filepath: str | StringIO = None,
-    community_prompt_filepath: str | StringIO = None,
-    summarize_description_prompt_filepath: str | StringIO = None,
-) -> requests.Response:
-    """Create a search index.
-    This function kicks off a job that builds a knowledge graph (KG) index from files located in a blob storage container.
-    """
-    url = api_url + "/index"
-    prompt_files = dict()
-    if entity_extraction_prompt_filepath:
-        prompt_files["entity_extraction_prompt"] = (
-            open(entity_extraction_prompt_filepath, "r")
-            if isinstance(entity_extraction_prompt_filepath, str)
-            else entity_extraction_prompt_filepath
-        )
-    if community_prompt_filepath:
-        prompt_files["community_report_prompt"] = (
-            open(community_prompt_filepath, "r")
-            if isinstance(community_prompt_filepath, str)
-            else community_prompt_filepath
-        )
-    if summarize_description_prompt_filepath:
-        prompt_files["summarize_descriptions_prompt"] = (
-            open(summarize_description_prompt_filepath, "r")
-            if isinstance(summarize_description_prompt_filepath, str)
-            else summarize_description_prompt_filepath
-        )
-    return requests.post(
-        url,
-        files=prompt_files if len(prompt_files) > 0 else None,
-        params={"index_name": index_name, "storage_name": storage_name},
-        headers=headers,
-    )
-
-
-def query_index(
-    index_name: str, query_type: str, query: str, api_url: str, headers: dict
-):
-    try:
-        request = {
-            "index_name": index_name,
-            "query": query,
-            "reformat_context_data": True,
-        }
-        response = requests.post(
-            f"{api_url}/query/{query_type.lower()}", headers=headers, json=request
-        )
-
-        if response.status_code == 200:
-            return response.json()
-        else:
-            st.error(
-                f"Error with {query_type} search: {response.status_code} {response.json()}"
+    def upload_files(self, file_payloads: dict, input_storage_name: str):
+        """
+        Upload files to Azure Blob Storage Container.
+        """
+        try:
+            response = requests.post(
+                self.api_url + "/data",
+                headers=self.upload_headers,
+                files=file_payloads,
+                params={"storage_name": input_storage_name},
             )
-    except Exception as e:
-        st.error(f"Error with {query_type} search: {str(e)}")
+            if response.status_code == 200:
+                return response
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
 
+    def get_entity_data(self) -> dict | None:
+        raise NotImplementedError("Method not implemented")
+        # try:
+        #     response = requests.get(f"{self.api_url}/index/config/entity", headers=self.headers)
+        #     if response.status_code == 200:
+        #         return response.json()
+        #     else:
+        #         st.error(f"Error: {response.status_code}")
+        #         return response
+        # except Exception as e:
+        #     st.error(f"Error: {str(e)}")
 
-def global_streaming_query(index_name: str, query: str, api_url: str, headers: dict):
-    url = f"{api_url}/experimental/query/global/streaming"
-    try:
-        query_response = requests.post(
+    def get_indexes_data(self) -> dict | None:
+        """
+        GET request to GraphRAG API for existing indexes.
+        """
+        try:
+            response = requests.get(f"{self.api_url}/index", headers=self.headers)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                st.error(f"Error: {response.status_code}")
+                return response
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
+
+    def build_index(
+        self,
+        storage_name: str,
+        index_name: str,
+        entity_extraction_prompt_filepath: str | StringIO = None,
+        community_prompt_filepath: str | StringIO = None,
+        summarize_description_prompt_filepath: str | StringIO = None,
+    ) -> requests.Response:
+        """Create a search index.
+        This function kicks off a job that builds a knowledge graph (KG) index from files located in a blob storage container.
+        """
+        url = self.api_url + "/index"
+        prompt_files = dict()
+        if entity_extraction_prompt_filepath:
+            prompt_files["entity_extraction_prompt"] = (
+                open(entity_extraction_prompt_filepath, "r")
+                if isinstance(entity_extraction_prompt_filepath, str)
+                else entity_extraction_prompt_filepath
+            )
+        if community_prompt_filepath:
+            prompt_files["community_report_prompt"] = (
+                open(community_prompt_filepath, "r")
+                if isinstance(community_prompt_filepath, str)
+                else community_prompt_filepath
+            )
+        if summarize_description_prompt_filepath:
+            prompt_files["summarize_descriptions_prompt"] = (
+                open(summarize_description_prompt_filepath, "r")
+                if isinstance(summarize_description_prompt_filepath, str)
+                else summarize_description_prompt_filepath
+            )
+        return requests.post(
             url,
-            json={"index_name": index_name, "query": query},
-            headers=headers,
-            stream=True,
+            files=prompt_files if len(prompt_files) > 0 else None,
+            params={"index_name": index_name, "storage_name": storage_name},
+            headers=self.headers,
         )
-        return query_response
-    except Exception as e:
-        st.error(f"Error: {str(e)}")
 
+    def check_index_status(self, index_name: str) -> Response | None:
+        """
+        Check the status of a running index job.
+        """
+        url = self.api_url + f"/index/status/{index_name}"
+        try:
+            response = requests.get(url, headers=self.headers)
+            if response.status_code == 200:
+                return response
+            else:
+                st.error(f"Error: {response.status_code}")
+                return response
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
 
-def get_source_entity(
-    index_name: str, entity_id: str, api_url: str, headers: dict
-) -> dict | None:
-    try:
-        response = requests.get(
-            f"{api_url}/source/entity/{index_name}/{entity_id}", headers=headers
-        )
-        if response.status_code == 200:
-            return response.json()
-        else:
-            return response.json()
-        # else:
-        #     st.error(f"Error: {response.status_code} {response.json()}")
-    except Exception as e:
-        st.error(f"Error: {str(e)}")
+    def health_check(self, subscription_key: str) -> int:
+        """
+        Check the health of the APIM endpoint.
+        """
+        url = self.api_url + "/health"
+        headers = {
+            "Ocp-Apim-Subscription-Key": subscription_key,
+            "Content-Type": "application/json",
+        }
+        try:
+            response = requests.get(url, headers=headers)
+            return response.status_code
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
 
+    def query_index(self, index_name: str, query_type: str, query: str):
+        """
+        Submite query to GraphRAG API using specific index and query type.
+        """
+        try:
+            request = {
+                "index_name": index_name,
+                "query": query,
+                "reformat_context_data": True,
+            }
+            response = requests.post(
+                f"{self.api_url}/query/{query_type.lower()}",
+                headers=self.headers,
+                json=request,
+            )
 
-def show_index_options(api_url: str, headers: dict) -> list[str]:
-    """
-    Makes a GET request to the GraphRAG API to get the existing indexes
-    and returns a list of index names.
-    """
-    indexes = get_indexes_data(api_url, headers)
-    try:
-        options_indexes = indexes["index_name"]
-        return options_indexes
-    except Exception as e:
-        print(f"No indexes found, continuing...\nException: {str(e)}")
+            if response.status_code == 200:
+                return response.json()
+            else:
+                st.error(
+                    f"Error with {query_type} search: {response.status_code} {response.json()}"
+                )
+        except Exception as e:
+            st.error(f"Error with {query_type} search: {str(e)}")
+
+    def global_streaming_query(self, index_name: str, query: str):
+        url = f"{self.api_url}/experimental/query/global/streaming"
+        try:
+            query_response = requests.post(
+                url,
+                json={"index_name": index_name, "query": query},
+                headers=self.headers,
+                stream=True,
+            )
+            return query_response
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
+
+    def get_source_entity(self, index_name: str, entity_id: str) -> dict | None:
+        try:
+            response = requests.get(
+                f"{self.api_url}/source/entity/{index_name}/{entity_id}",
+                headers=self.headers,
+            )
+            if response.status_code == 200:
+                return response.json()
+            else:
+                return response.json()
+            # else:
+            #     st.error(f"Error: {response.status_code} {response.json()}")
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
+
+    def show_index_options(self) -> list[str]:
+        """
+        Makes a GET request to the GraphRAG API to get the existing indexes
+        and returns a list of index names.
+        """
+        indexes = self.get_indexes_data()
+        try:
+            options_indexes = indexes["index_name"]
+            return options_indexes
+        except Exception as e:
+            print(f"No indexes found, continuing...\nException: {str(e)}")
 
 
 def _generate_prompts(

@@ -74,8 +74,8 @@ def get_prompt_generation_tab(indexPipe: IndexPipeline) -> None:
     if triggered:
         with st.spinner("Generating LLM prompts for GraphRAG..."):
             generate_and_extract_prompts(
-                api_url=indexPipe.api_url,
-                headers=indexPipe.headers,
+                api_url=indexPipe.client.api_url,
+                headers=indexPipe.client.headers,
                 storage_name=select_storage_name2,
                 limit=1,
             )
@@ -139,7 +139,6 @@ def get_index_tab(
     """
     pipeline = IndexPipeline(containers, api_url, headers, headers_upload)
     pipeline.storage_data_step()
-    # pipeline.prompt_selection_step()
     pipeline.build_index_step()
     pipeline.check_status_step()
 

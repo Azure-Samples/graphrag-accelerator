@@ -6,7 +6,7 @@ import streamlit as st
 from src.app_utilities.enums import EnvVars
 
 # from dotenv import load_dotenv
-from src.app_utilities.functions import get_storage_container_names, initialize_app
+from src.app_utilities.functions import GraphragAPI, initialize_app
 from src.components import tabs
 from src.components.index_pipeline import IndexPipeline
 
@@ -34,8 +34,9 @@ def graphrag_app(initialized: bool):
         api_url = st.session_state[EnvVars.DEPLOYMENT_URL.value]
         headers = st.session_state["headers"]
         headers_upload = st.session_state["headers_upload"]
+        client = GraphragAPI(api_url, headers, headers_upload)
         # set constants
-        containers = get_storage_container_names(api_url, headers)
+        containers = client.get_storage_container_names()
         indexPipe = IndexPipeline(containers, api_url, headers, headers_upload)
         # display tabs
         with prompt_gen_tab:

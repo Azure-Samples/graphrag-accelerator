@@ -1,10 +1,9 @@
 import json
 from io import StringIO
 
-import requests
 import streamlit as st
 from src.app_utilities.enums import PromptKeys, StorageIndexVars
-from src.app_utilities.functions import build_index, show_index_options
+from src.app_utilities.functions import GraphragAPI
 
 
 class IndexPipeline:
@@ -19,13 +18,9 @@ class IndexPipeline:
     """
     COLUMN_WIDTHS = [0.275, 0.45, 0.275]
 
-    def __init__(
-        self, containers: dict, api_url: str, headers: dict, upload_headers: dict
-    ) -> None:
-        self.containers = containers
-        self.api_url = api_url
-        self.headers = headers
-        self.upload_headers = upload_headers
+    def __init__(self, graphrag_client: GraphragAPI) -> None:
+        self.containers = graphrag_client.get_storage_container_names()
+        self.client = graphrag_client
 
     def _parse_container_names(self) -> list:
         """
@@ -95,11 +90,8 @@ class IndexPipeline:
                             )
                             file_payloads.append((file_payload))
 
-                        response = requests.post(
-                            self.api_url + "/data",
-                            headers=self.upload_headers,
-                            files=file_payloads,
-                            params={"storage_name": input_storage_name},
+                        response = self.client.upload_files(
+                            file_payloads, input_storage_name
                         )
                         if response.status_code == 200:
                             st.success("Files uploaded successfully!")
@@ -110,25 +102,28 @@ class IndexPipeline:
                     input_storage_name = ""
 
     def prompt_selection_step(self):
-        _, col2, _ = st.columns(IndexPipeline.COLUMN_WIDTHS)
-        with col2:
-            st.header(
-                "2. Select LLM Prompts",
-                divider=True,
-                help="Generate fine tuned prompts for the LLM specific to your data and domain.",
-            )
-            selection = st.radio(
-                label="Prompt Selection",
-                captions=[
-                    "Use the built-in default prompts",
-                    "Use the generated prompts from Steps 1 + 2",
-                ],
-                label_visibility="hidden",
-                options=["Use Default Prompts", "Use Generated Prompts"],
-                index=1,
-                key="prompt-radio",
-            )
-            _ = selection
+        raise NotImplementedError(
+            "This is an optional method that has not been implemented yet."
+        )
+        # _, col2, _ = st.columns(IndexPipeline.COLUMN_WIDTHS)
+        # with col2:
+        #     st.header(
+        #         "2. Select LLM Prompts",
+        #         divider=True,
+        #         help="Generate fine tuned prompts for the LLM specific to your data and domain.",
+        #     )
+        #     selection = st.radio(
+        #         label="Prompt Selection",
+        #         captions=[
+        #             "Use the built-in default prompts",
+        #             "Use the generated prompts from Steps 1 + 2",
+        #         ],
+        #         label_visibility="hidden",
+        #         options=["Use Default Prompts", "Use Generated Prompts"],
+        #         index=1,
+        #         key="prompt-radio",
+        #     )
+        #     _ = selection
 
     def build_index_step(self):
         """
@@ -157,9 +152,7 @@ class IndexPipeline:
                     st.session_state[PromptKeys.COMMUNITY.value]
                 )
 
-                response = build_index(
-                    api_url=self.api_url,
-                    headers=self.headers,
+                response = self.client.build_index(
                     storage_name=final_storage_name,
                     index_name=index_name,
                     entity_extraction_prompt_filepath=entity_prompt,
@@ -184,14 +177,13 @@ class IndexPipeline:
                 help="Select the created index to check status at what steps it is at in indexing. Indexing must be complete in order to be able to execute queries.",
             )
 
-            options_indexes = show_index_options(self.api_url, self.headers)
+            options_indexes = self.client.show_index_options()
             index_name_select = st.selectbox(
                 "Select an index to check its status.", options_indexes
             )
             progress_bar = st.progress(0, text="Index Job Progress")
             if st.button("Check Status"):
-                status_url = self.api_url + f"/index/status/{index_name_select}"
-                status_response = requests.get(url=status_url, headers=self.headers)
+                status_response = self.client.check_index_status(index_name_select)
                 status_response_text: dict = json.loads(status_response.text)
                 if (
                     status_response.status_code == 200
