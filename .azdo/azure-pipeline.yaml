@@ -18,6 +18,7 @@ extends:
       image: SMTOCTO1ESAgentWindowsVM
       os: windows
     sdl:
+      skipComponentGovernanceDetection: false
       policheck:
         enabled: true
       sourceAnalysisPool:
