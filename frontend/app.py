@@ -29,24 +29,23 @@ def graphrag_app(initialized: bool):
     )
     with main_tab:
         tabs.get_main_tab(initialized)
+
     if initialized:
         # assign API request information
         api_url = st.session_state[EnvVars.DEPLOYMENT_URL.value]
-        headers = st.session_state["headers"]
-        headers_upload = st.session_state["headers_upload"]
-        client = GraphragAPI(api_url, headers, headers_upload)
-        # set constants
-        containers = client.get_storage_container_names()
-        indexPipe = IndexPipeline(containers, api_url, headers, headers_upload)
+        apim_key = st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY.value]
+        client = GraphragAPI(api_url, apim_key)
+        indexPipe = IndexPipeline(client)
+
         # display tabs
         with prompt_gen_tab:
-            tabs.get_prompt_generation_tab(indexPipe)
+            tabs.get_prompt_generation_tab(client)
         with prompt_edit_tab:
             tabs.get_prompt_configuration_tab()
         with index_tab:
-            tabs.get_index_tab(containers, api_url, headers, headers_upload)
+            tabs.get_index_tab(indexPipe)
         with query_tab:
-            tabs.get_query_tab(api_url, headers)
+            tabs.get_query_tab(client)
 
     deployer_email = os.getenv("DEPLOYER_EMAIL", "deployer@email.com")
 

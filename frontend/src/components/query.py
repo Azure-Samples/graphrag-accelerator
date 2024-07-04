@@ -5,15 +5,15 @@ import numpy as np
 import pandas as pd
 import requests
 import streamlit as st
-from src.app_utilities.functions import global_streaming_query, query_index
+
+from src.app_utilities.functions import GraphragAPI
 
 
 class GraphQuery:
     KILOBYTE = 1024
 
-    def __init__(self, api_url: str, headers: dict):
-        self.api_url = api_url
-        self.headers = headers
+    def __init__(self, client: GraphragAPI):
+        self.client = client
 
     def search(
         self,
@@ -61,12 +61,7 @@ class GraphQuery:
         Executes a global streaming query on the specified index.
         Handles the response and displays the results in the Streamlit app.
         """
-        query_response = global_streaming_query(
-            search_index,
-            query,
-            self.api_url,
-            self.headers,
-        )
+        query_response = self.client.global_streaming_query(search_index, query)
         assistant_response = ""
         context_list = []
 
@@ -115,12 +110,8 @@ class GraphQuery:
             raise Exception("Received unexpected response from server")
 
     def global_search(self, search_index: str, query: str) -> None:
-        query_response = query_index(
-            index_name=search_index,
-            query_type="Global",
-            query=query,
-            api_url=self.api_url,
-            headers=self.headers,
+        query_response = self.client.query_index(
+            index_name=search_index, query_type="Global", query=query
         )
         if query_response["result"] != "":
             with self._create_section_expander("Query Results", "black", True, True):
@@ -134,12 +125,8 @@ class GraphQuery:
                 self._build_st_dataframe(query_response["context_data"]["reports"])
 
     def local_search(self, search_index: str, query: str) -> None:
-        query_response = query_index(
-            index_name=search_index,
-            query_type="Local",
-            query=query,
-            api_url=self.api_url,
-            headers=self.headers,
+        query_response = self.client.query_index(
+            index_name=search_index, query_type="Local", query=query
         )
         results = query_response["result"]
         if results != "":

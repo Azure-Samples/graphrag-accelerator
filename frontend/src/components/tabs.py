@@ -1,11 +1,10 @@
 import os
+from time import sleep
 
 import streamlit as st
+
 from src.app_utilities.enums import PromptKeys
-from src.app_utilities.functions import (
-    generate_and_extract_prompts,
-    show_index_options,
-)
+from src.app_utilities.functions import GraphragAPI, generate_and_extract_prompts
 from src.components.index_pipeline import IndexPipeline
 from src.components.login_sidebar import login
 from src.components.prompt_configuration import (
@@ -14,6 +13,7 @@ from src.components.prompt_configuration import (
     save_prompts,
 )
 from src.components.query import GraphQuery
+from src.components.upload_files_component import upload_files
 
 
 def get_main_tab(initialized: bool) -> None:
@@ -51,10 +51,13 @@ def get_main_tab(initialized: bool) -> None:
         login()
 
 
-def get_prompt_generation_tab(indexPipe: IndexPipeline) -> None:
+def get_prompt_generation_tab(client: GraphragAPI, num_files: int = 5) -> None:
     """
     Displays content of Prompt Generation Tab
     """
+    # hard set limit to 5 files to reduce overly long processing times and to reduce over sample errors.
+    num_files = num_files if num_files <= 5 else 5
+
     st.header(
         "1. LLM Prompt Generation (Optional)",
         divider=True,
@@ -64,24 +67,64 @@ def get_prompt_generation_tab(indexPipe: IndexPipeline) -> None:
     st.write(
         "**OPTIONAL STEP:** Select a storage container that contains your data. The LLM will use that data to generate domain-specific prompts for follow-on indexing."
     )
-    select_storage_name2 = st.selectbox(
-        "Select an existing Storage Container.",
-        indexPipe._parse_container_names(),
-        key="prompt-storage",
-        index=1,
-    )
-    triggered = st.button(label="Generate Prompts", key="prompt-generation")
-    if triggered:
-        with st.spinner("Generating LLM prompts for GraphRAG..."):
-            generate_and_extract_prompts(
-                api_url=indexPipe.client.api_url,
-                headers=indexPipe.client.headers,
-                storage_name=select_storage_name2,
-                limit=1,
+    storage_containers = client.get_storage_container_names()
+
+    # if no storage containers, allow user to upload files
+    if not (any(storage_containers)):
+        COLUMN_WIDTHS = [0.275, 0.45, 0.275]
+        _, col2, _ = st.columns(COLUMN_WIDTHS)
+        with col2:
+            st.warning(
+                "No existing Storage Containers found. Please upload data to continue."
             )
-            st.success(
-                "Prompts generated successfully! Move on to the next tab to configure the prompts."
-            )
+            uploaded = upload_files(client, key_prefix="prompts")
+            if uploaded:
+                # brief pause to allow success message to display
+                sleep(1.5)
+                st.rerun()
+    else:
+        select_prompt_storage = st.selectbox(
+            "Select an existing Storage Container.",
+            options=storage_containers if any(storage_containers) else [],
+            key="prompt-storage",
+            index=0,
+        )
+        st.write(f"**Selected Storage Container:** {select_prompt_storage}")
+        triggered = st.button(
+            label="Generate Prompts",
+            key="prompt-generation",
+            disabled=not any(storage_containers),
+        )
+        if triggered:
+            with st.spinner("Generating LLM prompts for GraphRAG..."):
+                generated = generate_and_extract_prompts(
+                    client=client,
+                    storage_name=select_prompt_storage,
+                    limit=num_files,
+                )
+                if not isinstance(generated, Exception):
+                    st.success(
+                        "Prompts generated successfully! Move on to the next tab to configure the prompts."
+                    )
+                else:
+                    # assume limit parametes is too high
+                    st.warning(
+                        "You do not have enough data to generate prompts. Retrying with a smaller sample size."
+                    )
+                    while num_files > 1:
+                        num_files -= 1
+                        generated = generate_and_extract_prompts(
+                            client=client,
+                            storage_name=select_prompt_storage,
+                            limit=num_files,
+                        )
+                        if not isinstance(generated, Exception):
+                            st.success(
+                                "Prompts generated successfully! Move on to the next tab to configure the prompts."
+                            )
+                            break
+                        else:
+                            st.warning(f"Retrying with sample size: {num_files}")
 
 
 def get_prompt_configuration_tab() -> None:
@@ -131,16 +174,13 @@ def get_prompt_configuration_tab() -> None:
             )
 
 
-def get_index_tab(
-    containers: dict, api_url: str, headers: dict, headers_upload: dict
-) -> None:
+def get_index_tab(indexPipe: IndexPipeline) -> None:
     """
     Displays content of Index tab
     """
-    pipeline = IndexPipeline(containers, api_url, headers, headers_upload)
-    pipeline.storage_data_step()
-    pipeline.build_index_step()
-    pipeline.check_status_step()
+    indexPipe.storage_data_step()
+    indexPipe.build_index_step()
+    indexPipe.check_status_step()
 
 
 def execute_query(
@@ -157,11 +197,11 @@ def execute_query(
         return st.warning("Please enter a query to search.")
 
 
-def get_query_tab(api_url: str, headers: dict) -> None:
+def get_query_tab(client: GraphragAPI) -> None:
     """
     Displays content of Query Tab
     """
-    gquery = GraphQuery(api_url, headers)
+    gquery = GraphQuery(client)
     col1, col2 = st.columns(2)
     with col1:
         query_type = st.selectbox(
@@ -170,9 +210,12 @@ def get_query_tab(api_url: str, headers: dict) -> None:
             help="Select the query type - Each yeilds different results of specificity. Global queries focus on the entire graph structure. Local queries focus on a set of communities (subgraphs) in the graph that are more connected to each other than they are to the rest of the graph structure and can focus on very specific entities in the graph. Global streaming is a global query that displays results as they appear live.",
         )
     with col2:
+        search_indexes = client.get_index_names()
+        if not any(search_indexes):
+            st.warning("No indexes found. Please build an index to continue.")
         select_index_search = st.selectbox(
             label="Index",
-            options=show_index_options(api_url, headers),
+            options=search_indexes if any(search_indexes) else [],
             index=0,
             help="Select the index(es) to query. The selected index(es) must have a complete status in order to yield query results without error. Use Check Index Status to confirm status.",
         )

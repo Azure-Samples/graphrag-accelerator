@@ -1,6 +1,7 @@
 import streamlit as st
+
 from src.app_utilities.enums import EnvVars
-from src.app_utilities.functions import apim_health_check
+from src.app_utilities.functions import GraphragAPI
 
 
 def login():
@@ -16,7 +17,8 @@ def login():
             )
             form_submit = st.form_submit_button("Login")
             if form_submit:
-                status_code = apim_health_check(apim_url, apim_sub_key)
+                client = GraphragAPI(apim_url, apim_sub_key)
+                status_code = client.health_check()
                 if status_code == 200:
                     st.success("Login Successful")
                     st.session_state[EnvVars.DEPLOYMENT_URL.value] = apim_url
@@ -26,3 +28,4 @@ def login():
                 else:
                     st.error("Login Failed")
                     st.error("Please check the APIM Gateway URL and Subscription Key")
+                    return status_code

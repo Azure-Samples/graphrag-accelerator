@@ -8,6 +8,7 @@ import requests
 import streamlit as st
 from dotenv import find_dotenv, load_dotenv
 from requests import Response
+
 from src.app_utilities.enums import EnvVars, PromptKeys, StorageIndexVars
 
 
@@ -105,24 +106,31 @@ class GraphragAPI:
     Primary interface for making REST API call to GraphRAG API.
     """
 
-    def __init__(self, api_url: str, headers: dict, upload_headers: dict):
+    def __init__(self, api_url: str, apim_key: str):
         self.api_url = api_url
-        self.headers = headers
-        self.upload_headers = upload_headers
+        self.apim_key = apim_key
+        self.headers = {
+            "Ocp-Apim-Subscription-Key": self.apim_key,
+            "Content-Type": "application/json",
+        }
+        self.upload_headers = {"Ocp-Apim-Subscription-Key": self.apim_key}
 
-    def get_storage_container_names(self) -> dict | None:
+    def get_storage_container_names(
+        self, storage_name_key: str = "storage_name"
+    ) -> list[str] | Response | Exception:
         """
         GET request to GraphRAG API for Azure Blob Storage Container names.
         """
         try:
             response = requests.get(f"{self.api_url}/data", headers=self.headers)
             if response.status_code == 200:
-                return response.json()
+                return response.json()[storage_name_key]
             else:
                 st.error(f"Error: {response.status_code}")
                 return response
         except Exception as e:
             st.error(f"Error: {str(e)}")
+            return e
 
     def upload_files(self, file_payloads: dict, input_storage_name: str):
         """
@@ -152,14 +160,14 @@ class GraphragAPI:
         # except Exception as e:
         #     st.error(f"Error: {str(e)}")
 
-    def get_indexes_data(self) -> dict | None:
+    def get_index_names(self, index_name_key: str = "index_name") -> dict | None:
         """
         GET request to GraphRAG API for existing indexes.
         """
         try:
             response = requests.get(f"{self.api_url}/index", headers=self.headers)
             if response.status_code == 200:
-                return response.json()
+                return response.json()[index_name_key]
             else:
                 st.error(f"Error: {response.status_code}")
                 return response
@@ -219,20 +227,17 @@ class GraphragAPI:
         except Exception as e:
             st.error(f"Error: {str(e)}")
 
-    def health_check(self, subscription_key: str) -> int:
+    def health_check(self) -> int | Response:
         """
         Check the health of the APIM endpoint.
         """
         url = self.api_url + "/health"
-        headers = {
-            "Ocp-Apim-Subscription-Key": subscription_key,
-            "Content-Type": "application/json",
-        }
         try:
-            response = requests.get(url, headers=headers)
+            response = requests.get(url, headers=self.headers)
             return response.status_code
         except Exception as e:
             st.error(f"Error: {str(e)}")
+            return e
 
     def query_index(self, index_name: str, query_type: str, query: str):
         """
@@ -259,7 +264,7 @@ class GraphragAPI:
         except Exception as e:
             st.error(f"Error with {query_type} search: {str(e)}")
 
-    def global_streaming_query(self, index_name: str, query: str):
+    def global_streaming_query(self, index_name: str, query: str) -> Response | None:
         url = f"{self.api_url}/experimental/query/global/streaming"
         try:
             query_response = requests.post(
@@ -281,59 +286,46 @@ class GraphragAPI:
             if response.status_code == 200:
                 return response.json()
             else:
-                return response.json()
-            # else:
-            #     st.error(f"Error: {response.status_code} {response.json()}")
+                return response
         except Exception as e:
             st.error(f"Error: {str(e)}")
 
-    def show_index_options(self) -> list[str]:
+    def generate_prompts(
+        self, storage_name: str, zip_file_name: str = "prompts.zip", limit: int = 1
+    ) -> None:
         """
-        Makes a GET request to the GraphRAG API to get the existing indexes
-        and returns a list of index names.
+        Generate graphrag prompts using data provided in a specific storage container.
         """
-        indexes = self.get_indexes_data()
-        try:
-            options_indexes = indexes["index_name"]
-            return options_indexes
-        except Exception as e:
-            print(f"No indexes found, continuing...\nException: {str(e)}")
+        url = self.api_url + "/index/config/prompts"
+        params = {"storage_name": storage_name, "limit": limit}
+        with requests.get(url, params=params, headers=self.headers, stream=True) as r:
+            r.raise_for_status()
+            print(r.status_code)
+            with open(zip_file_name, "wb") as f:
+                for chunk in r.iter_content():
+                    f.write(chunk)
 
 
-def _generate_prompts(
-    api_url: str,
-    headers: dict,
+def generate_and_extract_prompts(
+    client: GraphragAPI,
     storage_name: str,
     zip_file_name: str = "prompts.zip",
     limit: int = 5,
-) -> None:
-    """
-    Generate graphrag prompts using data provided in a specific storage container.
-    """
-    url = api_url + "/index/config/prompts"
-    params = {"storage_name": storage_name, "limit": limit}
-    with requests.get(url, params=params, headers=headers, stream=True) as r:
-        r.raise_for_status()
-        with open(zip_file_name, "wb") as f:
-            for chunk in r.iter_content():
-                f.write(chunk)
+) -> None | Exception:
+    try:
+        client.generate_prompts(
+            storage_name=storage_name, zip_file_name=zip_file_name, limit=limit
+        )
+        _extract_prompts_from_zip(zip_file_name)
+        update_session_state_prompt_vars(initial_setting=True)
+        return
+    except Exception as e:
+        return e
 
 
 def _extract_prompts_from_zip(zip_file_name: str = "prompts.zip"):
     with ZipFile(zip_file_name, "r") as zip_ref:
         zip_ref.extractall()
-
-
-def generate_and_extract_prompts(
-    api_url: str,
-    headers: str,
-    storage_name: str,
-    zip_file_name: str = "prompts.zip",
-    limit: int = 5,
-) -> None:
-    _generate_prompts(api_url, headers, storage_name, zip_file_name, limit)
-    _extract_prompts_from_zip(zip_file_name)
-    update_session_state_prompt_vars(initial_setting=True)
 
 
 def open_file(file_path: str | Path):

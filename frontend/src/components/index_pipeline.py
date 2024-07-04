@@ -2,8 +2,10 @@ import json
 from io import StringIO
 
 import streamlit as st
+
 from src.app_utilities.enums import PromptKeys, StorageIndexVars
 from src.app_utilities.functions import GraphragAPI
+from src.components.upload_files_component import upload_files
 
 
 class IndexPipeline:
@@ -18,28 +20,16 @@ class IndexPipeline:
     """
     COLUMN_WIDTHS = [0.275, 0.45, 0.275]
 
-    def __init__(self, graphrag_client: GraphragAPI) -> None:
-        self.containers = graphrag_client.get_storage_container_names()
-        self.client = graphrag_client
-
-    def _parse_container_names(self) -> list:
-        """
-        Parses the container names from the response from the API.
-        """
-        try:
-            container_names = self.containers["storage_name"]
-        except Exception as e:
-            print(f"No data containers found, continuing...\nException: {str(e)}")
-        return container_names
+    def __init__(self, client: GraphragAPI) -> None:
+        self.client = client
+        self.containers = client.get_storage_container_names()
 
     def storage_data_step(self):
         """
         Builds the Storage Data Step for the Indexing Pipeline.
         """
-        container_names = self._parse_container_names()
 
         disable_other_input = False
-
         _, col2, _ = st.columns(IndexPipeline.COLUMN_WIDTHS)
 
         with col2:
@@ -49,7 +39,10 @@ class IndexPipeline:
                 help="Select a Data Storage Container to upload data to or select an existing container to use for indexing. The data will be processed by the LLM to create a Knowledge Graph.",
             )
             select_storage_name = st.selectbox(
-                "Select an existing Storage Container.", container_names
+                label="Select an existing Storage Container.",
+                options=self.containers if any(self.containers) else [],
+                key="index-storage",
+                index=0,
             )
 
             if select_storage_name != "":
@@ -61,45 +54,15 @@ class IndexPipeline:
             with st.expander("Upload data to a storage container."):
                 # TODO: validate storage container name before uploading
                 # TODO: Add user message that option not available while existing storage container is selected
-                input_storage_name = st.text_input(
-                    "Enter Storage Name",
-                    disabled=disable_other_input,
-                    help=IndexPipeline.container_naming_rules,
-                )
-                input_storage_name = input_storage_name.lower()
-                st.session_state[StorageIndexVars.INPUT_STORAGE.value] = (
-                    input_storage_name
-                )
-                file_upload = st.file_uploader(
-                    "Upload Data",
-                    type=["txt"],
-                    accept_multiple_files=True,
-                    disabled=disable_other_input,
+                upload_files(
+                    self.client,
+                    key_prefix="index",
+                    disable_other_input=disable_other_input,
                 )
 
-                if st.button(
-                    "Upload Files",
-                    disabled=disable_other_input or input_storage_name == "",
-                ):
-                    if file_upload and input_storage_name != "":
-                        file_payloads = []
-                        for file in file_upload:
-                            file_payload = (
-                                "files",
-                                (file.name, file.read(), file.type),
-                            )
-                            file_payloads.append((file_payload))
-
-                        response = self.client.upload_files(
-                            file_payloads, input_storage_name
-                        )
-                        if response.status_code == 200:
-                            st.success("Files uploaded successfully!")
-                        else:
-                            st.error(f"Error: {json.loads(response.text)}")
                 if select_storage_name != "":
                     disable_other_input = True
-                    input_storage_name = ""
+                    # input_storage_name = ""
 
     def prompt_selection_step(self):
         raise NotImplementedError(
@@ -177,9 +140,10 @@ class IndexPipeline:
                 help="Select the created index to check status at what steps it is at in indexing. Indexing must be complete in order to be able to execute queries.",
             )
 
-            options_indexes = self.client.show_index_options()
+            options_indexes = self.client.get_index_names()
             index_name_select = st.selectbox(
-                "Select an index to check its status.", options_indexes
+                label="Select an index to check its status.",
+                options=options_indexes if any(options_indexes) else [],
             )
             progress_bar = st.progress(0, text="Index Job Progress")
             if st.button("Check Status"):
