@@ -3,7 +3,7 @@ from io import StringIO
 import streamlit as st
 
 from src.components.upload_files_component import upload_files
-from src.enums import PromptKeys, StorageIndexVars
+from src.enums import PromptKeys
 from src.functions import GraphragAPI
 
 
@@ -46,9 +46,6 @@ class IndexPipeline:
 
             if select_storage_name != "":
                 disable_other_input = True
-                st.session_state[StorageIndexVars.SELECTED_STORAGE.value] = (
-                    select_storage_name
-                )
             st.write("Or...")
             with st.expander("Upload data to a storage container."):
                 # TODO: validate storage container name before uploading
@@ -98,16 +95,21 @@ class IndexPipeline:
                 divider=True,
                 help="Building an index will process the data from step 1 and create a Knowledge Graph suitable for querying. The LLM will use either the default prompt configuration or the prompts that you generated previously. To track the status of an indexing job, use the check index status below.",
             )
-            select_storage_name = st.session_state[
-                StorageIndexVars.SELECTED_STORAGE.value
-            ]
-            input_storage_name = st.session_state[StorageIndexVars.INPUT_STORAGE.value]
-            index_name = st.text_input("Enter Index Name")
-            st.write(
-                f"Selected Storage Container: **:blue[{select_storage_name} {input_storage_name}]**"
+            select_storage_name = st.session_state["index-storage"]
+            input_storage_name = (
+                st.session_state["index-storage-name-input"]
+                if st.session_state["index-upload-button"]
+                else ""
             )
-            if st.button("Build Index"):
-                final_storage_name = select_storage_name or input_storage_name
+            storage_selection = select_storage_name or input_storage_name
+            index_name = st.text_input("Enter Index Name")
+
+            st.write(f"Selected Storage Container: **:blue[{storage_selection}]**")
+            if st.button(
+                "Build Index",
+                help="You must enter both an Index Name and Select a Storage Container to enable this button",
+                disabled=not index_name or not storage_selection,
+            ):
                 entity_prompt = StringIO(st.session_state[PromptKeys.ENTITY.value])
                 summarize_prompt = StringIO(st.session_state[PromptKeys.SUMMARY.value])
                 community_prompt = StringIO(
@@ -115,7 +117,7 @@ class IndexPipeline:
                 )
 
                 response = self.client.build_index(
-                    storage_name=final_storage_name,
+                    storage_name=storage_selection,
                     index_name=index_name,
                     entity_extraction_prompt_filepath=entity_prompt,
                     summarize_description_prompt_filepath=summarize_prompt,
@@ -125,7 +127,9 @@ class IndexPipeline:
                 if response.status_code == 200:
                     st.success("Job submitted successfully!")
                 else:
-                    st.error(f"Failed to submit job.\nStatus: {response.text}")
+                    st.error(
+                        f"Failed to submit job.\nStatus: {response.json()['detail']}"
+                    )
 
     def check_status_step(self):
         """

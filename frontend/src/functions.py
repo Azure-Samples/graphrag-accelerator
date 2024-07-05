@@ -81,6 +81,8 @@ def set_session_state_variables() -> None:
         st.session_state["saved_prompts"] = False
     if "initialized" not in st.session_state:
         st.session_state["initialized"] = False
+    if "new_upload" not in st.session_state:
+        st.session_state["new_upload"] = False
 
 
 def update_session_state_prompt_vars(

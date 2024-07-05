@@ -78,7 +78,7 @@ def get_prompt_generation_tab(client: GraphragAPI, num_chunks: int = 5) -> None:
             st.warning(
                 "No existing Storage Containers found. Please upload data to continue."
             )
-            uploaded = upload_files(client, key_prefix="prompts")
+            uploaded = upload_files(client, key_prefix="prompts-upload-1")
             if uploaded:
                 # brief pause to allow success message to display
                 sleep(1.5)
@@ -86,15 +86,31 @@ def get_prompt_generation_tab(client: GraphragAPI, num_chunks: int = 5) -> None:
     else:
         select_prompt_storage = st.selectbox(
             "Select an existing Storage Container.",
-            options=storage_containers if any(storage_containers) else [],
+            options=[""] + storage_containers if any(storage_containers) else [],
             key="prompt-storage",
             index=0,
         )
-        st.write(f"**Selected Storage Container:** {select_prompt_storage}")
+        disable_other_input = True if select_prompt_storage != "" else False
+        with st.expander("I want to upload new data...", expanded=False):
+            new_upload = upload_files(
+                client,
+                key_prefix="prompts-upload-2",
+                disable_other_input=disable_other_input,
+            )
+            if new_upload:
+                # brief pause to allow success message to display
+                st.session_state["new_upload"] = True
+                sleep(1.5)
+                st.rerun()
+        if st.session_state["new_upload"] and not select_prompt_storage:
+            st.warning(
+                "Please select the newly uploaded Storage Container to continue."
+            )
+        st.write(f"**Selected Storage Container:** :blue[{select_prompt_storage}]")
         triggered = st.button(
             label="Generate Prompts",
             key="prompt-generation",
-            disabled=not any(storage_containers),
+            disabled=not select_prompt_storage,
         )
         if triggered:
             with st.spinner("Generating LLM prompts for GraphRAG..."):
@@ -145,6 +161,7 @@ def get_prompt_configuration_tab() -> None:
         with col1:
             clicked = st.button(
                 "Save Prompts",
+                help="Save the edited prompts for use with the follow-on indexing step. This button must be clicked to enable downloading the prompts.",
                 type="primary",
                 key="save-prompt-button",
                 on_click=save_prompts,
@@ -152,6 +169,7 @@ def get_prompt_configuration_tab() -> None:
         with col2:
             st.button(
                 "Edit Prompts",
+                help="Allows user to re-edit the prompts after saving.",
                 type="primary",
                 key="edit-prompt-button",
                 on_click=edit_prompts,
@@ -164,6 +182,7 @@ def get_prompt_configuration_tab() -> None:
                         "Download Prompts",
                         data=fp,
                         file_name=download_file,
+                        help="Downloads the saved prompts as a zip file containing three LLM prompts in .txt format.",
                         mime="application/zip",
                         type="primary",
                         disabled=not st.session_state["saved_prompts"],
