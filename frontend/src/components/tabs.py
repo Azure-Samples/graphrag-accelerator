@@ -3,8 +3,6 @@ from time import sleep
 
 import streamlit as st
 
-from src.app_utilities.enums import PromptKeys
-from src.app_utilities.functions import GraphragAPI, generate_and_extract_prompts
 from src.components.index_pipeline import IndexPipeline
 from src.components.login_sidebar import login
 from src.components.prompt_configuration import (
@@ -14,6 +12,9 @@ from src.components.prompt_configuration import (
 )
 from src.components.query import GraphQuery
 from src.components.upload_files_component import upload_files
+from src.enums import PromptKeys
+from src.functions import generate_and_extract_prompts
+from src.graphrag_api import GraphragAPI
 
 
 def get_main_tab(initialized: bool) -> None:
@@ -51,12 +52,12 @@ def get_main_tab(initialized: bool) -> None:
         login()
 
 
-def get_prompt_generation_tab(client: GraphragAPI, num_files: int = 5) -> None:
+def get_prompt_generation_tab(client: GraphragAPI, num_chunks: int = 5) -> None:
     """
     Displays content of Prompt Generation Tab
     """
-    # hard set limit to 5 files to reduce overly long processing times and to reduce over sample errors.
-    num_files = num_files if num_files <= 5 else 5
+    # hard set limit to 5 files to reduce overly long processing times and to reduce over sampling errors.
+    num_chunks = num_chunks if num_chunks <= 5 else 5
 
     st.header(
         "1. LLM Prompt Generation (Optional)",
@@ -100,7 +101,7 @@ def get_prompt_generation_tab(client: GraphragAPI, num_files: int = 5) -> None:
                 generated = generate_and_extract_prompts(
                     client=client,
                     storage_name=select_prompt_storage,
-                    limit=num_files,
+                    limit=num_chunks,
                 )
                 if not isinstance(generated, Exception):
                     st.success(
@@ -111,12 +112,12 @@ def get_prompt_generation_tab(client: GraphragAPI, num_files: int = 5) -> None:
                     st.warning(
                         "You do not have enough data to generate prompts. Retrying with a smaller sample size."
                     )
-                    while num_files > 1:
-                        num_files -= 1
+                    while num_chunks > 1:
+                        num_chunks -= 1
                         generated = generate_and_extract_prompts(
                             client=client,
                             storage_name=select_prompt_storage,
-                            limit=num_files,
+                            limit=num_chunks,
                         )
                         if not isinstance(generated, Exception):
                             st.success(
@@ -124,7 +125,7 @@ def get_prompt_generation_tab(client: GraphragAPI, num_files: int = 5) -> None:
                             )
                             break
                         else:
-                            st.warning(f"Retrying with sample size: {num_files}")
+                            st.warning(f"Retrying with sample size: {num_chunks}")
 
 
 def get_prompt_configuration_tab() -> None:

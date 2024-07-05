@@ -6,7 +6,7 @@ import pandas as pd
 import requests
 import streamlit as st
 
-from src.app_utilities.functions import GraphragAPI
+from src.graphrag_api import GraphragAPI
 
 
 class GraphQuery:

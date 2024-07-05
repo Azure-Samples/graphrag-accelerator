@@ -2,8 +2,8 @@ import json
 
 import streamlit as st
 
-from src.app_utilities.enums import StorageIndexVars
-from src.app_utilities.functions import GraphragAPI
+from src.enums import StorageIndexVars
+from src.graphrag_api import GraphragAPI
 
 CONTAINER_NAMING_RULES = """
 Container names must start or end with a letter or number, and can contain only letters, numbers, and the hyphen/minus (-) character.

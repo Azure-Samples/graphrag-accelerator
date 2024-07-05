@@ -1,104 +1,13 @@
-import os
 from io import StringIO
-from pathlib import Path
-from typing import Optional
-from zipfile import ZipFile
 
 import requests
 import streamlit as st
-from dotenv import find_dotenv, load_dotenv
 from requests import Response
 
-from src.app_utilities.enums import EnvVars, PromptKeys, StorageIndexVars
-
-
-def initialize_app(
-    env_file: str = ".env", css_file: str = "style.css"
-) -> tuple[str, str, str] | bool:
-    """
-    Initialize the Streamlit app with the necessary configurations.
-    """
-    # set page configuration
-    st.set_page_config(initial_sidebar_state="expanded", layout="wide")
-
-    # set custom CSS
-    with open(css_file) as f:
-        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-
-    # initialize session state variables
-    set_session_state_variables()
-
-    # load environment variables
-    _ = load_dotenv(find_dotenv(filename=env_file), override=True)
-
-    # set key and deployment url variables
-    st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY.value] = os.getenv(
-        EnvVars.APIM_SUBSCRIPTION_KEY.value,
-        st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY.value],
-    )
-    st.session_state[EnvVars.DEPLOYMENT_URL.value] = os.getenv(
-        EnvVars.DEPLOYMENT_URL.value, st.session_state[EnvVars.DEPLOYMENT_URL.value]
-    )
-    if (
-        st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY.value]
-        and st.session_state[EnvVars.DEPLOYMENT_URL.value]
-    ):
-        st.session_state["headers"] = {
-            "Ocp-Apim-Subscription-Key": st.session_state[
-                EnvVars.APIM_SUBSCRIPTION_KEY.value
-            ],
-            "Content-Type": "application/json",
-        }
-        st.session_state["headers_upload"] = {
-            "Ocp-Apim-Subscription-Key": st.session_state[
-                EnvVars.APIM_SUBSCRIPTION_KEY.value
-            ]
-        }
-        return True
-    else:
-        return False
-
-
-def set_session_state_variables() -> None:
-    """
-    Initalizes most session state variables for the app.
-    """
-    for key in PromptKeys:
-        value = key.value
-        if value not in st.session_state:
-            st.session_state[value] = ""
-    for key in StorageIndexVars:
-        value = key.value
-        if value not in st.session_state:
-            st.session_state[value] = ""
-    for key in EnvVars:
-        value = key.value
-        if value not in st.session_state:
-            st.session_state[value] = ""
-    if "saved_prompts" not in st.session_state:
-        st.session_state["saved_prompts"] = False
-    if "initialized" not in st.session_state:
-        st.session_state["initialized"] = False
-
-
-def update_session_state_prompt_vars(
-    entity_extract: Optional[str] = None,
-    summarize: Optional[str] = None,
-    community: Optional[str] = None,
-    initial_setting: bool = False,
-    prompt_dir: str = "./prompts",
-) -> None:
-    """
-    Updates the session state variables for the LLM prompts.
-    """
-    if initial_setting:
-        entity_extract, summarize, community = get_prompts(prompt_dir)
-    if entity_extract:
-        st.session_state[PromptKeys.ENTITY.value] = entity_extract
-    if summarize:
-        st.session_state[PromptKeys.SUMMARY.value] = summarize
-    if community:
-        st.session_state[PromptKeys.COMMUNITY.value] = community
+"""
+This module contains the GraphRAG API class for making all external API calls
+presumably to a GraphRAG instance deployed on Azure.
+"""
 
 
 class GraphragAPI:
@@ -126,10 +35,10 @@ class GraphragAPI:
             if response.status_code == 200:
                 return response.json()[storage_name_key]
             else:
-                st.error(f"Error: {response.status_code}")
+                print(f"Error: {response.status_code}")
                 return response
         except Exception as e:
-            st.error(f"Error: {str(e)}")
+            print(f"Error: {str(e)}")
             return e
 
     def upload_files(self, file_payloads: dict, input_storage_name: str):
@@ -146,7 +55,7 @@ class GraphragAPI:
             if response.status_code == 200:
                 return response
         except Exception as e:
-            st.error(f"Error: {str(e)}")
+            print(f"Error: {str(e)}")
 
     def get_entity_data(self) -> dict | None:
         raise NotImplementedError("Method not implemented")
@@ -155,10 +64,10 @@ class GraphragAPI:
         #     if response.status_code == 200:
         #         return response.json()
         #     else:
-        #         st.error(f"Error: {response.status_code}")
+        #         print(f"Error: {response.status_code}")
         #         return response
         # except Exception as e:
-        #     st.error(f"Error: {str(e)}")
+        #     print(f"Error: {str(e)}")
 
     def get_index_names(self, index_name_key: str = "index_name") -> dict | None:
         """
@@ -169,10 +78,10 @@ class GraphragAPI:
             if response.status_code == 200:
                 return response.json()[index_name_key]
             else:
-                st.error(f"Error: {response.status_code}")
+                print(f"Error: {response.status_code}")
                 return response
         except Exception as e:
-            st.error(f"Error: {str(e)}")
+            print(f"Error: {str(e)}")
 
     def build_index(
         self,
@@ -182,8 +91,10 @@ class GraphragAPI:
         community_prompt_filepath: str | StringIO = None,
         summarize_description_prompt_filepath: str | StringIO = None,
     ) -> requests.Response:
-        """Create a search index.
-        This function kicks off a job that builds a knowledge graph (KG) index from files located in a blob storage container.
+        """
+        Create a search index.
+        This function kicks off a job that builds a knowledge graph (KG)
+        index from files located in a blob storage container.
         """
         url = self.api_url + "/index"
         prompt_files = dict()
@@ -222,10 +133,10 @@ class GraphragAPI:
             if response.status_code == 200:
                 return response
             else:
-                st.error(f"Error: {response.status_code}")
+                print(f"Error: {response.status_code}")
                 return response
         except Exception as e:
-            st.error(f"Error: {str(e)}")
+            print(f"Error: {str(e)}")
 
     def health_check(self) -> int | Response:
         """
@@ -236,7 +147,7 @@ class GraphragAPI:
             response = requests.get(url, headers=self.headers)
             return response.status_code
         except Exception as e:
-            st.error(f"Error: {str(e)}")
+            print(f"Error: {str(e)}")
             return e
 
     def query_index(self, index_name: str, query_type: str, query: str):
@@ -265,6 +176,9 @@ class GraphragAPI:
             st.error(f"Error with {query_type} search: {str(e)}")
 
     def global_streaming_query(self, index_name: str, query: str) -> Response | None:
+        """
+        Returns a streaming response object for a global query.
+        """
         url = f"{self.api_url}/experimental/query/global/streaming"
         try:
             query_response = requests.post(
@@ -275,7 +189,7 @@ class GraphragAPI:
             )
             return query_response
         except Exception as e:
-            st.error(f"Error: {str(e)}")
+            print(f"Error: {str(e)}")
 
     def get_source_entity(self, index_name: str, entity_id: str) -> dict | None:
         try:
@@ -288,7 +202,7 @@ class GraphragAPI:
             else:
                 return response
         except Exception as e:
-            st.error(f"Error: {str(e)}")
+            print(f"Error: {str(e)}")
 
     def generate_prompts(
         self, storage_name: str, zip_file_name: str = "prompts.zip", limit: int = 1
@@ -300,72 +214,6 @@ class GraphragAPI:
         params = {"storage_name": storage_name, "limit": limit}
         with requests.get(url, params=params, headers=self.headers, stream=True) as r:
             r.raise_for_status()
-            print(r.status_code)
             with open(zip_file_name, "wb") as f:
                 for chunk in r.iter_content():
                     f.write(chunk)
-
-
-def generate_and_extract_prompts(
-    client: GraphragAPI,
-    storage_name: str,
-    zip_file_name: str = "prompts.zip",
-    limit: int = 5,
-) -> None | Exception:
-    try:
-        client.generate_prompts(
-            storage_name=storage_name, zip_file_name=zip_file_name, limit=limit
-        )
-        _extract_prompts_from_zip(zip_file_name)
-        update_session_state_prompt_vars(initial_setting=True)
-        return
-    except Exception as e:
-        return e
-
-
-def _extract_prompts_from_zip(zip_file_name: str = "prompts.zip"):
-    with ZipFile(zip_file_name, "r") as zip_ref:
-        zip_ref.extractall()
-
-
-def open_file(file_path: str | Path):
-    with open(file_path, "r") as file:
-        text = file.read()
-    return text
-
-
-def zip_directory(directory_path: str, zip_path: str):
-    """
-    Zips all contents of a directory into a single zip file.
-
-    Parameters:
-    - directory_path: str, the path of the directory to zip
-    - zip_path: str, the path where the zip file will be created
-    """
-    root_dir_name = os.path.basename(directory_path.rstrip("/"))
-    with ZipFile(zip_path, "w") as zipf:
-        for root, _, files in os.walk(directory_path):
-            for file in files:
-                file_path = os.path.join(root, file)
-                relpath = os.path.relpath(file_path, start=directory_path)
-                arcname = os.path.join(root_dir_name, relpath)
-                zipf.write(file_path, arcname)
-
-
-def get_prompts(prompt_dir: str = "./prompts"):
-    """
-    Extract text from generated prompts.  Assumes file names comply with pregenerated file name standards.
-    """
-    prompt_paths = [
-        prompt for prompt in Path(prompt_dir).iterdir() if prompt.name.endswith(".txt")
-    ]
-    entity_ext_prompt = [
-        open_file(path) for path in prompt_paths if path.name.startswith("entity")
-    ][0]
-    summ_prompt = [
-        open_file(path) for path in prompt_paths if path.name.startswith("summ")
-    ][0]
-    comm_report_prompt = [
-        open_file(path) for path in prompt_paths if path.name.startswith("community")
-    ][0]
-    return entity_ext_prompt, summ_prompt, comm_report_prompt

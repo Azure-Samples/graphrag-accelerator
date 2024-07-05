@@ -1,11 +1,10 @@
-import json
 from io import StringIO
 
 import streamlit as st
 
-from src.app_utilities.enums import PromptKeys, StorageIndexVars
-from src.app_utilities.functions import GraphragAPI
 from src.components.upload_files_component import upload_files
+from src.enums import PromptKeys, StorageIndexVars
+from src.functions import GraphragAPI
 
 
 class IndexPipeline:
@@ -40,7 +39,7 @@ class IndexPipeline:
             )
             select_storage_name = st.selectbox(
                 label="Select an existing Storage Container.",
-                options=self.containers if any(self.containers) else [],
+                options=[""] + self.containers if any(self.containers) else [],
                 key="index-storage",
                 index=0,
             )
@@ -105,7 +104,7 @@ class IndexPipeline:
             input_storage_name = st.session_state[StorageIndexVars.INPUT_STORAGE.value]
             index_name = st.text_input("Enter Index Name")
             st.write(
-                f"Selected Storage Container: :blue[{select_storage_name}] {input_storage_name}"
+                f"Selected Storage Container: **:blue[{select_storage_name} {input_storage_name}]**"
             )
             if st.button("Build Index"):
                 final_storage_name = select_storage_name or input_storage_name
@@ -148,42 +147,52 @@ class IndexPipeline:
             progress_bar = st.progress(0, text="Index Job Progress")
             if st.button("Check Status"):
                 status_response = self.client.check_index_status(index_name_select)
-                status_response_text: dict = json.loads(status_response.text)
-                if (
-                    status_response.status_code == 200
-                    and status_response_text["status"] != ""
-                ):
-                    try:
-                        job_status = status_response_text["status"]
-                        status_message = f"Status: {status_response_text['status']}"
-                        _ = (
-                            st.success(status_message)
-                            if job_status in ["running", "complete"]
-                            else st.warning(status_message)
+                if status_response.status_code == 200:
+                    status_response_text = status_response.json()
+                    if status_response_text["status"] != "":
+                        try:
+                            # build status message
+                            job_status = status_response_text["status"]
+                            status_message = f"Status: {status_response_text['status']}"
+                            st.success(status_message) if job_status in [
+                                "running",
+                                "complete",
+                            ] else st.warning(status_message)
+                        except Exception as e:
+                            print(e)
+                        try:
+                            # build percent complete message
+                            percent_complete = status_response_text["percent_complete"]
+                            progress_bar.progress(float(percent_complete) / 100)
+                            completion_message = (
+                                f"Percent Complete: {percent_complete}% "
+                            )
+                            st.warning(
+                                completion_message
+                            ) if percent_complete < 100 else st.success(
+                                completion_message
+                            )
+                        except Exception as e:
+                            print(e)
+                        try:
+                            # build progress message
+                            progress_status = status_response_text["progress"]
+                            progress_status = (
+                                progress_status if progress_status else "N/A"
+                            )
+                            progress_message = f"Progress: {progress_status}"
+                            st.success(
+                                progress_message
+                            ) if progress_status != "N/A" else st.warning(
+                                progress_message
+                            )
+                        except Exception as e:
+                            print(e)
+                    else:
+                        st.warning(
+                            f"No status information available for this index: {index_name_select}"
                         )
-                    except Exception as e:
-                        print(e)
-                    try:
-                        percent_complete = status_response_text["percent_complete"]
-                        progress_bar.progress(float(percent_complete) / 100)
-                        completion_message = f"Percent Complete: {percent_complete}% "
-                        _ = (
-                            st.warning(completion_message)
-                            if percent_complete < 100
-                            else st.success(completion_message)
-                        )
-                    except Exception as e:
-                        print(e)
-                    try:
-                        progress_status = status_response_text["progress"]
-                        progress_status = progress_status if progress_status else "N/A"
-                        progress_message = f"Progress: {progress_status}"
-                        _ = (
-                            st.success(progress_message)
-                            if progress_status != "N/A"
-                            else st.warning(progress_message)
-                        )
-                    except Exception as e:
-                        print(e)
                 else:
-                    st.error(f"Status: No workflow associated with {index_name_select}")
+                    st.warning(
+                        f"No workflow information available for this index: {index_name_select}"
+                    )

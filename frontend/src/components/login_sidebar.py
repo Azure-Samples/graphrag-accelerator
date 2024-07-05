@@ -1,10 +1,15 @@
 import streamlit as st
 
-from src.app_utilities.enums import EnvVars
-from src.app_utilities.functions import GraphragAPI
+from src.enums import EnvVars
+from src.graphrag_api import GraphragAPI
 
 
 def login():
+    """
+    Login component that displays in the sidebar.  Requires the user to enter
+    the APIM Gateway URL and Subscription Key to login.  After entering user
+    credentials, a simple health check call is made to the GraphRAG API.
+    """
     with st.sidebar:
         st.title(
             "Login",

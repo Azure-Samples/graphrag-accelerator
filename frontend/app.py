@@ -3,12 +3,13 @@
 import os
 
 import streamlit as st
-from src.app_utilities.enums import EnvVars
-
-# from dotenv import load_dotenv
-from src.app_utilities.functions import GraphragAPI, initialize_app
 from src.components import tabs
 from src.components.index_pipeline import IndexPipeline
+from src.enums import EnvVars
+
+# from dotenv import load_dotenv
+from src.functions import initialize_app
+from src.graphrag_api import GraphragAPI
 
 # Load environment variables
 initialized = initialize_app()
@@ -16,7 +17,7 @@ st.session_state["initialized"] = True if initialized else False
 
 
 def graphrag_app(initialized: bool):
-    # main entry point
+    # main entry point for app interface
     st.title("Microsoft GraphRAG Copilot")
     main_tab, prompt_gen_tab, prompt_edit_tab, index_tab, query_tab = st.tabs(
         [
@@ -30,6 +31,7 @@ def graphrag_app(initialized: bool):
     with main_tab:
         tabs.get_main_tab(initialized)
 
+    # if not initialized, only main tab is displayed
     if initialized:
         # assign API request information
         api_url = st.session_state[EnvVars.DEPLOYMENT_URL.value]

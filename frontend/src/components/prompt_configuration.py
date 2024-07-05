@@ -2,8 +2,8 @@ import os
 
 import streamlit as st
 
-from src.app_utilities.enums import PromptFileNames, PromptKeys, PromptTextAreas
-from src.app_utilities.functions import zip_directory
+from src.enums import PromptFileNames, PromptKeys, PromptTextAreas
+from src.functions import zip_directory
 
 SAVED_PROMPT_VAR = "saved_prompts"
 
