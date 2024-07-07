@@ -102,8 +102,6 @@ checkRequiredTools () {
     versionCheck "jq" $JQ_VERSION "1.6.0"
     versionCheck "yq" $YQ_VERSION "4.40.7"
     versionCheck "az cli" $AZ_VERSION "2.55.0"
-    echo "success!!"
-    exit 0
     printf "Done.\n"
 }
 
