@@ -87,12 +87,21 @@ checkRequiredTools () {
     which curl > /dev/null
     exitIfCommandFailed $? "curl is required, exiting..."
 
-    # minimum version check for yq and az cli
-    YQ_VERSION=`yq --version | awk '{print substr($4,2)}'`
-    AZ_VERSION=`az version -o json | jq -r '.["azure-cli"]'`
+    # minimum version check for jq, yq, and az cli
+    local JQ_VERSION=$(jq --version | cut -d'-' -f2)
+    local major minor patch
+    IFS='.' read -r major minor patch <<< "$JQ_VERSION"
+    if [ -z $patch ]; then
+        # NOTE: older acceptable versions of jq report a version number without the patch number.
+        # if patch version is not present, set it to 0
+        patch=0
+        JQ_VERSION="$major.$minor.$patch"
+    fi
+    local YQ_VERSION=`yq --version | awk '{print substr($4,2)}'`
+    local AZ_VERSION=`az version -o json | jq -r '.["azure-cli"]'`
+    versionCheck "jq" $JQ_VERSION "1.6.0"
     versionCheck "yq" $YQ_VERSION "4.40.7"
     versionCheck "az cli" $AZ_VERSION "2.55.0"
-
     printf "Done.\n"
 }
 
