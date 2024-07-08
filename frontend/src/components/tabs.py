@@ -124,7 +124,7 @@ def get_prompt_generation_tab(client: GraphragAPI, num_chunks: int = 5) -> None:
                         "Prompts generated successfully! Move on to the next tab to configure the prompts."
                     )
                 else:
-                    # assume limit parametes is too high
+                    # assume limit parameter is too high
                     st.warning(
                         "You do not have enough data to generate prompts. Retrying with a smaller sample size."
                     )
@@ -144,7 +144,9 @@ def get_prompt_generation_tab(client: GraphragAPI, num_chunks: int = 5) -> None:
                             st.warning(f"Retrying with sample size: {num_chunks}")
 
 
-def get_prompt_configuration_tab() -> None:
+def get_prompt_configuration_tab(
+    download_file_name: str = "edited_prompts.zip",
+) -> None:
     """
     Displays content of Prompt Configuration Tab
     """
@@ -165,6 +167,7 @@ def get_prompt_configuration_tab() -> None:
                 type="primary",
                 key="save-prompt-button",
                 on_click=save_prompts,
+                kwargs={"zip_file_path": download_file_name},
             )
         with col2:
             st.button(
@@ -175,13 +178,12 @@ def get_prompt_configuration_tab() -> None:
                 on_click=edit_prompts,
             )
         with col3:
-            download_file = "edited_prompts.zip"
-            if os.path.exists(download_file):
-                with open(download_file, "rb") as fp:
+            if os.path.exists(download_file_name):
+                with open(download_file_name, "rb") as fp:
                     st.download_button(
                         "Download Prompts",
                         data=fp,
-                        file_name=download_file,
+                        file_name=download_file_name,
                         help="Downloads the saved prompts as a zip file containing three LLM prompts in .txt format.",
                         mime="application/zip",
                         type="primary",

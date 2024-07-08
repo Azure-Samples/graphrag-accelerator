@@ -8,9 +8,11 @@ from src.functions import zip_directory
 SAVED_PROMPT_VAR = "saved_prompts"
 
 
-def save_prompts(local_dir: str = "./edited_prompts/"):
+def save_prompts(
+    local_dir: str = "./edited_prompts/", zip_file_path: str = "edited_prompts.zip"
+):
     """
-    Save the prompts to the server
+    Save prompts in memory and on disk as a zip file
     """
     st.session_state[SAVED_PROMPT_VAR] = True
     st.session_state[PromptKeys.ENTITY.value] = st.session_state[
@@ -27,7 +29,7 @@ def save_prompts(local_dir: str = "./edited_prompts/"):
         outpath = os.path.join(local_dir, filename.value)
         with open(outpath, "w") as f:
             f.write(st.session_state[key.value])
-    zip_directory(local_dir, "./edited_prompts.zip")
+    zip_directory(local_dir, zip_file_path)
 
 
 def edit_prompts():

@@ -14,9 +14,7 @@ This module contains functions that are used across the Streamlit app.
 """
 
 
-def initialize_app(
-    env_file: str = ".env", css_file: str = "style.css"
-) -> tuple[str, str, str] | bool:
+def initialize_app(env_file: str = ".env", css_file: str = "style.css") -> bool:
     """
     Initialize the Streamlit app with the necessary configurations.
     """
