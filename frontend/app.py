@@ -6,8 +6,6 @@ import streamlit as st
 from src.components import tabs
 from src.components.index_pipeline import IndexPipeline
 from src.enums import EnvVars
-
-# from dotenv import load_dotenv
 from src.functions import initialize_app
 from src.graphrag_api import GraphragAPI
 
