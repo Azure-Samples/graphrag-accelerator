@@ -29,19 +29,19 @@ def get_main_tab(initialized: bool) -> None:
     Here's how you can get started with just a few clicks:
     - **PROMPT GENERATION:** (*Optional Step*)
         1. Generate fine-tuned prompts for graphrag customized to your data and domain.
-        2. Simply select an existing Storage Container and click "Generate Prompts".
+        2. Select an existing Storage Container and click "Generate Prompts".
     - **PROMPT CONFIGURATION:** (*Optional Step*)
-        1. Edit the generated prompts to better suit your needs.
+        1. Edit the generated prompts to best suit your needs.
         2. Once you are finished editing, click the "Save Prompts" button.
-        3. Saving the prompts will store the prompts for use with the follow-on Indexing step.
+        3. Saving the prompts will store them for use in the follow-on Indexing step.
         4. You can also download the edited prompts for future reference.
     - **INDEXING:**
-        1. Select or upload your data to Index
-        2. Name your index and click "Build Index" to begin building a GraphRAG Index.
+        1. Select an existing data storage container or upload data, to Index
+        2. Name your index and select "Build Index" to begin building a GraphRAG Index.
         3. Check the status of the index as the job progresses.
     - **QUERYING:**
         1. Choose an existing index
-        2. Specify the query type
+        2. Specify a query type
         3. Hit "Enter" or click "Search" to view insights.
 
     [GraphRAG]({url}) combines the power of RAG with a Graph structure, giving you insights at your fingertips.
