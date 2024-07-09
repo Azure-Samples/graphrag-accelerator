@@ -241,12 +241,6 @@ def get_query_tab(client: GraphragAPI) -> None:
             key="multiselect-index-search",
             help="Select the index(es) to query. The selected index(es) must have a complete status in order to yield query results without error. Use Check Index Status to confirm status.",
         )
-        # select_index_search = st.selectbox(
-        #     label="Index",
-        #     options=search_indexes if any(search_indexes) else [],
-        #     index=0,
-        #     help="Select the index(es) to query. The selected index(es) must have a complete status in order to yield query results without error. Use Check Index Status to confirm status.",
-        # )
 
     disabled = True if not any(select_index_search) else False
     col3, col4 = st.columns([0.8, 0.2])
@@ -258,7 +252,7 @@ def get_query_tab(client: GraphragAPI) -> None:
     # defining a query variable enables the use of either the search bar or the search button to trigger the query
     query = st.session_state["search-query"]
     if len(query) > 5:
-        if search_bar or search_button:
+        if (search_bar or search_button) and any(select_index_search):
             execute_query(
                 query_engine=gquery,
                 query_type=query_type,
@@ -266,4 +260,6 @@ def get_query_tab(client: GraphragAPI) -> None:
                 query=query,
             )
     else:
-        st.warning("Cannot submit queries less than 6 characters in length.")
+        col1, col2 = st.columns([0.3, 0.7])
+        with col1:
+            st.warning("Cannot submit queries less than 6 characters in length.")
