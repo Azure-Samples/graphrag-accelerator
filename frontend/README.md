@@ -1,5 +1,5 @@
 # Frontend Application Launch Instructions
-The GraphRAG solution accelerator provides a small frontend application, a streamlit app, designed to demonstrate how to build a UI on top of the solution accelerator API.
+A small frontend application, a streamlit app, is provided to demonstrate how to build a UI on top of the solution accelerator API.
 
 ### 1. Deploy the GraphRAG solution accelerator
 Follow instructions from the [deployment guide](../docs/DEPLOYMENT-GUIDE.md) to deploy a full instance of the solution accelerator.
