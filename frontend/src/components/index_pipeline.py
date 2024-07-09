@@ -17,11 +17,11 @@ class IndexPipeline:
 
     Container names must be from 3 through 63 characters long.
     """
-    COLUMN_WIDTHS = [0.275, 0.45, 0.275]
 
-    def __init__(self, client: GraphragAPI) -> None:
+    def __init__(self, client: GraphragAPI, column_widths: list[float]) -> None:
         self.client = client
         self.containers = client.get_storage_container_names()
+        self.column_widths = column_widths
 
     def storage_data_step(self):
         """
@@ -29,7 +29,7 @@ class IndexPipeline:
         """
 
         disable_other_input = False
-        _, col2, _ = st.columns(IndexPipeline.COLUMN_WIDTHS)
+        _, col2, _ = st.columns(self.column_widths)
 
         with col2:
             st.header(
@@ -64,7 +64,7 @@ class IndexPipeline:
         raise NotImplementedError(
             "This is an optional method that has not been implemented yet."
         )
-        # _, col2, _ = st.columns(IndexPipeline.COLUMN_WIDTHS)
+        # _, col2, _ = st.columns(self.column_widths)
         # with col2:
         #     st.header(
         #         "2. Select LLM Prompts",
@@ -88,7 +88,7 @@ class IndexPipeline:
         """
         Creates the Build Index Step for the Indexing Pipeline.
         """
-        _, col2, _ = st.columns(IndexPipeline.COLUMN_WIDTHS)
+        _, col2, _ = st.columns(self.column_widths)
         with col2:
             st.header(
                 "2. Build Index",
@@ -161,7 +161,7 @@ class IndexPipeline:
         """
         Checks the progress of a running indexing job.
         """
-        _, col2, _ = st.columns(IndexPipeline.COLUMN_WIDTHS)
+        _, col2, _ = st.columns(self.column_widths)
         with col2:
             st.header(
                 "3. Check Index Status",

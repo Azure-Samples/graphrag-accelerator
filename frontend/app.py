@@ -32,14 +32,15 @@ def graphrag_app(initialized: bool):
     # if not initialized, only main tab is displayed
     if initialized:
         # assign API request information
+        COLUMN_WIDTHS = [0.275, 0.45, 0.275]
         api_url = st.session_state[EnvVars.DEPLOYMENT_URL.value]
         apim_key = st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY.value]
         client = GraphragAPI(api_url, apim_key)
-        indexPipe = IndexPipeline(client)
+        indexPipe = IndexPipeline(client, COLUMN_WIDTHS)
 
         # display tabs
         with prompt_gen_tab:
-            tabs.get_prompt_generation_tab(client)
+            tabs.get_prompt_generation_tab(client, COLUMN_WIDTHS)
         with prompt_edit_tab:
             tabs.get_prompt_configuration_tab()
         with index_tab:

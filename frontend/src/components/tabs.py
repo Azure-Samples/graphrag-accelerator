@@ -52,29 +52,31 @@ def get_main_tab(initialized: bool) -> None:
         login()
 
 
-def get_prompt_generation_tab(client: GraphragAPI, num_chunks: int = 5) -> None:
+def get_prompt_generation_tab(
+    client: GraphragAPI,
+    column_widths: list[float],
+    num_chunks: int = 5,
+) -> None:
     """
     Displays content of Prompt Generation Tab
     """
     # hard set limit to 5 files to reduce overly long processing times and to reduce over sampling errors.
     num_chunks = num_chunks if num_chunks <= 5 else 5
+    _, col2, _ = st.columns(column_widths)
+    with col2:
+        st.header(
+            "Generate Prompts (optional)",
+            divider=True,
+            help="Generate fine-tuned prompts for graphrag tailored to your data and domain.",
+        )
 
-    st.header(
-        "Generate Prompts (optional)",
-        divider=True,
-        help="Generate fine-tuned prompts for graphrag tailored to your data and domain.",
-    )
+        st.write(
+            "Select a storage container that contains your data. GraphRAG will use this data to generate domain-specific prompts for follow-on indexing."
+        )
+        storage_containers = client.get_storage_container_names()
 
-    st.write(
-        "Select a storage container that contains your data. GraphRAG will use this data to generate domain-specific prompts for follow-on indexing."
-    )
-    storage_containers = client.get_storage_container_names()
-
-    # if no storage containers, allow user to upload files
-    if not (any(storage_containers)):
-        COLUMN_WIDTHS = [0.275, 0.45, 0.275]
-        _, col2, _ = st.columns(COLUMN_WIDTHS)
-        with col2:
+        # if no storage containers, allow user to upload files
+        if not (any(storage_containers)):
             st.warning(
                 "No existing Storage Containers found. Please upload data to continue."
             )
@@ -83,67 +85,67 @@ def get_prompt_generation_tab(client: GraphragAPI, num_chunks: int = 5) -> None:
                 # brief pause to allow success message to display
                 sleep(1.5)
                 st.rerun()
-    else:
-        select_prompt_storage = st.selectbox(
-            "Select an existing Storage Container.",
-            options=[""] + storage_containers if any(storage_containers) else [],
-            key="prompt-storage",
-            index=0,
-        )
-        disable_other_input = True if select_prompt_storage != "" else False
-        with st.expander("I want to upload new data...", expanded=False):
-            new_upload = upload_files(
-                client,
-                key_prefix="prompts-upload-2",
-                disable_other_input=disable_other_input,
+        else:
+            select_prompt_storage = st.selectbox(
+                "Select an existing Storage Container.",
+                options=[""] + storage_containers if any(storage_containers) else [],
+                key="prompt-storage",
+                index=0,
             )
-            if new_upload:
-                # brief pause to allow success message to display
-                st.session_state["new_upload"] = True
-                sleep(1.5)
-                st.rerun()
-        if st.session_state["new_upload"] and not select_prompt_storage:
-            st.warning(
-                "Please select the newly uploaded Storage Container to continue."
-            )
-        st.write(f"**Selected Storage Container:** :blue[{select_prompt_storage}]")
-        triggered = st.button(
-            label="Generate Prompts",
-            key="prompt-generation",
-            help="Select either an existing Storage Container or upload new data to enable this button.\n\
-            Then, click to generate custom prompts for the LLM.",
-            disabled=not select_prompt_storage,
-        )
-        if triggered:
-            with st.spinner("Generating LLM prompts for GraphRAG..."):
-                generated = generate_and_extract_prompts(
-                    client=client,
-                    storage_name=select_prompt_storage,
-                    limit=num_chunks,
+            disable_other_input = True if select_prompt_storage != "" else False
+            with st.expander("I want to upload new data...", expanded=False):
+                new_upload = upload_files(
+                    client,
+                    key_prefix="prompts-upload-2",
+                    disable_other_input=disable_other_input,
                 )
-                if not isinstance(generated, Exception):
-                    st.success(
-                        "Prompts generated successfully! Move on to the next tab to configure the prompts."
+                if new_upload:
+                    # brief pause to allow success message to display
+                    st.session_state["new_upload"] = True
+                    sleep(1.5)
+                    st.rerun()
+            if st.session_state["new_upload"] and not select_prompt_storage:
+                st.warning(
+                    "Please select the newly uploaded Storage Container to continue."
+                )
+            st.write(f"**Selected Storage Container:** :blue[{select_prompt_storage}]")
+            triggered = st.button(
+                label="Generate Prompts",
+                key="prompt-generation",
+                help="Select either an existing Storage Container or upload new data to enable this button.\n\
+                Then, click to generate custom prompts for the LLM.",
+                disabled=not select_prompt_storage,
+            )
+            if triggered:
+                with st.spinner("Generating LLM prompts for GraphRAG..."):
+                    generated = generate_and_extract_prompts(
+                        client=client,
+                        storage_name=select_prompt_storage,
+                        limit=num_chunks,
                     )
-                else:
-                    # assume limit parameter is too high
-                    st.warning(
-                        "You do not have enough data to generate prompts. Retrying with a smaller sample size."
-                    )
-                    while num_chunks > 1:
-                        num_chunks -= 1
-                        generated = generate_and_extract_prompts(
-                            client=client,
-                            storage_name=select_prompt_storage,
-                            limit=num_chunks,
+                    if not isinstance(generated, Exception):
+                        st.success(
+                            "Prompts generated successfully! Move on to the next tab to configure the prompts."
                         )
-                        if not isinstance(generated, Exception):
-                            st.success(
-                                "Prompts generated successfully! Move on to the next tab to configure the prompts."
+                    else:
+                        # assume limit parameter is too high
+                        st.warning(
+                            "You do not have enough data to generate prompts. Retrying with a smaller sample size."
+                        )
+                        while num_chunks > 1:
+                            num_chunks -= 1
+                            generated = generate_and_extract_prompts(
+                                client=client,
+                                storage_name=select_prompt_storage,
+                                limit=num_chunks,
                             )
-                            break
-                        else:
-                            st.warning(f"Retrying with sample size: {num_chunks}")
+                            if not isinstance(generated, Exception):
+                                st.success(
+                                    "Prompts generated successfully! Move on to the next tab to configure the prompts."
+                                )
+                                break
+                            else:
+                                st.warning(f"Retrying with sample size: {num_chunks}")
 
 
 def get_prompt_configuration_tab(
