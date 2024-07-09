@@ -42,7 +42,7 @@ def get_main_tab(initialized: bool) -> None:
     - **QUERYING:**
         1. Choose an existing index
         2. Specify a query type
-        3. Hit "Enter" or click "Search" to view insights.
+        3. Click "Query" button to search and view insights.
 
     [GraphRAG]({url}) combines the power of RAG with a Graph structure, giving you insights at your fingertips.
     """
@@ -246,6 +246,7 @@ def get_query_tab(client: GraphragAPI) -> None:
 
     disabled = True if not any(select_index_search) else False
     col3, col4 = st.columns([0.8, 0.2])
+    
     with col3:
         search_bar = st.text_input("Query", key="search-query", disabled=disabled)
     with col4:
@@ -254,7 +255,8 @@ def get_query_tab(client: GraphragAPI) -> None:
     # defining a query variable enables the use of either the search bar or the search button to trigger the query
     query = st.session_state["search-query"]
     if len(query) > 5:
-        if (search_bar or search_button) and any(select_index_search):
+        if (search_bar and search_button) and any(select_index_search):
+          
             execute_query(
                 query_engine=gquery,
                 query_type=query_type,
