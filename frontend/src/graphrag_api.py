@@ -150,7 +150,7 @@ class GraphragAPI:
             print(f"Error: {str(e)}")
             return e
 
-    def query_index(self, index_name: str, query_type: str, query: str):
+    def query_index(self, index_name: str | list[str], query_type: str, query: str):
         """
         Submite query to GraphRAG API using specific index and query type.
         """
@@ -175,7 +175,9 @@ class GraphragAPI:
         except Exception as e:
             st.error(f"Error with {query_type} search: {str(e)}")
 
-    def global_streaming_query(self, index_name: str, query: str) -> Response | None:
+    def global_streaming_query(
+        self, index_name: str | list[str], query: str
+    ) -> Response | None:
         """
         Returns a streaming response object for a global query.
         """

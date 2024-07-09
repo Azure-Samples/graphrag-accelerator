@@ -18,7 +18,7 @@ class GraphQuery:
     def search(
         self,
         query_type: Literal["Global Streaming", "Global", "Local"],
-        search_index: str,
+        search_index: str | list[str],
         query: str,
     ) -> None:
         idler_message_list = [
@@ -56,7 +56,9 @@ class GraphQuery:
             except requests.exceptions.RequestException as e:
                 st.error(f"Error with query {query_type}: {str(e)}")
 
-    def global_streaming_search(self, search_index: str, query: str) -> None:
+    def global_streaming_search(
+        self, search_index: str | list[str], query: str
+    ) -> None:
         """
         Executes a global streaming query on the specified index.
         Handles the response and displays the results in the Streamlit app.
@@ -109,7 +111,7 @@ class GraphQuery:
             print(query_response.reason, query_response.content)
             raise Exception("Received unexpected response from server")
 
-    def global_search(self, search_index: str, query: str) -> None:
+    def global_search(self, search_index: str | list[str], query: str) -> None:
         query_response = self.client.query_index(
             index_name=search_index, query_type="Global", query=query
         )
@@ -124,7 +126,7 @@ class GraphQuery:
                 )
                 self._build_st_dataframe(query_response["context_data"]["reports"])
 
-    def local_search(self, search_index: str, query: str) -> None:
+    def local_search(self, search_index: str | list[str], query: str) -> None:
         query_response = self.client.query_index(
             index_name=search_index, query_type="Local", query=query
         )
