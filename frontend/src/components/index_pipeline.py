@@ -95,6 +95,7 @@ class IndexPipeline:
                 divider=True,
                 help="Building an index will process the data from step 1 and create a Knowledge Graph suitable for querying. The LLM will use either the default prompt configuration or the prompts that you generated previously. To track the status of an indexing job, use the check index status below.",
             )
+            # Use data from either the selected storage container or the uploaded data
             select_storage_name = st.session_state["index-storage"]
             input_storage_name = (
                 st.session_state["index-storage-name-input"]
@@ -102,7 +103,20 @@ class IndexPipeline:
                 else ""
             )
             storage_selection = select_storage_name or input_storage_name
-            index_name = st.text_input("Enter Index Name")
+
+            # Allow user to choose either default or custom prompts
+            custom_prompts = any([st.session_state[k.value] for k in PromptKeys])
+            prompt_options = ["Default", "Custom"] if custom_prompts else ["Default"]
+            prompt_choice = st.radio(
+                "Choose LLM Prompt Configuration",
+                options=prompt_options,
+                index=1 if custom_prompts else 0,
+                key="prompt-config-choice",
+                horizontal=True,
+            )
+
+            # Create new index name
+            index_name = st.text_input("Enter Index Name", key="index-name-input")
 
             st.write(f"Selected Storage Container: **:blue[{storage_selection}]**")
             if st.button(
@@ -110,10 +124,20 @@ class IndexPipeline:
                 help="You must enter both an Index Name and Select a Storage Container to enable this button",
                 disabled=not index_name or not storage_selection,
             ):
-                entity_prompt = StringIO(st.session_state[PromptKeys.ENTITY.value])
-                summarize_prompt = StringIO(st.session_state[PromptKeys.SUMMARY.value])
-                community_prompt = StringIO(
-                    st.session_state[PromptKeys.COMMUNITY.value]
+                entity_prompt = (
+                    StringIO(st.session_state[PromptKeys.ENTITY.value])
+                    if prompt_choice == "Custom"
+                    else None
+                )
+                summarize_prompt = (
+                    StringIO(st.session_state[PromptKeys.SUMMARY.value])
+                    if prompt_choice == "Custom"
+                    else None
+                )
+                community_prompt = (
+                    StringIO(st.session_state[PromptKeys.COMMUNITY.value])
+                    if prompt_choice == "Custom"
+                    else None
                 )
 
                 response = self.client.build_index(
@@ -125,7 +149,9 @@ class IndexPipeline:
                 )
 
                 if response.status_code == 200:
-                    st.success("Job submitted successfully!")
+                    st.success(
+                        f"Job submitted successfully, using {prompt_choice} prompts!"
+                    )
                 else:
                     st.error(
                         f"Failed to submit job.\nStatus: {response.json()['detail']}"
@@ -144,9 +170,17 @@ class IndexPipeline:
             )
 
             options_indexes = self.client.get_index_names()
+            # create logic for defaulting to running job index if one exists
+            new_index_name = st.session_state["index-name-input"]
+            default_index = (
+                options_indexes.index(new_index_name)
+                if new_index_name in options_indexes
+                else 0
+            )
             index_name_select = st.selectbox(
                 label="Select an index to check its status.",
                 options=options_indexes if any(options_indexes) else [],
+                index=default_index,
             )
             progress_bar = st.progress(0, text="Index Job Progress")
             if st.button("Check Status"):

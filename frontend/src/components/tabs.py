@@ -110,6 +110,8 @@ def get_prompt_generation_tab(client: GraphragAPI, num_chunks: int = 5) -> None:
         triggered = st.button(
             label="Generate Prompts",
             key="prompt-generation",
+            help="Select either an existing Storage Container or upload new data to enable this button.\n\
+            Then, click to generate custom prompts for the LLM.",
             disabled=not select_prompt_storage,
         )
         if triggered:

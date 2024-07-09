@@ -69,7 +69,9 @@ class GraphragAPI:
         # except Exception as e:
         #     print(f"Error: {str(e)}")
 
-    def get_index_names(self, index_name_key: str = "index_name") -> dict | None:
+    def get_index_names(
+        self, index_name_key: str = "index_name"
+    ) -> list | Response | None:
         """
         GET request to GraphRAG API for existing indexes.
         """
