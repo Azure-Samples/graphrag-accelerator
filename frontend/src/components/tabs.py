@@ -76,7 +76,7 @@ def get_prompt_generation_tab(
         storage_containers = client.get_storage_container_names()
 
         # if no storage containers, allow user to upload files
-        if not (any(storage_containers)):
+        if isinstance(storage_containers, list) and not (any(storage_containers)):
             st.warning(
                 "No existing Storage Containers found. Please upload data to continue."
             )

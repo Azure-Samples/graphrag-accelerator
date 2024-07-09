@@ -102,19 +102,19 @@ class GraphragAPI:
         prompt_files = dict()
         if entity_extraction_prompt_filepath:
             prompt_files["entity_extraction_prompt"] = (
-                open(entity_extraction_prompt_filepath, "r")
+                open(entity_extraction_prompt_filepath, "r", encoding="utf-8")
                 if isinstance(entity_extraction_prompt_filepath, str)
                 else entity_extraction_prompt_filepath
             )
         if community_prompt_filepath:
             prompt_files["community_report_prompt"] = (
-                open(community_prompt_filepath, "r")
+                open(community_prompt_filepath, "r", encoding="utf-8")
                 if isinstance(community_prompt_filepath, str)
                 else community_prompt_filepath
             )
         if summarize_description_prompt_filepath:
             prompt_files["summarize_descriptions_prompt"] = (
-                open(summarize_description_prompt_filepath, "r")
+                open(summarize_description_prompt_filepath, "r", encoding="utf-8")
                 if isinstance(summarize_description_prompt_filepath, str)
                 else summarize_description_prompt_filepath
             )

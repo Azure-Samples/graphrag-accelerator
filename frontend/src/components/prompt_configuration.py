@@ -27,7 +27,7 @@ def save_prompts(
     os.makedirs(local_dir, exist_ok=True)
     for key, filename in zip(PromptKeys, PromptFileNames):
         outpath = os.path.join(local_dir, filename.value)
-        with open(outpath, "w") as f:
+        with open(outpath, "w", encoding="utf-8") as f:
             f.write(st.session_state[key.value])
     zip_directory(local_dir, zip_file_path)
 

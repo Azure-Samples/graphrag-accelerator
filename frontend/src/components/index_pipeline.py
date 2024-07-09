@@ -8,16 +8,6 @@ from src.functions import GraphragAPI
 
 
 class IndexPipeline:
-    container_naming_rules = """
-    Container names must start or end with a letter or number, and can contain only letters, numbers, and the hyphen/minus (-) character.
-
-    Every hyphen/minus (-) character must be immediately preceded and followed by a letter or number; consecutive hyphens aren't permitted in container names.
-
-    All letters in a container name must be lowercase.
-
-    Container names must be from 3 through 63 characters long.
-    """
-
     def __init__(self, client: GraphragAPI, column_widths: list[float]) -> None:
         self.client = client
         self.containers = client.get_storage_container_names()
@@ -49,7 +39,7 @@ class IndexPipeline:
             st.write("Or...")
             with st.expander("Upload data to a storage container."):
                 # TODO: validate storage container name before uploading
-                # TODO: Add user message that option not available while existing storage container is selected
+                # TODO: add user message that option not available while existing storage container is selected
                 upload_files(
                     self.client,
                     key_prefix="index",
@@ -58,31 +48,6 @@ class IndexPipeline:
 
                 if select_storage_name != "":
                     disable_other_input = True
-                    # input_storage_name = ""
-
-    def prompt_selection_step(self):
-        raise NotImplementedError(
-            "This is an optional method that has not been implemented yet."
-        )
-        # _, col2, _ = st.columns(self.column_widths)
-        # with col2:
-        #     st.header(
-        #         "2. Select LLM Prompts",
-        #         divider=True,
-        #         help="Generate fine tuned prompts for the LLM specific to your data and domain.",
-        #     )
-        #     selection = st.radio(
-        #         label="Prompt Selection",
-        #         captions=[
-        #             "Use the built-in default prompts",
-        #             "Use the generated prompts from Steps 1 + 2",
-        #         ],
-        #         label_visibility="hidden",
-        #         options=["Use Default Prompts", "Use Generated Prompts"],
-        #         index=1,
-        #         key="prompt-radio",
-        #     )
-        #     _ = selection
 
     def build_index_step(self):
         """
@@ -95,7 +60,7 @@ class IndexPipeline:
                 divider=True,
                 help="Building an index will process the data from step 1 and create a Knowledge Graph suitable for querying. The LLM will use either the default prompt configuration or the prompts that you generated previously. To track the status of an indexing job, use the check index status below.",
             )
-            # Use data from either the selected storage container or the uploaded data
+            # use data from either the selected storage container or the uploaded data
             select_storage_name = st.session_state["index-storage"]
             input_storage_name = (
                 st.session_state["index-storage-name-input"]
@@ -166,7 +131,7 @@ class IndexPipeline:
             st.header(
                 "3. Check Index Status",
                 divider=True,
-                help="Select the created index to check status at what steps it is at in indexing. Indexing must be complete in order to be able to execute queries.",
+                help="Select an index to check the status of what stage indexing is in. Indexing must be complete in order to be able to execute queries.",
             )
 
             options_indexes = self.client.get_index_names()

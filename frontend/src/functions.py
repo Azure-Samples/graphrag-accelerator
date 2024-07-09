@@ -130,7 +130,7 @@ def _extract_prompts_from_zip(zip_file_name: str = "prompts.zip"):
 
 
 def open_file(file_path: str | Path):
-    with open(file_path, "r") as file:
+    with open(file_path, "r", encoding="utf-8") as file:
         text = file.read()
     return text
 
