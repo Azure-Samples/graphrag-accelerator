@@ -248,7 +248,7 @@ def get_query_tab(client: GraphragAPI) -> None:
 
     disabled = True if not any(select_index_search) else False
     col3, col4 = st.columns([0.8, 0.2])
-    
+
     with col3:
         search_bar = st.text_input("Query", key="search-query", disabled=disabled)
     with col4:
@@ -258,7 +258,6 @@ def get_query_tab(client: GraphragAPI) -> None:
     query = st.session_state["search-query"]
     if len(query) > 5:
         if (search_bar and search_button) and any(select_index_search):
-          
             execute_query(
                 query_engine=gquery,
                 query_type=query_type,
