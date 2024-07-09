@@ -156,8 +156,7 @@ class GraphQuery:
                     df_entities = pd.DataFrame(entities)
                     self._build_st_dataframe(df_entities, entity_df=True)
 
-                # TODO: Fix granular entity view
-
+                # TODO: Fix the next portion of code to provide a more granular entity view
                 # for report in entities:
                 #     entity_response = get_source_entity(
                 #         report["index_name"], report["id"], self.api_url, self.headers
@@ -179,6 +178,8 @@ class GraphQuery:
                 with self._create_section_expander("Context Relationships"):
                     df_relationships = pd.DataFrame(relationships)
                     self._build_st_dataframe(df_relationships, rel_df=True)
+
+                    # TODO: Fix the next portion of code to provide a more granular relationship view
                     # for report in query_response["context_data"][
                     #     "relationships"
                     # ][:15]:
@@ -197,7 +198,6 @@ class GraphQuery:
                     #             headers=self.headers,
                     #         )
                     #         text_info_rel = response.json()
-
                     #         df_textinfo_rel = pd.DataFrame([text_info_rel])
                     #         with st.expander(
                     #             f"Source: {report['source']} Target: {report['target']} - Source Document: {sources['source_document']} "
