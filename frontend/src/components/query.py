@@ -116,7 +116,7 @@ class GraphQuery:
             index_name=search_index, query_type="Global", query=query
         )
         if query_response["result"] != "":
-            with self._create_section_expander("Query Results", "black", True, True):
+            with self._create_section_expander("Query Response", "black", True, True):
                 st.write(query_response["result"])
             with self._create_section_expander("Query Context"):
                 st.write(
@@ -132,7 +132,7 @@ class GraphQuery:
         )
         results = query_response["result"]
         if results != "":
-            with self._create_section_expander("Query Results", "black", True, True):
+            with self._create_section_expander("Query Response", "black", True, True):
                 st.write(results)
 
         context_data = query_response["context_data"]
@@ -209,12 +209,14 @@ class GraphQuery:
 
     def _build_st_dataframe(
         self,
-        data: dict,
+        data: dict | pd.DataFrame,
         drop_columns: list[str] = ["id", "index_id", "index_name", "in_context"],
         entity_df: bool = False,
         rel_df: bool = False,
     ) -> st.dataframe:
-        df_context = pd.DataFrame.from_records(data)
+        df_context = (
+            data if isinstance(data, pd.DataFrame) else pd.DataFrame.from_records(data)
+        )
         if any(drop_columns):
             for column in drop_columns:
                 if column in df_context.columns:

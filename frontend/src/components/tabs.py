@@ -28,7 +28,7 @@ def get_main_tab(initialized: bool) -> None:
     Diving into complex information and uncovering semantic relationships utilizing generative AI has never been easier.
     Here's how you can get started with just a few clicks:
     - **PROMPT GENERATION:** (*Optional Step*)
-        1. Generate fine-tuned prompts for the LLM specific to your data and domain.
+        1. Generate fine-tuned prompts for graphrag customized to your data and domain.
         2. Simply select an existing Storage Container and click "Generate Prompts".
     - **PROMPT CONFIGURATION:** (*Optional Step*)
         1. Edit the generated prompts to better suit your needs.
@@ -60,13 +60,13 @@ def get_prompt_generation_tab(client: GraphragAPI, num_chunks: int = 5) -> None:
     num_chunks = num_chunks if num_chunks <= 5 else 5
 
     st.header(
-        "1. LLM Prompt Generation (Optional)",
+        "Generate Prompts (optional)",
         divider=True,
-        help="Generate fine tuned prompts for the LLM specific to your data and domain.",
+        help="Generate fine-tuned prompts for graphrag tailored to your data and domain.",
     )
 
     st.write(
-        "**OPTIONAL STEP:** Select a storage container that contains your data. The LLM will use that data to generate domain-specific prompts for follow-on indexing."
+        "Select a storage container that contains your data. GraphRAG will use this data to generate domain-specific prompts for follow-on indexing."
     )
     storage_containers = client.get_storage_container_names()
 
@@ -151,7 +151,7 @@ def get_prompt_configuration_tab(
     Displays content of Prompt Configuration Tab
     """
     st.header(
-        "2. Configure Prompts (Optional)",
+        "Configure Prompts (optional)",
         divider=True,
         help="Generate fine tuned prompts for the LLM specific to your data and domain.",
     )
