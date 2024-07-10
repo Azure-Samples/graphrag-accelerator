@@ -22,13 +22,15 @@
         "PYTHONPATH": "/graphrag-accelerator/backend/:$PATH"
     },
 	"mounts": [
+		// NOTE: we reference both HOME and USERPROFILE environment variables to simultaneously support both Windows and Unix environments
+		//       in most default situations, only one variable will exist (Windows has USERPROFILE and unix has HOME) and a reference to the other variable will result in an empty string
 		// Keep command history
 		"type=volume,source=graphrag-bashhistory,target=/home/vscode/command_history",
 		"type=volume,source=graphrag-devcontainer-vscode-server,target=/home/vscode/.vscode-server/extensions",
 		// Mounts the login details from the host machine so azcli works seamlessly in the container
-		// "type=bind,source=${localEnv:HOME}/.azure,target=/home/vscode/.azure",
+		// "type=bind,source=${localEnv:HOME}${localEnv:USERPROFILE}/.azure,target=/home/vscode/.azure",
 		// Mounts the ssh details from the host machine - this allows the container to connect to ssh hosts
-		"type=bind,source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh",
+		"type=bind,source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/vscode/.ssh",
 		// Mount docker socket for docker builds
 		"type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock"
 	],

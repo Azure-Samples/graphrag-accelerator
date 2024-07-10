@@ -52,3 +52,16 @@ jobs:
           context: .
           file: docker/Dockerfile-backend
           push: false
+  build-frontend:
+    needs: [lint-check]
+    runs-on: ubuntu-latest
+    if: ${{ !github.event.pull_request.draft }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Build docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: docker/Dockerfile-frontend
+          push: false
