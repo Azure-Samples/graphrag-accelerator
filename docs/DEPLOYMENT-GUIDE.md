@@ -43,7 +43,8 @@ az provider show --namespace Microsoft.AlertsManagement -o table
 ## Installation
 
 ### 1. Deploy Azure OpenAI Service
-You will need access to a deployed Azure OpenAI resource. Documentation on how to deploy an Azure OpenAI service resource can be found [here](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/create-resource?pivots=web-portal). Ensure deployments for the `gpt-4-turbo` model and `text-embedding-ada-002` embedding model are setup. Take note of the model deployment name and model name. Ensure that the subscription used to deploy this Azure OpenAI resource is the same subscription that will be used in the next step (Step 2).
+You will need access to a deployed Azure OpenAI (AOAI) resource. Otherwise documentation on how to deploy an AOAI service can be found [here](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/create-resource?pivots=web-portal). Ensure deployments for the `gpt-4 turbo` model and `text-embedding-ada-002` embedding model are setup. Take note of the model deployment name and model name.
+Note that the AOAI instance **must** be in the same subscription that you plan to deploy this solution accelerator in.
 
 As a starting point, we recommend the following quota thresholds be setup for this solution accelerator to run.
 | Model Name | TPM Threshold |
@@ -52,10 +53,10 @@ gpt-4 turbo            | 80K
 text-embedding-ada-002 | 300K
 
 ### 2. Login to Azure
-Login with Azure CLI and set the appropriate Azure subscription. Ensure that the subscription being used is the same subscription with the deployed Azure OpenAI resources from Step 1 (above).
+Login with Azure CLI and set the appropriate Azure subscription.
 
 ```shell
-# login to Azure - may need to use use the "--use-device-code" flag if using a remote host/virtual machine
+# login to Azure - may need to use the "--use-device-code" flag if using a remote host/virtual machine
 az login
 # check what subscription you are logged into
 az account show
