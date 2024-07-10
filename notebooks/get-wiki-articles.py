@@ -49,6 +49,7 @@ def main():
                 if args.short_summary
                 else wikipedia.page(state).content
             )
+            content = content.strip()
             filename = os.path.join(args.directory, f"{title}_wiki_article.txt")
             with open(filename, "w", encoding="utf-8") as f:
                 f.write(content)
