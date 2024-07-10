@@ -30,6 +30,7 @@ ingress:
 graphragConfig:
   APIM_GATEWAY_URL: ""
   COSMOS_URI_ENDPOINT: ""
+  DEBUG_MODE: "off"
   GRAPHRAG_API_BASE: ""
   GRAPHRAG_API_VERSION: ""
   GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT: "https://cognitiveservices.azure.com/.default"

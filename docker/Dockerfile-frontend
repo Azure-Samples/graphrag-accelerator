@@ -1,0 +1,18 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+FROM python:3.10
+
+ENV PIP_ROOT_USER_ACTION=ignore
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV SETUPTOOLS_USE_DISTUTILS=stdlib
+
+COPY poetry.lock pyproject.toml /
+COPY frontend /frontend
+RUN pip install poetry \
+    && poetry config virtualenvs.create false \
+    && poetry install --without backend
+
+WORKDIR /frontend
+EXPOSE 8080
+CMD ["streamlit", "run", "app.py", "--server.port", "8080"]

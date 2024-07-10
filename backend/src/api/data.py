@@ -186,9 +186,7 @@ async def upload_files(
         )
         return BaseResponse(status="File upload successful.")
     except Exception:
-        reporter.on_error(
-            "Error uploading files.", details={"files": files}
-        )
+        reporter.on_error("Error uploading files.", details={"files": files})
         raise HTTPException(
             status_code=500,
             detail=f"Error uploading files to container '{storage_name}'.",
