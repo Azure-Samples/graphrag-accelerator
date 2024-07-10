@@ -60,18 +60,6 @@ class GraphragAPI:
         except Exception as e:
             print(f"Error: {str(e)}")
 
-    def get_entity_data(self) -> dict | None:
-        raise NotImplementedError("Method not implemented")
-        # try:
-        #     response = requests.get(f"{self.api_url}/index/config/entity", headers=self.headers)
-        #     if response.status_code == 200:
-        #         return response.json()
-        #     else:
-        #         print(f"Error: {response.status_code}")
-        #         return response
-        # except Exception as e:
-        #     print(f"Error: {str(e)}")
-
     def get_index_names(
         self, index_name_key: str = "index_name"
     ) -> list | Response | None:
