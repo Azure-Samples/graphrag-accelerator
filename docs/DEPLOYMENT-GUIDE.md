@@ -77,22 +77,22 @@ In the `deploy.parameters.json` file, provide values for the following required 
 
 | Variable | Expected Value | Required | Description
 | :--- | :--- | --- | ---: |
-`RESOURCE_GROUP`                       | <my_resource_group>                | Yes | The resource group that GraphRAG will be deployed in. Will get created automatically if the resource group does not exist.
-`LOCATION`                             | <my_location>                      | Yes | The azure cloud region to deploy GraphRAG resources in.
-`CONTAINER_REGISTRY_SERVER`            | <my_container_registry>.azurecr.io | No  | Name of an existing Azure Container Registry where the `graphrag` backend docker image is hosted. Will get created automatically if not provided.
-`GRAPHRAG_IMAGE`                       | graphrag:backend                   | No  | The name and tag of the graphrag docker image in the container registry. Will default to `graphrag:backend`.
-`GRAPHRAG_API_BASE`                    |                                    | Yes | Azure OpenAI service endpoint.
-`GRAPHRAG_API_VERSION`                 | 2023-03-15-preview                 | Yes | Azure OpenAI API version.
-`GRAPHRAG_LLM_MODEL`                   | gpt-4                              | Yes | Name of the gpt-4 turbo model.
-`GRAPHRAG_LLM_DEPLOYMENT_NAME`         |                                    | Yes | Deployment name of the gpt-4 turbo model.
-`GRAPHRAG_EMBEDDING_MODEL`             | text-embedding-ada-002             | Yes | Name of the Azure OpenAI embedding model.
-`GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME`   |                                    | Yes | Deployment name of the Azure OpenAI embedding model.
-`GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT` |                                    | No  | Endpoint for cognitive services identity authorization. Will default to `https://cognitiveservices.azure.com/.default` for Azure Commercial cloud but should be defined for deployments in other Azure clouds.
-`APIM_NAME`                            |                                    | No  | Hostname of the API. Must be a globally unique name. The API will be accessible at `https://<APIM_NAME>.azure-api.net`. If not provided a unique name will be generated.
-`RESOURCE_BASE_NAME`                   |                                    | No  | Suffix to apply to all azure resource names. If not provided a unique suffix will be generated.
-`AISEARCH_ENDPOINT_SUFFIX`             |                                    | No  | Suffix to apply to AI search endpoint. Will default to `search.windows.net` for Azure Commercial cloud but should be overridden for deployments in other Azure clouds.
-`AISEARCH_AUDIENCE`                    |                                    | No  | Audience for AAD for AI Search. Will default to `https://search.azure.com/` for Azure Commercial cloud but should be overridden for deployments in other Azure clouds.D
-`REPORTERS`                            |                                    | No  | The type of logging to enable. If not provided, logging will be saved to a file in Azure Storage and to the console in AKS.
+`RESOURCE_GROUP`                       | <my_resource_group>                       | Yes | The resource group that GraphRAG will be deployed in. Will get created automatically if the resource group does not exist.
+`LOCATION`                             | <my_location>                             | Yes | The azure cloud region to deploy GraphRAG resources in.
+`CONTAINER_REGISTRY_SERVER`            | <my_container_registry>.azurecr.io        | No  | Name of an existing Azure Container Registry where the `graphrag` backend docker image is hosted. Will get created automatically if not provided.
+`GRAPHRAG_IMAGE`                       | graphrag:backend                          | No  | The name and tag of the graphrag docker image in the container registry. Will default to `graphrag:backend`.
+`GRAPHRAG_API_BASE`                    | https://<my_openai_name>.openai.azure.com | Yes | Azure OpenAI service endpoint.
+`GRAPHRAG_API_VERSION`                 | 2023-03-15-preview                        | Yes | Azure OpenAI API version.
+`GRAPHRAG_LLM_MODEL`                   | gpt-4                                     | Yes | Name of the gpt-4 turbo model.
+`GRAPHRAG_LLM_DEPLOYMENT_NAME`         |                                           | Yes | Deployment name of the gpt-4 turbo model.
+`GRAPHRAG_EMBEDDING_MODEL`             | text-embedding-ada-002                    | Yes | Name of the Azure OpenAI embedding model.
+`GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME`   |                                           | Yes | Deployment name of the Azure OpenAI embedding model.
+`GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT` |                                           | No  | Endpoint for cognitive services identity authorization. Will default to `https://cognitiveservices.azure.com/.default` for Azure Commercial cloud but should be defined for deployments in other Azure clouds.
+`APIM_NAME`                            |                                           | No  | Hostname of the API. Must be a globally unique name. The API will be accessible at `https://<APIM_NAME>.azure-api.net`. If not provided a unique name will be generated.
+`RESOURCE_BASE_NAME`                   |                                           | No  | Suffix to apply to all azure resource names. If not provided a unique suffix will be generated.
+`AISEARCH_ENDPOINT_SUFFIX`             |                                           | No  | Suffix to apply to AI search endpoint. Will default to `search.windows.net` for Azure Commercial cloud but should be overridden for deployments in other Azure clouds.
+`AISEARCH_AUDIENCE`                    |                                           | No  | Audience for AAD for AI Search. Will default to `https://search.azure.com/` for Azure Commercial cloud but should be overridden for deployments in other Azure clouds.D
+`REPORTERS`                            |                                           | No  | The type of logging to enable. If not provided, logging will be saved to a file in Azure Storage and to the console in AKS.
 
 ### 5. Deploy solution accelerator to the resource group
 ```shell
