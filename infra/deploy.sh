@@ -87,12 +87,21 @@ checkRequiredTools () {
     which curl > /dev/null
     exitIfCommandFailed $? "curl is required, exiting..."
 
-    # minimum version check for yq and az cli
-    YQ_VERSION=`yq --version | awk '{print substr($4,2)}'`
-    AZ_VERSION=`az version -o json | jq -r '.["azure-cli"]'`
+    # minimum version check for jq, yq, and az cli
+    local JQ_VERSION=$(jq --version | cut -d'-' -f2)
+    local major minor patch
+    IFS='.' read -r major minor patch <<< "$JQ_VERSION"
+    if [ -z $patch ]; then
+        # NOTE: older acceptable versions of jq report a version number without the patch number.
+        # if patch version is not present, set it to 0
+        patch=0
+        JQ_VERSION="$major.$minor.$patch"
+    fi
+    local YQ_VERSION=`yq --version | awk '{print substr($4,2)}'`
+    local AZ_VERSION=`az version -o json | jq -r '.["azure-cli"]'`
+    versionCheck "jq" $JQ_VERSION "1.6.0"
     versionCheck "yq" $YQ_VERSION "4.40.7"
     versionCheck "az cli" $AZ_VERSION "2.55.0"
-
     printf "Done.\n"
 }
 
@@ -365,9 +374,10 @@ installGraphRAGHelmChart () {
         --set "graphragConfig.AI_SEARCH_URL=https://$aiSearchName.$AISEARCH_ENDPOINT_SUFFIX" \
         --set "graphragConfig.AI_SEARCH_AUDIENCE=$AISEARCH_AUDIENCE" \
         --set "graphragConfig.COSMOS_URI_ENDPOINT=$cosmosEndpoint" \
+        --set "graphragConfig.DEBUG_MODE=$DEBUG_MODE" \
         --set "graphragConfig.GRAPHRAG_API_BASE=$GRAPHRAG_API_BASE" \
         --set "graphragConfig.GRAPHRAG_API_VERSION=$GRAPHRAG_API_VERSION" \
-	--set "graphragConfig.GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT=$GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT" \
+        --set "graphragConfig.GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT=$GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT" \
         --set "graphragConfig.GRAPHRAG_LLM_MODEL=$GRAPHRAG_LLM_MODEL" \
         --set "graphragConfig.GRAPHRAG_LLM_DEPLOYMENT_NAME=$GRAPHRAG_LLM_DEPLOYMENT_NAME" \
         --set "graphragConfig.GRAPHRAG_EMBEDDING_MODEL=$GRAPHRAG_EMBEDDING_MODEL" \
@@ -513,8 +523,7 @@ createAcrIfNotExists() {
     exitIfCommandFailed $? "Error creating container registry, exiting..."
     CONTAINER_REGISTRY_SERVER=$(jq -r .properties.outputs.loginServer.value <<< $AZURE_ACR_DEPLOY_RESULT)
     exitIfValueEmpty "$CONTAINER_REGISTRY_SERVER" "Unable to parse container registry login server from deployment, exiting..."
-    echo "Container registry '$CONTAINER_REGISTRY_SERVER' created."
-    printf "Done.\n"
+    printf "container registry '$CONTAINER_REGISTRY_SERVER' created.\n"
 }
 
 deployDockerImageToACR() {
@@ -535,7 +544,7 @@ usage() {
    echo "options:"
    echo "  -h     Print this help menu."
    echo "  -d     Disable private endpoint usage."
-   echo "  -g     Developer user only. Grants deployer of this script access to Azure Storage, AI Search, and CosmosDB. Will also disable private endpoints (-d)."
+   echo "  -g     Developer use only. Grants deployer of this script access to Azure Storage, AI Search, and CosmosDB. Will disable private endpoints (-d) and enable debug mode."
    echo "  -p     A JSON file containing the deployment parameters (deploy.parameters.json)."
    echo
 }
@@ -543,6 +552,7 @@ usage() {
 [ $# -eq 0 ] && usage && exit 0
 # parse arguments
 ENABLE_PRIVATE_ENDPOINTS=true
+DEBUG_MODE=off
 GRANT_DEV_ACCESS=0 # false
 PARAMS_FILE=""
 while getopts ":dgp:h" option; do
@@ -553,6 +563,7 @@ while getopts ":dgp:h" option; do
         g)
             ENABLE_PRIVATE_ENDPOINTS=false
             GRANT_DEV_ACCESS=1 # true
+            DEBUG_MODE=on
             ;;
         p)
             PARAMS_FILE=${OPTARG}
