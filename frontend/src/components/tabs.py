@@ -91,7 +91,9 @@ def get_prompt_generation_tab(
         else:
             select_prompt_storage = st.selectbox(
                 "Select an existing Storage Container.",
-                options=[""] + storage_containers if any(storage_containers) else [],
+                options=[""] + storage_containers
+                if isinstance(storage_containers, list)
+                else [],
                 key="prompt-storage",
                 index=0,
             )

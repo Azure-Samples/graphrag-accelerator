@@ -32,7 +32,7 @@ def initialize_app(env_file: str = ".env", css_file: str = "style.css") -> bool:
     set_session_state_variables()
 
     # load environment variables
-    _ = load_dotenv(find_dotenv(filename=env_file), override=True)
+    _ = load_dotenv(find_dotenv(filename=env_file) or None, override=True)
 
     # either load from .env file or from session state
     st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY.value] = os.getenv(

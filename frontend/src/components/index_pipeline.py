@@ -32,7 +32,9 @@ class IndexPipeline:
             )
             select_storage_name = st.selectbox(
                 label="Select an existing Storage Container.",
-                options=[""] + self.containers if any(self.containers) else [],
+                options=[""] + self.containers
+                if isinstance(self.containers, list)
+                else [],
                 key="index-storage",
                 index=0,
             )
