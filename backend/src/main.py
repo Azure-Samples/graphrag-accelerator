@@ -12,9 +12,6 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
-from opencensus.ext.azure.trace_exporter import AzureExporter
-from opencensus.ext.fastapi.fastapi_middleware import FastAPIMiddleware
-from opencensus.trace.samplers import ProbabilitySampler
 
 from src.api.common import verify_subscription_key_exist
 from src.api.data import data_route
@@ -25,16 +22,6 @@ from src.api.index_configuration import index_configuration_route
 from src.api.query import query_route
 from src.api.source import source_route
 from src.reporting import ReporterSingleton
-
-url = os.getenv("APIM_GATEWAY_URL", "localhost")
-version = os.getenv("GRAPHRAG_VERSION", "undefined_version")
-
-app = FastAPI(
-    docs_url="/manpage/docs",
-    openapi_url="/manpage/openapi.json",
-    title="GraphRAG",
-    version=version,
-)
 
 
 async def catch_all_exceptions_middleware(request: Request, call_next):
@@ -51,6 +38,15 @@ async def catch_all_exceptions_middleware(request: Request, call_next):
         return Response("Unexpected internal server error.", status_code=500)
 
 
+url = os.getenv("APIM_GATEWAY_URL", "localhost")
+version = os.getenv("GRAPHRAG_VERSION", "undefined_version")
+
+app = FastAPI(
+    docs_url="/manpage/docs",
+    openapi_url="/manpage/openapi.json",
+    title="GraphRAG",
+    version=version,
+)
 app.middleware("http")(catch_all_exceptions_middleware)
 app.add_middleware(
     CORSMiddleware,
@@ -59,11 +55,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# exporter = AzureExporter(connection_string=os.environ["APP_INSIGHTS_CONNECTION_STRING"])
-# sampler = ProbabilitySampler(1.0)
-# app.add_middleware(FastAPIMiddleware)
-
-
 app.include_router(data_route)
 app.include_router(index_route)
 app.include_router(query_route)

@@ -1,8 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import json
-
 # from dataclasses import asdict
 from datetime import datetime
 from typing import (
@@ -10,10 +8,10 @@ from typing import (
     Optional,
 )
 
-import devtools
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient
 from datashaper import NoopWorkflowCallbacks
+from devtools import pformat
 
 
 class BlobWorkflowCallbacks(NoopWorkflowCallbacks):
@@ -56,7 +54,8 @@ class BlobWorkflowCallbacks(NoopWorkflowCallbacks):
         blob_client = self._blob_service_client.get_blob_client(
             self._container_name, self._blob_name
         )
-        blob_client.append_block(json.dumps(log, indent=2) + "\n")
+        # blob_client.append_block(json.dumps(log, indent=2) + "\n")
+        blob_client.append_block(pformat(log, indent=2) + "\n")
 
         # update the blob's block count
         self._num_blocks += 1
