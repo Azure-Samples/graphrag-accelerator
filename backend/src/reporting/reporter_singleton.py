@@ -25,7 +25,6 @@ class ReporterSingleton:
                     reporters.append(Reporters[reporter_name.upper()])
                 except KeyError:
                     raise ValueError(f"Found unknown reporter: {reporter_name}")
-
             cls._instance = load_pipeline_reporter_from_list(
                 reporting_dir="", reporters=reporters
             )

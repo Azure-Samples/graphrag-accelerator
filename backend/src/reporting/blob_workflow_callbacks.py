@@ -10,6 +10,7 @@ from typing import (
     Optional,
 )
 
+import devtools
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient
 from datashaper import NoopWorkflowCallbacks
@@ -32,10 +33,8 @@ class BlobWorkflowCallbacks(NoopWorkflowCallbacks):
             storage_account_blob_url, credential=credential
         )
 
-        if blob_name == "":
-            blob_name = (
-                f"report/{datetime.now().strftime('%Y-%m-%d-%H:%M:%S:%f')}.logs.json"
-            )
+        if not blob_name:
+            blob_name = f"{container_name}/{datetime.now().strftime('%Y-%m-%d-%H:%M:%S:%f')}.logs.txt"
 
         self._blob_name = blob_name
         self._container_name = container_name
@@ -57,7 +56,7 @@ class BlobWorkflowCallbacks(NoopWorkflowCallbacks):
         blob_client = self._blob_service_client.get_blob_client(
             self._container_name, self._blob_name
         )
-        blob_client.append_block(json.dumps(log) + "\n")
+        blob_client.append_block(json.dumps(log, indent=2) + "\n")
 
         # update the blob's block count
         self._num_blocks += 1

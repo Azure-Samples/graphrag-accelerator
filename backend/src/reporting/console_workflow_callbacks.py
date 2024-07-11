@@ -126,9 +126,12 @@ class ConsoleWorkflowCallbacks(NoopWorkflowCallbacks):
     ) -> None:
         """A call back handler for when an error occurs."""
         details = {} if details is None else details
-        details = {"cause": cause, "stack": stack, **details}
+        details = {"cause": str(cause), "stack": stack, **details}
         self._logger.error(
-            message, stack_info=False, extra=self._format_details(details=details)
+            message,
+            exc_info=True,
+            stack_info=False,
+            extra=self._format_details(details=details),
         )
 
     def on_warning(self, message: str, details: Optional[dict] = None) -> None:
