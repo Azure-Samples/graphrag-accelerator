@@ -19,21 +19,25 @@ class BlobWorkflowCallbacks(NoopWorkflowCallbacks):
 
     _blob_service_client: BlobServiceClient
     _container_name: str
+    _index_name: str
     _max_block_count: int = 25000  # 25k blocks per blob
 
     def __init__(
-        self, storage_account_blob_url: str, container_name: str, blob_name: str = ""
-    ):  # type: ignore
+        self,
+        storage_account_blob_url: str,
+        container_name: str,
+        blob_name: str = "",
+        index_name: str = "",
+    ):
         """Create a new instance of the BlobStorageReporter class."""
         self._storage_account_blob_url = storage_account_blob_url
         credential = DefaultAzureCredential()
         self._blob_service_client = BlobServiceClient(
             storage_account_blob_url, credential=credential
         )
-
         if not blob_name:
             blob_name = f"{container_name}/{datetime.now().strftime('%Y-%m-%d-%H:%M:%S:%f')}.logs.txt"
-
+        self._index_name = index_name
         self._blob_name = blob_name
         self._container_name = container_name
         self._blob_client = self._blob_service_client.get_blob_client(
@@ -41,23 +45,16 @@ class BlobWorkflowCallbacks(NoopWorkflowCallbacks):
         )
         if not self._blob_client.exists():
             self._blob_client.create_append_blob()
-
         self._num_blocks = 0  # refresh block counter
 
     def _write_log(self, log: dict[str, Any]):
         # create a new file when block count hits close 25k
-        if (
-            self._num_blocks >= self._max_block_count
-        ):  # Check if block count exceeds 25k
+        if self._num_blocks >= self._max_block_count:
             self.__init__(self._storage_account_blob_url, self._container_name)
-
         blob_client = self._blob_service_client.get_blob_client(
             self._container_name, self._blob_name
         )
-        # blob_client.append_block(json.dumps(log, indent=2) + "\n")
         blob_client.append_block(pformat(log, indent=2) + "\n")
-
-        # update the blob's block count
         self._num_blocks += 1
 
     def on_error(
@@ -81,23 +78,28 @@ class BlobWorkflowCallbacks(NoopWorkflowCallbacks):
     def on_workflow_start(self, name: str, instance: object) -> None:
         """Execute this callback when a workflow starts."""
         self._workflow_name = name
-
-        message = f"Workflow {name} started."
+        message = f"Index: {self._index_name}. " if self._index_name else ""
+        message += f"Workflow {name} started."
         details = {
             "workflow_name": name,
             "workflow_instance": str(instance),
         }
+        if self._index_name:
+            details["index_name"] = self._index_name
         self._write_log(
             {"type": "on_workflow_start", "data": message, "details": details}
         )
 
     def on_workflow_end(self, name: str, instance: object) -> None:
         """Execute this callback when a workflow ends."""
-        message = f"Workflow {name} completed."
+        message = f"Index: {self._index_name}. " if self._index_name else ""
+        message += f"Workflow {name} complete."
         details = {
             "workflow_name": name,
             "workflow_instance": str(instance),
         }
+        if self._index_name:
+            details["index_name"] = self._index_name
         self._write_log(
             {"type": "on_workflow_end", "data": message, "details": details}
         )

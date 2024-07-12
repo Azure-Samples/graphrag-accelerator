@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 from datashaper import WorkflowCallbacks
 
-from src.reporting.load_reporter import load_pipeline_reporter_from_list
+from src.reporting.load_reporter import load_pipeline_reporter
 from src.reporting.typing import Reporters
 
 
@@ -16,7 +16,7 @@ class ReporterSingleton:
     @classmethod
     def get_instance(cls) -> WorkflowCallbacks:
         if cls._instance is None:
-            # Setting up reporters based on environment variable or defaults
+            # Set up reporters based on environment variable or defaults
             reporters = []
             for reporter_name in os.getenv(
                 "REPORTERS", Reporters.CONSOLE.name.upper()
@@ -25,7 +25,7 @@ class ReporterSingleton:
                     reporters.append(Reporters[reporter_name.upper()])
                 except KeyError:
                     raise ValueError(f"Found unknown reporter: {reporter_name}")
-            cls._instance = load_pipeline_reporter_from_list(
+            cls._instance = load_pipeline_reporter(
                 reporting_dir="", reporters=reporters
             )
         return cls._instance

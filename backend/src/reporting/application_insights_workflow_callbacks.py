@@ -19,11 +19,20 @@ from opencensus.ext.azure.log_exporter import AzureLogHandler
 class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
     """A reporter that writes to an AppInsights Workspace."""
 
+    _logger: logging.Logger
+    _logger_name: str
+    _logger_level: int
+    _logger_level_name: str
+    _properties: Dict[str, Any]
+    _workflow_name: str
+    _index_name: str
+
     def __init__(
         self,
         connection_string: str,
         logger_name: str | None = None,
         logger_level: int = logging.INFO,
+        index_name: str = "",
         properties: Dict[str, Any] = {},
     ):
         """
@@ -40,9 +49,8 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
         self._logger_level = logger_level
         self._logger_level_name: str = logging.getLevelName(logger_level)
         self._properties = properties
-
         self._workflow_name = "N/A"
-
+        self._index_name = index_name
         """Create a new logger with an AppInsights handler."""
         self.__init_logger(connection_string=connection_string)
 
@@ -64,11 +72,11 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
                 self._logger.propagate = False
                 # remove any existing handlers
                 self._logger.handlers.clear()
-                # Set up Azure Monitor
+                # set up Azure Monitor
                 self._logger.addHandler(
                     AzureLogHandler(connection_string=connection_string)
                 )
-                # Set the logging level to INFO
+                # set logging level
                 self._logger.setLevel(logging.DEBUG)
 
             # reduce sentinel counter value
@@ -88,29 +96,33 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
         """
         if not isinstance(details, dict) or (details is None):
             details = {}
-
         return {"custom_dimensions": {**self._properties, **unwrap_dict(details)}}
 
     def on_workflow_start(self, name: str, instance: object) -> None:
         """Execute this callback when a workflow starts."""
         self._workflow_name = name
-
-        message = f"Workflow {name} started."
+        message = f"Index: {self._index_name}. " if self._index_name else ""
+        message += f"Workflow {name} started."
         details = {
             "workflow_name": name,
             "workflow_instance": str(instance),
         }
+        if self._index_name:
+            details["index_name"] = self._index_name
         self._logger.info(
             message, stack_info=False, extra=self._format_details(details=details)
         )
 
     def on_workflow_end(self, name: str, instance: object) -> None:
         """Execute this callback when a workflow ends."""
-        message = f"Workflow {name} completed."
+        message = f"Index: {self._index_name}. " if self._index_name else ""
+        message += f"Workflow {name} complete."
         details = {
             "workflow_name": name,
             "workflow_instance": str(instance),
         }
+        if self._index_name:
+            details["index_name"] = self._index_name
         self._logger.info(
             message, stack_info=False, extra=self._format_details(details=details)
         )

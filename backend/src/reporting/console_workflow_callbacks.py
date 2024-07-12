@@ -17,10 +17,19 @@ from datashaper.workflow.workflow_callbacks import NoopWorkflowCallbacks
 class ConsoleWorkflowCallbacks(NoopWorkflowCallbacks):
     """A reporter that writes to a stream (sys.stdout)."""
 
+    _logger: logging.Logger
+    _logger_name: str
+    _logger_level: int
+    _logger_level_name: str
+    _properties: Dict[str, Any]
+    _workflow_name: str
+    _index_name: str
+
     def __init__(
         self,
         logger_name: str | None = None,
         logger_level: int = logging.INFO,
+        index_name: str = "",
         properties: Dict[str, Any] = {},
     ):
         """
@@ -36,9 +45,8 @@ class ConsoleWorkflowCallbacks(NoopWorkflowCallbacks):
         self._logger_level = logger_level
         self._logger_level_name: str = logging.getLevelName(logger_level)
         self._properties = properties
-
         self._workflow_name = "N/A"
-
+        self._index_name = index_name
         """Create a new logger with an AppInsights handler."""
         self.__init_logger()
 
@@ -62,7 +70,7 @@ class ConsoleWorkflowCallbacks(NoopWorkflowCallbacks):
                 self._logger.handlers.clear()
                 # create a console handler
                 handler = logging.StreamHandler(stream=sys.stdout)
-                # Create a formatter and include 'extra_details' in the format string
+                # create a formatter and include 'extra_details' in the format string
                 handler.setFormatter(
                     # logging.Formatter(
                     #     "[%(levelname)s] %(asctime)s - %(message)s \n %(stack)s"
@@ -70,7 +78,7 @@ class ConsoleWorkflowCallbacks(NoopWorkflowCallbacks):
                     logging.Formatter("[%(levelname)s] %(asctime)s - %(message)s")
                 )
                 self._logger.addHandler(handler)
-                # Set the logging level to INFO
+                # set logging level
                 self._logger.setLevel(logging.INFO)
 
             # reduce sentinel counter value
@@ -90,29 +98,33 @@ class ConsoleWorkflowCallbacks(NoopWorkflowCallbacks):
         """
         if not isinstance(details, dict) or (details is None):
             details = {}
-
         return {**self._properties, **details}
 
     def on_workflow_start(self, name: str, instance: object) -> None:
         """Execute this callback when a workflow starts."""
         self._workflow_name = name
-
-        message = f"Workflow {name} started."
+        message = f"Index: {self._index_name}. " if self._index_name else ""
+        message += f"Workflow {name} started."
         details = {
             "workflow_name": name,
             "workflow_instance": str(instance),
         }
+        if self._index_name:
+            details["index_name"] = self._index_name
         self._logger.info(
             message, stack_info=False, extra=self._format_details(details=details)
         )
 
     def on_workflow_end(self, name: str, instance: object) -> None:
         """Execute this callback when a workflow ends."""
-        message = f"Workflow {name} completed."
+        message = f"Index: {self._index_name}. " if self._index_name else ""
+        message += f"Workflow {name} complete."
         details = {
             "workflow_name": name,
             "workflow_instance": str(instance),
         }
+        if self._index_name:
+            details["index_name"] = self._index_name
         self._logger.info(
             message, stack_info=False, extra=self._format_details(details=details)
         )

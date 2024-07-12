@@ -241,9 +241,8 @@ async def _start_indexing_pipeline(index_name: str):
             reporters.append(Reporters[reporter_name.upper()])
         except KeyError:
             raise ValueError(f"Found unknown reporter: {reporter_name}")
-
     workflow_callbacks = load_pipeline_reporter(
-        reporting_dir=sanitized_index_name, reporters=reporters
+        index_name=index_name, reporting_dir=sanitized_index_name, reporters=reporters
     )
 
     # load custom pipeline settings
@@ -296,7 +295,7 @@ async def _start_indexing_pipeline(index_name: str):
     for workflow in pipeline_config.workflows:
         pipeline_job.all_workflows.append(workflow.name)
 
-    # add pipeline_job callback to the callback manager
+    # add pipeline job callback to the callback manager
     cast(WorkflowCallbacksManager, workflow_callbacks).register(
         PipelineJobWorkflowCallbacks(pipeline_job)
     )
