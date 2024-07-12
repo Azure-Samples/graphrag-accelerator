@@ -38,7 +38,6 @@ async def catch_all_exceptions_middleware(request: Request, call_next):
         return Response("Unexpected internal server error.", status_code=500)
 
 
-url = os.getenv("APIM_GATEWAY_URL", "localhost")
 version = os.getenv("GRAPHRAG_VERSION", "undefined_version")
 
 app = FastAPI(

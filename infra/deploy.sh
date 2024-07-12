@@ -373,7 +373,6 @@ installGraphRAGHelmChart () {
         --set "query.image.repository=$CONTAINER_REGISTRY_SERVER/$graphragImageName" \
         --set "query.image.tag=$graphragImageVersion" \
         --set "ingress.host=$graphragHostname" \
-        --set "graphragConfig.APIM_GATEWAY_URL=$apimGatewayUrl" \
         --set "graphragConfig.APP_INSIGHTS_CONNECTION_STRING=$appInsightsConnectionString" \
         --set "graphragConfig.AI_SEARCH_URL=https://$aiSearchName.$AISEARCH_ENDPOINT_SUFFIX" \
         --set "graphragConfig.AI_SEARCH_AUDIENCE=$AISEARCH_AUDIENCE" \
