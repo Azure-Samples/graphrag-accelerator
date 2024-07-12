@@ -4,6 +4,7 @@
 import asyncio
 import inspect
 import os
+import traceback
 from typing import cast
 
 import yaml
@@ -327,38 +328,43 @@ async def _start_indexing_pipeline(index_name: str):
         )
 
         workflow_callbacks.on_log(
-            f"Index Name: {index_name}, Container Name: {storage_name}\n",
-            details={"status_message": "Indexing pipeline complete."},
+            message=f"Indexing complete for index '{index_name}' from data in container '{storage_name}'\n",
+            details={
+                "index": index_name,
+                "storage_name": storage_name,
+                "status_message": "indexing pipeline complete",
+            },
         )
 
         del workflow_callbacks  # garbage collect
         if pipeline_job.status == PipelineJobState.FAILED:
             exit(1)  # signal to AKS that indexing job failed
 
-    except Exception:
+    except Exception as e:
         pipeline_job.status = PipelineJobState.FAILED
 
         # update failed state in cosmos db
         error_details = {
-            "error_message": "Indexing pipeline failed.",
+            "index": index_name,
+            "storage_name": storage_name,
         }
         # log error in local index directory logs
         workflow_callbacks.on_error(
-            message=f"Index Name: {index_name}, Container Name: {storage_name}\n",
-            cause=None,
-            stack=None,
+            message=f"Indexing pipeline failed for index '{index_name}'",
+            cause=e,
+            stack=traceback.format_exc(),
             details=error_details,
         )
         # log error in global index directory logs
         reporter.on_error(
-            f"Index Name: {index_name}, Container Name: {storage_name}\n {str(e)} \n",
-            cause=str(e),
-            stack=None,
+            message=f"Indexing pipeline failed for index '{index_name}'",
+            cause=e,
+            stack=traceback.format_exc(),
             details=error_details,
         )
         raise HTTPException(
             status_code=500,
-            detail=f"Error occurred during indexing job for index '{index_name}'.",
+            detail=f"Error encountered during indexing job for index '{index_name}'.",
         )
 
 
@@ -437,8 +443,8 @@ def _delete_k8s_job(job_name: str, namespace: str) -> None:
         batch_v1.delete_namespaced_job(name=job_name, namespace=namespace)
     except Exception:
         reporter.on_error(
-            f"Error deleting k8s job {job_name}.",
-            details={"Container": job_name},
+            message=f"Error deleting k8s job {job_name}.",
+            details={"container": job_name},
         )
         pass
     try:
@@ -448,8 +454,8 @@ def _delete_k8s_job(job_name: str, namespace: str) -> None:
             core_v1.delete_namespaced_pod(job_pod, namespace=namespace)
     except Exception:
         reporter.on_error(
-            f"Error deleting k8s pod for job {job_name}.",
-            details={"Container": job_name},
+            message=f"Error deleting k8s pod for job {job_name}.",
+            details={"container": job_name},
         )
         pass
 
