@@ -3570,21 +3570,6 @@ psutil = ">=5.6.3"
 requests = ">=2.19.0"
 
 [[package]]
-name = "opencensus-ext-fastapi"
-version = "0.1.0"
-description = "OpenCensus FastAPI Integration"
-optional = false
-python-versions = "*"
-files = [
-    {file = "opencensus-ext-fastapi-0.1.0.tar.gz", hash = "sha256:b63b51b2233a8afc7820ab1f4b13b0c5e63aa86c12c0035f4679709dd1afa0fb"},
-    {file = "opencensus_ext_fastapi-0.1.0-py2.py3-none-any.whl", hash = "sha256:ed524cdc8c8d479b3b15d155c0b0afbb54ade8c98ae6a179e74b7c8bcd8d8977"},
-]
-
-[package.dependencies]
-fastapi = ">=0.75.2"
-opencensus = ">=0.11.2,<1.0.0"
-
-[[package]]
 name = "orjson"
 version = "3.10.6"
 description = "Fast, correct Python JSON library supporting dataclasses, datetimes, and numpy"
@@ -6591,4 +6576,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"
-content-hash = "ce0366523fc082a2a4359afc4559fe7cdaa428c78bdc47cccb9c8908a73680e1"
+content-hash = "9115ee8882f896593cebf763b24b6a65da1c10bd888b92863d5b41b82ec10914"
