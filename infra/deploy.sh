@@ -325,9 +325,6 @@ installGraphRAGHelmChart () {
     local serviceAccountName=$(jq -r .azure_aks_service_account_name.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$serviceAccountName" "Unable to parse service account name from Azure outputs, exiting..."
 
-    local apimGatewayUrl=$(jq -r .azure_apim_url.value <<< $AZURE_OUTPUTS)
-    exitIfValueEmpty "$apimGatewayUrl" "Unable to parse APIM gateway url from Azure outputs, exiting..."
-
     local appInsightsConnectionString=$(jq -r .azure_app_insights_connection_string.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$appInsightsConnectionString" "Unable to parse app insights connection string from Azure outputs, exiting..."
 
