@@ -59,9 +59,6 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
         self._num_workflow_steps = num_workflow_steps
         self._processed_workflow_steps = []  # maintain a running list of workflow steps that get processed
         """Create a new logger with an AppInsights handler."""
-        print(
-            f"Initializing App Insights logger with num_workflow_steps: {num_workflow_steps}"
-        )
         self.__init_logger(connection_string=connection_string)
 
     def __init_logger(self, connection_string, max_logger_init_retries: int = 10):

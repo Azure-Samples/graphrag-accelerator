@@ -282,7 +282,6 @@ async def _start_indexing_pipeline(index_name: str):
     pipeline_job.failed_workflows = []
     for workflow in pipeline_config.workflows:
         pipeline_job.all_workflows.append(workflow.name)
-        print(f"Workflow Name: {workflow.name}")
 
     # create new reporters/callbacks just for this job
     reporters = []
