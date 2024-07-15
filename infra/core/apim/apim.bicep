@@ -28,6 +28,9 @@ param virtualNetworkName string = 'apimvnet'
 @description('Application Insights resource name')
 param appInsightsName string = 'apim-appi'
 
+@description('Application Insights public network access for ingestion')
+param appInsightsPublicNetworkAccessForIngestion string = 'Disabled'
+
 @description('Address prefix')
 param virtualNetworkAddressPrefix string = '10.0.0.0/12'
 
@@ -442,7 +445,7 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   properties: {
     Application_Type: 'web'
     WorkspaceResourceId: logAnalyticsWorkspaceId
-    publicNetworkAccessForIngestion: 'Disabled'
+    publicNetworkAccessForIngestion: appInsightsPublicNetworkAccessForIngestion
     publicNetworkAccessForQuery: 'Enabled'
   }
 }
@@ -451,6 +454,7 @@ output apimIPs array = apiManagementService.properties.publicIPAddresses
 output apimGatewayUrl string = apiManagementService.properties.gatewayUrl
 output appInsightsName string = appInsights.name
 output appInsightsId string = appInsights.id
+output appInsightsConnectionString string = appInsights.properties.ConnectionString
 output name string = apiManagementService.name
 output vnetName string = virtualNetwork.name
 output vnetId string = virtualNetwork.id

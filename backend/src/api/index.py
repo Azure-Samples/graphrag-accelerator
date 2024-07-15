@@ -4,6 +4,7 @@
 import asyncio
 import inspect
 import os
+import traceback
 from typing import cast
 
 import yaml
@@ -98,7 +99,7 @@ async def setup_indexing_pipeline(
     if not _blob_service_client.get_container_client(sanitized_storage_name).exists():
         raise HTTPException(
             status_code=500,
-            detail=f"Data container '{storage_name}' does not exist.",
+            detail=f"Storage blob container {storage_name} does not exist",
         )
 
     # check for prompts
@@ -202,7 +203,7 @@ async def setup_indexing_pipeline(
                 status_code=500,
                 detail="exception when calling BatchV1Api->create_namespaced_job",
             )
-        return BaseResponse(status="indexing operation has been scheduled.")
+        return BaseResponse(status="Indexing operation scheduled")
     except Exception:
         reporter = ReporterSingleton().get_instance()
         job_details = {
@@ -215,7 +216,7 @@ async def setup_indexing_pipeline(
         )
         raise HTTPException(
             status_code=500,
-            detail=f"Error occurred during setup of indexing job for '{index_name}'.",
+            detail=f"Error occurred during setup of indexing job for index {index_name}",
         )
 
 
@@ -231,19 +232,6 @@ async def _start_indexing_pipeline(index_name: str):
 
     # download nltk dependencies
     bootstrap()
-
-    # create new reporters/callbacks just for this job
-    reporters = []
-    reporter_names = os.getenv("REPORTERS", Reporters.CONSOLE.name.upper()).split(",")
-    for reporter_name in reporter_names:
-        try:
-            reporters.append(Reporters[reporter_name.upper()])
-        except KeyError:
-            raise ValueError(f"Found unknown reporter: {reporter_name}")
-
-    workflow_callbacks = load_pipeline_reporter(
-        reporting_dir=sanitized_index_name, reporters=reporters
-    )
 
     # load custom pipeline settings
     this_directory = os.path.dirname(
@@ -295,7 +283,22 @@ async def _start_indexing_pipeline(index_name: str):
     for workflow in pipeline_config.workflows:
         pipeline_job.all_workflows.append(workflow.name)
 
-    # add pipeline_job callback to the callback manager
+    # create new reporters/callbacks just for this job
+    reporters = []
+    reporter_names = os.getenv("REPORTERS", Reporters.CONSOLE.name.upper()).split(",")
+    for reporter_name in reporter_names:
+        try:
+            reporters.append(Reporters[reporter_name.upper()])
+        except KeyError:
+            raise ValueError(f"Unknown reporter type: {reporter_name}")
+    workflow_callbacks = load_pipeline_reporter(
+        index_name=index_name,
+        num_workflow_steps=len(pipeline_job.all_workflows),
+        reporting_dir=sanitized_index_name,
+        reporters=reporters,
+    )
+
+    # add pipeline job callback to the callback manager
     cast(WorkflowCallbacksManager, workflow_callbacks).register(
         PipelineJobWorkflowCallbacks(pipeline_job)
     )
@@ -312,6 +315,7 @@ async def _start_indexing_pipeline(index_name: str):
                 # if the workflow failed, record the failure
                 pipeline_job.failed_workflows.append(workflow_result.workflow)
                 pipeline_job.update_db()
+                # TODO: exit early if a workflow fails and add more detailed error logging
 
         # if job is done, check if any workflow steps failed
         if len(pipeline_job.failed_workflows) > 0:
@@ -327,38 +331,43 @@ async def _start_indexing_pipeline(index_name: str):
         )
 
         workflow_callbacks.on_log(
-            f"Index Name: {index_name}, Container Name: {storage_name}\n",
-            details={"status_message": "Indexing pipeline complete."},
+            message=f"Indexing pipeline complete for index {index_name}.",
+            details={
+                "index": index_name,
+                "storage_name": storage_name,
+                "status_message": "indexing pipeline complete",
+            },
         )
 
         del workflow_callbacks  # garbage collect
         if pipeline_job.status == PipelineJobState.FAILED:
             exit(1)  # signal to AKS that indexing job failed
 
-    except Exception:
+    except Exception as e:
         pipeline_job.status = PipelineJobState.FAILED
 
         # update failed state in cosmos db
         error_details = {
-            "error_message": "Indexing pipeline failed.",
+            "index": index_name,
+            "storage_name": storage_name,
         }
         # log error in local index directory logs
         workflow_callbacks.on_error(
-            message=f"Index Name: {index_name}, Container Name: {storage_name}\n",
-            cause=None,
-            stack=None,
+            message=f"Indexing pipeline failed for index {index_name}.",
+            cause=e,
+            stack=traceback.format_exc(),
             details=error_details,
         )
         # log error in global index directory logs
         reporter.on_error(
-            f"Index Name: {index_name}, Container Name: {storage_name}\n {str(e)} \n",
-            cause=str(e),
-            stack=None,
+            message=f"Indexing pipeline failed for index {index_name}.",
+            cause=e,
+            stack=traceback.format_exc(),
             details=error_details,
         )
         raise HTTPException(
             status_code=500,
-            detail=f"Error occurred during indexing job for index '{index_name}'.",
+            detail=f"Error encountered during indexing job for index {index_name}.",
         )
 
 
@@ -437,8 +446,8 @@ def _delete_k8s_job(job_name: str, namespace: str) -> None:
         batch_v1.delete_namespaced_job(name=job_name, namespace=namespace)
     except Exception:
         reporter.on_error(
-            f"Error deleting k8s job {job_name}.",
-            details={"Container": job_name},
+            message=f"Error deleting k8s job {job_name}.",
+            details={"container": job_name},
         )
         pass
     try:
@@ -448,8 +457,8 @@ def _delete_k8s_job(job_name: str, namespace: str) -> None:
             core_v1.delete_namespaced_pod(job_pod, namespace=namespace)
     except Exception:
         reporter.on_error(
-            f"Error deleting k8s pod for job {job_name}.",
-            details={"Container": job_name},
+            message=f"Error deleting k8s pod for job {job_name}.",
+            details={"container": job_name},
         )
         pass
 

@@ -92,6 +92,7 @@ module log 'core/log-analytics/log.bicep' = {
   params:{
     name: '${abbrs.operationalInsightsWorkspaces}${resourceBaseNameFinal}'
     location: location
+    publicNetworkAccessForIngestion: enablePrivateEndpoints ? 'Disabled' : 'Enabled'
   }
 }
 
@@ -178,6 +179,7 @@ module apim 'core/apim/apim.bicep' = {
   params: {
     apiManagementName: !empty(apimName) ? apimName : '${abbrs.apiManagementService}${resourceBaseNameFinal}'
     appInsightsName: '${abbrs.insightsComponents}${resourceBaseNameFinal}'
+    appInsightsPublicNetworkAccessForIngestion: enablePrivateEndpoints ? 'Disabled' : 'Enabled'
     nsgName: '${abbrs.networkNetworkSecurityGroups}${resourceBaseNameFinal}'
     publicIpName: '${abbrs.networkPublicIPAddresses}${resourceBaseNameFinal}'
     virtualNetworkName: '${abbrs.networkVirtualNetworks}${resourceBaseNameFinal}'
@@ -326,6 +328,7 @@ output azure_storage_account_blob_url string = storage.outputs.primaryEndpoints.
 output azure_cosmosdb_endpoint string = cosmosdb.outputs.endpoint
 output azure_cosmosdb_name string = cosmosdb.outputs.name
 output azure_cosmosdb_id string = cosmosdb.outputs.id
+output azure_app_insights_connection_string string = apim.outputs.appInsightsConnectionString
 output azure_apim_name string = apim.outputs.name
 output azure_apim_url string = apim.outputs.apimGatewayUrl
 output azure_apim_vnet_name string = apim.outputs.vnetName

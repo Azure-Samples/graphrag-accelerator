@@ -21,8 +21,23 @@ from src.api.index import index_route
 from src.api.index_configuration import index_configuration_route
 from src.api.query import query_route
 from src.api.source import source_route
+from src.reporting import ReporterSingleton
 
-url = os.getenv("APIM_GATEWAY_URL", "localhost")
+
+async def catch_all_exceptions_middleware(request: Request, call_next):
+    """a function to globally catch all exceptions and return a 500 response with the exception message"""
+    try:
+        return await call_next(request)
+    except Exception as e:
+        reporter = ReporterSingleton().get_instance()
+        reporter.on_error(
+            message="Unexpected internal server error",
+            cause=e,
+            stack=traceback.format_exc(),
+        )
+        return Response("Unexpected internal server error.", status_code=500)
+
+
 version = os.getenv("GRAPHRAG_VERSION", "undefined_version")
 
 app = FastAPI(
@@ -31,19 +46,6 @@ app = FastAPI(
     title="GraphRAG",
     version=version,
 )
-
-
-async def catch_all_exceptions_middleware(request: Request, call_next):
-    """a function to globally catch all exceptions and return a 500 response with the exception message"""
-    try:
-        return await call_next(request)
-    except Exception:
-        # only print stacktrace if developer has enabled debug mode
-        if os.getenv("DEBUG_MODE") == "on":  # possible values: on, off
-            print(traceback.format_exc())
-        return Response("Unexpected internal server error", status_code=500)
-
-
 app.middleware("http")(catch_all_exceptions_middleware)
 app.add_middleware(
     CORSMiddleware,
@@ -52,8 +54,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
 app.include_router(data_route)
 app.include_router(index_route)
 app.include_router(query_route)
