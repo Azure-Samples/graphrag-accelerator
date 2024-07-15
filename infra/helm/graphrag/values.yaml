@@ -28,7 +28,6 @@ ingress:
   tls: []
 
 graphragConfig:
-  APIM_GATEWAY_URL: ""
   COSMOS_URI_ENDPOINT: ""
   DEBUG_MODE: "off"
   GRAPHRAG_API_BASE: ""

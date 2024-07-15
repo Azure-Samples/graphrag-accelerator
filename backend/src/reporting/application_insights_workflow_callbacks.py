@@ -19,11 +19,23 @@ from opencensus.ext.azure.log_exporter import AzureLogHandler
 class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
     """A reporter that writes to an AppInsights Workspace."""
 
+    _logger: logging.Logger
+    _logger_name: str
+    _logger_level: int
+    _logger_level_name: str
+    _properties: Dict[str, Any]
+    _workflow_name: str
+    _index_name: str
+    _num_workflow_steps: int
+    _processed_workflow_steps: list[str] = []
+
     def __init__(
         self,
         connection_string: str,
         logger_name: str | None = None,
         logger_level: int = logging.INFO,
+        index_name: str = "",
+        num_workflow_steps: int = 0,
         properties: Dict[str, Any] = {},
     ):
         """
@@ -33,6 +45,8 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
             connection_string (str): The connection string for the App Insights instance.
             logger_name (str | None, optional): The name of the logger. Defaults to None.
             logger_level (int, optional): The logging level. Defaults to logging.INFO.
+            index_name (str, optional): The name of an index. Defaults to "".
+            num_workflow_steps (int): A list of workflow names ordered by their execution. Defaults to [].
             properties (Dict[str, Any], optional): Additional properties to be included in the log. Defaults to {}.
         """
         self._logger: logging.Logger
@@ -40,9 +54,10 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
         self._logger_level = logger_level
         self._logger_level_name: str = logging.getLevelName(logger_level)
         self._properties = properties
-
         self._workflow_name = "N/A"
-
+        self._index_name = index_name
+        self._num_workflow_steps = num_workflow_steps
+        self._processed_workflow_steps = []  # maintain a running list of workflow steps that get processed
         """Create a new logger with an AppInsights handler."""
         self.__init_logger(connection_string=connection_string)
 
@@ -64,12 +79,12 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
                 self._logger.propagate = False
                 # remove any existing handlers
                 self._logger.handlers.clear()
-                # Set up Azure Monitor
+                # set up Azure Monitor
                 self._logger.addHandler(
                     AzureLogHandler(connection_string=connection_string)
                 )
-                # Set the logging level to INFO
-                self._logger.setLevel(logging.INFO)
+                # set logging level
+                self._logger.setLevel(logging.DEBUG)
 
             # reduce sentinel counter value
             max_retry -= 1
@@ -88,29 +103,44 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
         """
         if not isinstance(details, dict) or (details is None):
             details = {}
-
         return {"custom_dimensions": {**self._properties, **unwrap_dict(details)}}
 
     def on_workflow_start(self, name: str, instance: object) -> None:
         """Execute this callback when a workflow starts."""
         self._workflow_name = name
-
-        message = f"Workflow {name} started."
+        self._processed_workflow_steps.append(name)
+        message = f"Index: {self._index_name} -- " if self._index_name else ""
+        workflow_progress = (
+            f" ({len(self._processed_workflow_steps)}/{self._num_workflow_steps})"
+            if self._num_workflow_steps
+            else ""
+        )  # will take the form "(1/4)"
+        message += f"Workflow{workflow_progress}: {name} started."
         details = {
             "workflow_name": name,
-            "workflow_instance": str(instance),
+            # "workflow_instance": str(instance),
         }
+        if self._index_name:
+            details["index_name"] = self._index_name
         self._logger.info(
             message, stack_info=False, extra=self._format_details(details=details)
         )
 
     def on_workflow_end(self, name: str, instance: object) -> None:
         """Execute this callback when a workflow ends."""
-        message = f"Workflow {name} completed."
+        message = f"Index: {self._index_name} -- " if self._index_name else ""
+        workflow_progress = (
+            f" ({len(self._processed_workflow_steps)}/{self._num_workflow_steps})"
+            if self._num_workflow_steps
+            else ""
+        )  # will take the form "(1/4)"
+        message += f"Workflow{workflow_progress}: {name} complete."
         details = {
             "workflow_name": name,
-            "workflow_instance": str(instance),
+            # "workflow_instance": str(instance),
         }
+        if self._index_name:
+            details["index_name"] = self._index_name
         self._logger.info(
             message, stack_info=False, extra=self._format_details(details=details)
         )
@@ -124,9 +154,12 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
     ) -> None:
         """A call back handler for when an error occurs."""
         details = {} if details is None else details
-        details = {"cause": cause, "stack": stack, **details}
+        details = {"cause": str(cause), "stack": stack, **details}
         self._logger.error(
-            message, stack_info=True, extra=self._format_details(details=details)
+            message,
+            exc_info=True,
+            stack_info=False,
+            extra=self._format_details(details=details),
         )
 
     def on_warning(self, message: str, details: Optional[dict] = None) -> None:
