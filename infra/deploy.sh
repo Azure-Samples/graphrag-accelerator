@@ -509,11 +509,12 @@ grantDevAccessToAzureResources() {
 
 createAcrIfNotExists() {
     # check if container registry exists
-    if [ ! -z "$CONTAINER_REGISTRY_SERVER" ]; then
-        printf "Checking if container registry '$CONTAINER_REGISTRY_SERVER' exists... "
-        az acr show --name $CONTAINER_REGISTRY_SERVER > /dev/null 2>&1
-        exitIfCommandFailed $? "Container registry '$CONTAINER_REGISTRY_SERVER' not found, exiting..."
-        printf "Yes.\n"
+    printf "Checking if container registry exists... "
+    local existingRegistry
+    existingRegistry=$(az acr show --name $CONTAINER_REGISTRY_SERVER --query loginServer -o tsv 2>/dev/null)
+    if [ $? -eq 0 ]; then
+        printf "Yes. Using existing registry '$existingRegistry'.\n"
+        CONTAINER_REGISTRY_SERVER=$existingRegistry
         return 0
     fi
     # else deploy a new container registry
