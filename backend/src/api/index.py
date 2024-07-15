@@ -99,7 +99,7 @@ async def setup_indexing_pipeline(
     if not _blob_service_client.get_container_client(sanitized_storage_name).exists():
         raise HTTPException(
             status_code=500,
-            detail=f"Data container '{storage_name}' does not exist.",
+            detail=f"Storage blob container {storage_name} does not exist",
         )
 
     # check for prompts
@@ -203,7 +203,7 @@ async def setup_indexing_pipeline(
                 status_code=500,
                 detail="exception when calling BatchV1Api->create_namespaced_job",
             )
-        return BaseResponse(status="indexing operation has been scheduled.")
+        return BaseResponse(status="Indexing operation scheduled")
     except Exception:
         reporter = ReporterSingleton().get_instance()
         job_details = {
@@ -216,7 +216,7 @@ async def setup_indexing_pipeline(
         )
         raise HTTPException(
             status_code=500,
-            detail=f"Error occurred during setup of indexing job for '{index_name}'.",
+            detail=f"Error occurred during setup of indexing job for index {index_name}",
         )
 
 
@@ -232,18 +232,6 @@ async def _start_indexing_pipeline(index_name: str):
 
     # download nltk dependencies
     bootstrap()
-
-    # create new reporters/callbacks just for this job
-    reporters = []
-    reporter_names = os.getenv("REPORTERS", Reporters.CONSOLE.name.upper()).split(",")
-    for reporter_name in reporter_names:
-        try:
-            reporters.append(Reporters[reporter_name.upper()])
-        except KeyError:
-            raise ValueError(f"Found unknown reporter: {reporter_name}")
-    workflow_callbacks = load_pipeline_reporter(
-        index_name=index_name, reporting_dir=sanitized_index_name, reporters=reporters
-    )
 
     # load custom pipeline settings
     this_directory = os.path.dirname(
@@ -294,6 +282,22 @@ async def _start_indexing_pipeline(index_name: str):
     pipeline_job.failed_workflows = []
     for workflow in pipeline_config.workflows:
         pipeline_job.all_workflows.append(workflow.name)
+        print(f"Workflow Name: {workflow.name}")
+
+    # create new reporters/callbacks just for this job
+    reporters = []
+    reporter_names = os.getenv("REPORTERS", Reporters.CONSOLE.name.upper()).split(",")
+    for reporter_name in reporter_names:
+        try:
+            reporters.append(Reporters[reporter_name.upper()])
+        except KeyError:
+            raise ValueError(f"Unknown reporter type: {reporter_name}")
+    workflow_callbacks = load_pipeline_reporter(
+        index_name=index_name,
+        num_workflow_steps=len(pipeline_job.all_workflows),
+        reporting_dir=sanitized_index_name,
+        reporters=reporters
+    )
 
     # add pipeline job callback to the callback manager
     cast(WorkflowCallbacksManager, workflow_callbacks).register(
@@ -312,6 +316,7 @@ async def _start_indexing_pipeline(index_name: str):
                 # if the workflow failed, record the failure
                 pipeline_job.failed_workflows.append(workflow_result.workflow)
                 pipeline_job.update_db()
+                # TODO: exit early if a workflow fails and add more detailed error logging
 
         # if job is done, check if any workflow steps failed
         if len(pipeline_job.failed_workflows) > 0:
@@ -327,7 +332,7 @@ async def _start_indexing_pipeline(index_name: str):
         )
 
         workflow_callbacks.on_log(
-            message=f"Indexing complete for index '{index_name}' from data in container '{storage_name}'\n",
+            message=f"Indexing pipeline complete for index {index_name}.",
             details={
                 "index": index_name,
                 "storage_name": storage_name,
@@ -349,21 +354,21 @@ async def _start_indexing_pipeline(index_name: str):
         }
         # log error in local index directory logs
         workflow_callbacks.on_error(
-            message=f"Indexing pipeline failed for index '{index_name}'",
+            message=f"Indexing pipeline failed for index {index_name}.",
             cause=e,
             stack=traceback.format_exc(),
             details=error_details,
         )
         # log error in global index directory logs
         reporter.on_error(
-            message=f"Indexing pipeline failed for index '{index_name}'",
+            message=f"Indexing pipeline failed for index {index_name}.",
             cause=e,
             stack=traceback.format_exc(),
             details=error_details,
         )
         raise HTTPException(
             status_code=500,
-            detail=f"Error encountered during indexing job for index '{index_name}'.",
+            detail=f"Error encountered during indexing job for index {index_name}.",
         )
 
 

@@ -26,6 +26,8 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
     _properties: Dict[str, Any]
     _workflow_name: str
     _index_name: str
+    _num_workflow_steps: int
+    _processed_workflow_steps: list[str] = []
 
     def __init__(
         self,
@@ -33,6 +35,7 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
         logger_name: str | None = None,
         logger_level: int = logging.INFO,
         index_name: str = "",
+        num_workflow_steps: int = 0,
         properties: Dict[str, Any] = {},
     ):
         """
@@ -42,6 +45,8 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
             connection_string (str): The connection string for the App Insights instance.
             logger_name (str | None, optional): The name of the logger. Defaults to None.
             logger_level (int, optional): The logging level. Defaults to logging.INFO.
+            index_name (str, optional): The name of an index. Defaults to "".
+            num_workflow_steps (int): A list of workflow names ordered by their execution. Defaults to [].
             properties (Dict[str, Any], optional): Additional properties to be included in the log. Defaults to {}.
         """
         self._logger: logging.Logger
@@ -51,7 +56,10 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
         self._properties = properties
         self._workflow_name = "N/A"
         self._index_name = index_name
+        self._num_workflow_steps = num_workflow_steps
+        self._processed_workflow_steps = [] # maintain a running list of workflow steps that get processed
         """Create a new logger with an AppInsights handler."""
+        print(f"Initializing App Insights logger with num_workflow_steps: {num_workflow_steps}")
         self.__init_logger(connection_string=connection_string)
 
     def __init_logger(self, connection_string, max_logger_init_retries: int = 10):
@@ -101,11 +109,13 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
     def on_workflow_start(self, name: str, instance: object) -> None:
         """Execute this callback when a workflow starts."""
         self._workflow_name = name
-        message = f"Index: {self._index_name}. " if self._index_name else ""
-        message += f"Workflow {name} started."
+        self._processed_workflow_steps.append(name)
+        message = f"Index: {self._index_name} -- " if self._index_name else ""
+        workflow_progress = f" ({len(self._processed_workflow_steps)}/{self._num_workflow_steps})" if self._num_workflow_steps else "" # will take the form "(1/4)"
+        message += f"Workflow{workflow_progress}: {name} started."
         details = {
             "workflow_name": name,
-            "workflow_instance": str(instance),
+            # "workflow_instance": str(instance),
         }
         if self._index_name:
             details["index_name"] = self._index_name
@@ -115,11 +125,12 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
 
     def on_workflow_end(self, name: str, instance: object) -> None:
         """Execute this callback when a workflow ends."""
-        message = f"Index: {self._index_name}. " if self._index_name else ""
-        message += f"Workflow {name} complete."
+        message = f"Index: {self._index_name} -- " if self._index_name else ""
+        workflow_progress = f" ({len(self._processed_workflow_steps)}/{self._num_workflow_steps})" if self._num_workflow_steps else "" # will take the form "(1/4)"
+        message += f"Workflow{workflow_progress}: {name} complete."
         details = {
             "workflow_name": name,
-            "workflow_instance": str(instance),
+            # "workflow_instance": str(instance),
         }
         if self._index_name:
             details["index_name"] = self._index_name
