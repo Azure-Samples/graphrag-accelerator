@@ -69,5 +69,9 @@ def load_pipeline_reporter(
             case _:
                 print(f"WARNING: unknown reporter type: {reporter}. Skipping.")
     # always register the console reporter as a fallback
-    callback_manager.register(ConsoleWorkflowCallbacks(index_name=index_name, num_workflow_steps=num_workflow_steps))
+    callback_manager.register(
+        ConsoleWorkflowCallbacks(
+            index_name=index_name, num_workflow_steps=num_workflow_steps
+        )
+    )
     return callback_manager

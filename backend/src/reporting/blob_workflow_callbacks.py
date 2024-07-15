@@ -33,7 +33,7 @@ class BlobWorkflowCallbacks(NoopWorkflowCallbacks):
         num_workflow_steps: int = 0,
     ):
         """Create a new instance of the BlobStorageReporter class.
-        
+
         Args:
             storage_account_blob_url (str): The URL to the storage account.
             container_name (str): The name of the container.
@@ -50,7 +50,7 @@ class BlobWorkflowCallbacks(NoopWorkflowCallbacks):
             blob_name = f"{container_name}/{datetime.now().strftime('%Y-%m-%d-%H:%M:%S:%f')}.logs.txt"
         self._index_name = index_name
         self._num_workflow_steps = num_workflow_steps
-        self._processed_workflow_steps = [] # maintain a running list of workflow steps that get processed
+        self._processed_workflow_steps = []  # maintain a running list of workflow steps that get processed
         self._blob_name = blob_name
         self._container_name = container_name
         self._blob_client = self._blob_service_client.get_blob_client(
@@ -93,7 +93,11 @@ class BlobWorkflowCallbacks(NoopWorkflowCallbacks):
         self._workflow_name = name
         self._processed_workflow_steps.append(name)
         message = f"Index: {self._index_name} -- " if self._index_name else ""
-        workflow_progress = f" ({len(self._processed_workflow_steps)}/{self._num_workflow_steps})" if self._num_workflow_steps else "" # will take the form "(1/4)"
+        workflow_progress = (
+            f" ({len(self._processed_workflow_steps)}/{self._num_workflow_steps})"
+            if self._num_workflow_steps
+            else ""
+        )  # will take the form "(1/4)"
         message += f"Workflow{workflow_progress}: {name} started."
         details = {
             "workflow_name": name,
@@ -108,7 +112,11 @@ class BlobWorkflowCallbacks(NoopWorkflowCallbacks):
     def on_workflow_end(self, name: str, instance: object) -> None:
         """Execute this callback when a workflow ends."""
         message = f"Index: {self._index_name} -- " if self._index_name else ""
-        workflow_progress = f" ({len(self._processed_workflow_steps)}/{self._num_workflow_steps})" if self._num_workflow_steps else "" # will take the form "(1/4)"
+        workflow_progress = (
+            f" ({len(self._processed_workflow_steps)}/{self._num_workflow_steps})"
+            if self._num_workflow_steps
+            else ""
+        )  # will take the form "(1/4)"
         message += f"Workflow{workflow_progress}: {name} complete."
         details = {
             "workflow_name": name,

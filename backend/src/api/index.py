@@ -296,7 +296,7 @@ async def _start_indexing_pipeline(index_name: str):
         index_name=index_name,
         num_workflow_steps=len(pipeline_job.all_workflows),
         reporting_dir=sanitized_index_name,
-        reporters=reporters
+        reporters=reporters,
     )
 
     # add pipeline job callback to the callback manager
