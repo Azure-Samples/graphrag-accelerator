@@ -28,8 +28,8 @@ def main():
         default="testdata",
     )
     parser.add_argument(
-        "--only-summary",
-        help="Retrieve only summary article content.",
+        "--short-summary",
+        help="Retrieve short summary article content.",
         action="store_true",
     )
     parser.add_argument(
@@ -46,9 +46,10 @@ def main():
             title = wikipedia.page(state).title.lower().replace(" ", "_")
             content = (
                 wikipedia.page(state).summary
-                if args.only_summary
+                if args.short_summary
                 else wikipedia.page(state).content
             )
+            content = content.strip()
             filename = os.path.join(args.directory, f"{title}_wiki_article.txt")
             with open(filename, "w", encoding="utf-8") as f:
                 f.write(content)

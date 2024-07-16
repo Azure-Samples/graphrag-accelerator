@@ -163,8 +163,8 @@ populateOptionalParams () {
         printf "\tsetting RESOURCE_BASE_NAME=$RESOURCE_BASE_NAME\n"
     fi
     if [ -z "$REPORTERS" ]; then
-        REPORTERS="blob,console"
-        printf "\tsetting REPORTERS=blob,console\n"
+        REPORTERS="blob,console,app_insights"
+        printf "\tsetting REPORTERS=blob,console,app_insights\n"
     fi
     if [ -z "$GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT" ]; then
         GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT="https://cognitiveservices.azure.com/.default"
@@ -325,8 +325,8 @@ installGraphRAGHelmChart () {
     local serviceAccountName=$(jq -r .azure_aks_service_account_name.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$serviceAccountName" "Unable to parse service account name from Azure outputs, exiting..."
 
-    local apimGatewayUrl=$(jq -r .azure_apim_url.value <<< $AZURE_OUTPUTS)
-    exitIfValueEmpty "$apimGatewayUrl" "Unable to parse APIM gateway url from Azure outputs, exiting..."
+    local appInsightsConnectionString=$(jq -r .azure_app_insights_connection_string.value <<< $AZURE_OUTPUTS)
+    exitIfValueEmpty "$appInsightsConnectionString" "Unable to parse app insights connection string from Azure outputs, exiting..."
 
     local aiSearchName=$(jq -r .azure_ai_search_name.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$aiSearchName" "Unable to parse AI search name from Azure outputs, exiting..."
@@ -370,13 +370,14 @@ installGraphRAGHelmChart () {
         --set "query.image.repository=$CONTAINER_REGISTRY_SERVER/$graphragImageName" \
         --set "query.image.tag=$graphragImageVersion" \
         --set "ingress.host=$graphragHostname" \
-        --set "graphragConfig.APIM_GATEWAY_URL=$apimGatewayUrl" \
+        --set "graphragConfig.APP_INSIGHTS_CONNECTION_STRING=$appInsightsConnectionString" \
         --set "graphragConfig.AI_SEARCH_URL=https://$aiSearchName.$AISEARCH_ENDPOINT_SUFFIX" \
         --set "graphragConfig.AI_SEARCH_AUDIENCE=$AISEARCH_AUDIENCE" \
         --set "graphragConfig.COSMOS_URI_ENDPOINT=$cosmosEndpoint" \
+        --set "graphragConfig.DEBUG_MODE=$DEBUG_MODE" \
         --set "graphragConfig.GRAPHRAG_API_BASE=$GRAPHRAG_API_BASE" \
         --set "graphragConfig.GRAPHRAG_API_VERSION=$GRAPHRAG_API_VERSION" \
-	--set "graphragConfig.GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT=$GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT" \
+        --set "graphragConfig.GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT=$GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT" \
         --set "graphragConfig.GRAPHRAG_LLM_MODEL=$GRAPHRAG_LLM_MODEL" \
         --set "graphragConfig.GRAPHRAG_LLM_DEPLOYMENT_NAME=$GRAPHRAG_LLM_DEPLOYMENT_NAME" \
         --set "graphragConfig.GRAPHRAG_EMBEDDING_MODEL=$GRAPHRAG_EMBEDDING_MODEL" \
@@ -522,8 +523,7 @@ createAcrIfNotExists() {
     exitIfCommandFailed $? "Error creating container registry, exiting..."
     CONTAINER_REGISTRY_SERVER=$(jq -r .properties.outputs.loginServer.value <<< $AZURE_ACR_DEPLOY_RESULT)
     exitIfValueEmpty "$CONTAINER_REGISTRY_SERVER" "Unable to parse container registry login server from deployment, exiting..."
-    echo "Container registry '$CONTAINER_REGISTRY_SERVER' created."
-    printf "Done.\n"
+    printf "container registry '$CONTAINER_REGISTRY_SERVER' created.\n"
 }
 
 deployDockerImageToACR() {
@@ -544,7 +544,7 @@ usage() {
    echo "options:"
    echo "  -h     Print this help menu."
    echo "  -d     Disable private endpoint usage."
-   echo "  -g     Developer user only. Grants deployer of this script access to Azure Storage, AI Search, and CosmosDB. Will also disable private endpoints (-d)."
+   echo "  -g     Developer use only. Grants deployer of this script access to Azure Storage, AI Search, and CosmosDB. Will disable private endpoints (-d) and enable debug mode."
    echo "  -p     A JSON file containing the deployment parameters (deploy.parameters.json)."
    echo
 }
@@ -552,6 +552,7 @@ usage() {
 [ $# -eq 0 ] && usage && exit 0
 # parse arguments
 ENABLE_PRIVATE_ENDPOINTS=true
+DEBUG_MODE=off
 GRANT_DEV_ACCESS=0 # false
 PARAMS_FILE=""
 while getopts ":dgp:h" option; do
@@ -562,6 +563,7 @@ while getopts ":dgp:h" option; do
         g)
             ENABLE_PRIVATE_ENDPOINTS=false
             GRANT_DEV_ACCESS=1 # true
+            DEBUG_MODE=on
             ;;
         p)
             PARAMS_FILE=${OPTARG}

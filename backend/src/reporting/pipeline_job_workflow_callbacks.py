@@ -26,13 +26,13 @@ class PipelineJobWorkflowCallbacks(NoopWorkflowCallbacks):
         # if we are not already running, set the status to running
         if self._pipeline_job.status != PipelineJobState.RUNNING:
             self._pipeline_job.status = PipelineJobState.RUNNING
-        self._pipeline_job.progress = f"Workflow '{name}' started."
+        self._pipeline_job.progress = f"Workflow {name} started."
 
     def on_workflow_end(self, name: str, instance: object) -> None:
         """Execute this callback when a workflow ends."""
         self._pipeline_job.completed_workflows.append(name)
         self._pipeline_job.update_db()
-        self._pipeline_job.progress = f"Workflow '{name}' complete."
+        self._pipeline_job.progress = f"Workflow {name} complete."
         self._pipeline_job.percent_complete = (
             self._pipeline_job.calculate_percent_complete()
         )
