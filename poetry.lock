@@ -5535,12 +5535,13 @@ snowflake = ["snowflake-connector-python (>=2.8.0)", "snowflake-snowpark-python 
 
 [[package]]
 name = "streamlit-nested-layout"
-version = "0.1.1"
+version = "0.1.3"
 description = "Enables nested layout in streamlit."
 optional = false
-python-versions = ">=3.7, !=3.9.7"
+python-versions = "!=3.9.7,>=3.7"
 files = [
-    {file = "streamlit-nested-layout-0.1.1.tar.gz", hash = "sha256:8b7ce4d90b76ff8f4fff2cf7b30ae262cd2c068722e5439a3618f9a412ed82fb"},
+    {file = "streamlit-nested-layout-0.1.3.tar.gz", hash = "sha256:7481cdc559f658238982e88abb9fb38c198abb3ff2dcfa4ec35fe663a5952ea4"},
+    {file = "streamlit_nested_layout-0.1.3-py3-none-any.whl", hash = "sha256:9347c4d12d11a5942fd7ef98bcbc6851da06645ad592bb3b8252c7b2ef496d4f"},
 ]
 
 [package.dependencies]
@@ -6576,4 +6577,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"
-content-hash = "9115ee8882f896593cebf763b24b6a65da1c10bd888b92863d5b41b82ec10914"
+content-hash = "1875eacab23b2b49ff12dbad72235c1ad39206f6a306f69bb581899db2e3b6ae"
