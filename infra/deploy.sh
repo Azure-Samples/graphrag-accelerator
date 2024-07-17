@@ -245,6 +245,18 @@ deployAzureResources () {
     datetime="`date +%Y-%m-%d_%H-%M-%S`"
     deploy_name="graphrag-deploy-$datetime"
     echo "Deployment name: $deploy_name"
+    AZURE_DEPLOY_VALIDATION=$(az deployment group what-if --no-pretty-print --only-show-errors --name "$deploy_name" --resource-group $RESOURCE_GROUP --no-prompt -o json --template-file ./main.bicep \
+        --parameters "resourceBaseName=$RESOURCE_BASE_NAME" \
+        --parameters "graphRagName=$RESOURCE_GROUP" \
+        --parameters "apimName=$APIM_NAME" \
+        --parameters "publisherName=$PUBLISHER_NAME" \
+        --parameters "aksSshRsaPublicKey=$SSH_PUBLICKEY" \
+        --parameters "publisherEmail=$PUBLISHER_EMAIL" \
+        --parameters "enablePrivateEndpoints=$ENABLE_PRIVATE_ENDPOINTS")
+    exitIfCommandFailed $? "Error validating Azure resource deployment..."
+    echo "Validate Deployment Results"
+    echo "$AZURE_DEPLOY_VALIDATION" | jq .
+    exit 0
     AZURE_DEPLOY_RESULTS=$(az deployment group create --name "$deploy_name" --resource-group $RESOURCE_GROUP --no-prompt -o json --template-file ./main.bicep \
         --parameters "resourceBaseName=$RESOURCE_BASE_NAME" \
         --parameters "graphRagName=$RESOURCE_GROUP" \
