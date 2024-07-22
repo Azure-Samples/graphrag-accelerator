@@ -91,8 +91,8 @@ In the `deploy.parameters.json` file, provide values for the following required 
 `APIM_NAME`                            |                                           | No  | Hostname of the API. Must be a globally unique name. The API will be accessible at `https://<APIM_NAME>.azure-api.net`. If not provided a unique name will be generated.
 `RESOURCE_BASE_NAME`                   |                                           | No  | Suffix to apply to all azure resource names. If not provided a unique suffix will be generated.
 `AISEARCH_ENDPOINT_SUFFIX`             |                                           | No  | Suffix to apply to AI search endpoint. Will default to `search.windows.net` for Azure Commercial cloud but should be overridden for deployments in other Azure clouds.
-`AISEARCH_AUDIENCE`                    |                                           | No  | Audience for AAD for AI Search. Will default to `https://search.azure.com/` for Azure Commercial cloud but should be overridden for deployments in other Azure clouds.D
-`REPORTERS`                            |                                           | No  | The type of logging to enable. If not provided, logging will be saved to a file in Azure Storage and to the console in AKS.
+`AISEARCH_AUDIENCE`                    |                                           | No  | Audience for AAD for AI Search. Will default to `https://search.azure.com/` for Azure Commercial cloud but should be overridden for deployments in other Azure clouds.
+`REPORTERS`                            | blob,console,app_insights                 | No  | The type of logging to enable. A comma separated string containing at least one of the following `[blob,console,file,app_insights]`. Default value = `blob,console,app_insights`
 
 ### 5. Deploy solution accelerator to the resource group
 ```shell

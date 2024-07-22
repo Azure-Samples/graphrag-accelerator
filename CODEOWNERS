@@ -3,3 +3,4 @@
 # @global-owner1 and @global-owner2 will be requested for
 # review when someone opens a pull request.
 *       @Azure-Samples/graphrag-core-team
+*       @Azure-Samples/societal-resilience-graphrag

@@ -163,8 +163,8 @@ populateOptionalParams () {
         printf "\tsetting RESOURCE_BASE_NAME=$RESOURCE_BASE_NAME\n"
     fi
     if [ -z "$REPORTERS" ]; then
-        REPORTERS="blob,console"
-        printf "\tsetting REPORTERS=blob,console\n"
+        REPORTERS="blob,console,app_insights"
+        printf "\tsetting REPORTERS=blob,console,app_insights\n"
     fi
     if [ -z "$GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT" ]; then
         GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT="https://cognitiveservices.azure.com/.default"
@@ -325,8 +325,8 @@ installGraphRAGHelmChart () {
     local serviceAccountName=$(jq -r .azure_aks_service_account_name.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$serviceAccountName" "Unable to parse service account name from Azure outputs, exiting..."
 
-    local apimGatewayUrl=$(jq -r .azure_apim_url.value <<< $AZURE_OUTPUTS)
-    exitIfValueEmpty "$apimGatewayUrl" "Unable to parse APIM gateway url from Azure outputs, exiting..."
+    local appInsightsConnectionString=$(jq -r .azure_app_insights_connection_string.value <<< $AZURE_OUTPUTS)
+    exitIfValueEmpty "$appInsightsConnectionString" "Unable to parse app insights connection string from Azure outputs, exiting..."
 
     local aiSearchName=$(jq -r .azure_ai_search_name.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$aiSearchName" "Unable to parse AI search name from Azure outputs, exiting..."
@@ -370,7 +370,7 @@ installGraphRAGHelmChart () {
         --set "query.image.repository=$CONTAINER_REGISTRY_SERVER/$graphragImageName" \
         --set "query.image.tag=$graphragImageVersion" \
         --set "ingress.host=$graphragHostname" \
-        --set "graphragConfig.APIM_GATEWAY_URL=$apimGatewayUrl" \
+        --set "graphragConfig.APP_INSIGHTS_CONNECTION_STRING=$appInsightsConnectionString" \
         --set "graphragConfig.AI_SEARCH_URL=https://$aiSearchName.$AISEARCH_ENDPOINT_SUFFIX" \
         --set "graphragConfig.AI_SEARCH_AUDIENCE=$AISEARCH_AUDIENCE" \
         --set "graphragConfig.COSMOS_URI_ENDPOINT=$cosmosEndpoint" \
