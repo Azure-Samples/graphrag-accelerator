@@ -513,18 +513,18 @@ createAcrIfNotExists() {
     local existingRegistry
     existingRegistry=$(az acr show --name $CONTAINER_REGISTRY_SERVER --query loginServer -o tsv 2>/dev/null)
     if [ $? -eq 0 ]; then
-        printf "Yes. Using existing registry '$existingRegistry'.\n"
+        printf "Yes.\nUsing existing registry '$existingRegistry'.\n"
         CONTAINER_REGISTRY_SERVER=$existingRegistry
         return 0
     fi
     # else deploy a new container registry
-    printf "Creating container registry... "
+    printf "No.\nCreating container registry... "
     AZURE_ACR_DEPLOY_RESULT=$(az deployment group create --resource-group $RESOURCE_GROUP --name "acr-deployment" --template-file core/acr/acr.bicep --only-show-errors --no-prompt -o json \
         --parameters "name=$CONTAINER_REGISTRY_SERVER")
     exitIfCommandFailed $? "Error creating container registry, exiting..."
     CONTAINER_REGISTRY_SERVER=$(jq -r .properties.outputs.loginServer.value <<< $AZURE_ACR_DEPLOY_RESULT)
     exitIfValueEmpty "$CONTAINER_REGISTRY_SERVER" "Unable to parse container registry login server from deployment, exiting..."
-    printf "container registry '$CONTAINER_REGISTRY_SERVER' created.\n"
+    printf "'$CONTAINER_REGISTRY_SERVER' created.\n"
 }
 
 deployDockerImageToACR() {
