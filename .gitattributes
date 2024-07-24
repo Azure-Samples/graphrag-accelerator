@@ -1,4 +1,5 @@
 # Common settings that generally should always be used with your language specific settings
+# https://github.com/gitattributes/gitattributes/blob/master/Common.gitattributes
 
 # Auto detect text files and perform LF normalization
 *          text=auto
