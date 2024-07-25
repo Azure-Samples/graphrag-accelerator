@@ -507,24 +507,15 @@ grantDevAccessToAzureResources() {
     az role assignment create --role "Search Index Data Reader" --assignee $principalId --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Search/searchServices/$searchServiceName" > /dev/null
 }
 
-createAcrIfNotExists() {
-    # check if container registry exists
-    printf "Checking if container registry exists... "
-    local existingRegistry
-    existingRegistry=$(az acr show --name $CONTAINER_REGISTRY_SERVER --query loginServer -o tsv 2>/dev/null)
-    if [ $? -eq 0 ]; then
-        printf "Yes.\nUsing existing registry '$existingRegistry'.\n"
-        CONTAINER_REGISTRY_SERVER=$existingRegistry
-        return 0
-    fi
-    # else deploy a new container registry
-    printf "No.\nCreating container registry... "
+createAcrIfNeeded() {
+    printf "Creating container registry if needed..."
+    # Since the same deployment name 'acr-deployment' is used each time, ACR will either be created or the name of the existing resource will be returned.
     AZURE_ACR_DEPLOY_RESULT=$(az deployment group create --resource-group $RESOURCE_GROUP --name "acr-deployment" --template-file core/acr/acr.bicep --only-show-errors --no-prompt -o json \
         --parameters "name=$CONTAINER_REGISTRY_SERVER")
     exitIfCommandFailed $? "Error creating container registry, exiting..."
     CONTAINER_REGISTRY_SERVER=$(jq -r .properties.outputs.loginServer.value <<< $AZURE_ACR_DEPLOY_RESULT)
     exitIfValueEmpty "$CONTAINER_REGISTRY_SERVER" "Unable to parse container registry login server from deployment, exiting..."
-    printf "'$CONTAINER_REGISTRY_SERVER' created.\n"
+    printf " container registry is '$CONTAINER_REGISTRY_SERVER'.\n"
 }
 
 deployDockerImageToACR() {
@@ -593,7 +584,7 @@ populateParams $PARAMS_FILE
 createResourceGroupIfNotExists $LOCATION $RESOURCE_GROUP
 
 # Create azure container registry if it does not exist
-createAcrIfNotExists
+createAcrIfNeeded
 
 # Deploy the graphrag backend docker image to ACR
 deployDockerImageToACR
