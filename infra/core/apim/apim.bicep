@@ -16,6 +16,7 @@ param publisherName string
 @allowed([
   'Developer'
   'Premium'
+  'StandardV2'
 ])
 param sku string = 'Premium'
 
@@ -88,7 +89,7 @@ var subnetRef = resourceId('Microsoft.Network/virtualNetworks/subnets', virtualN
 @description('Name of the NSG for the API Management service.')
 param nsgName string = 'apim-nsg-${uniqueString(resourceGroup().id)}'
 
-resource nsg 'Microsoft.Network/networkSecurityGroups@2020-06-01' = {
+resource nsg 'Microsoft.Network/networkSecurityGroups@2024-01-01' = {
   name: nsgName
   location: location
   properties: {
@@ -333,7 +334,7 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2020-06-01' = {
   }
 }
 
-resource publicIp 'Microsoft.Network/publicIPAddresses@2020-05-01' = {
+resource publicIp 'Microsoft.Network/publicIPAddresses@2024-01-01' = {
   name: publicIpName
   location: location
   sku: {
@@ -348,7 +349,7 @@ resource publicIp 'Microsoft.Network/publicIPAddresses@2020-05-01' = {
   }
 }
 
-resource virtualNetwork 'Microsoft.Network/virtualNetworks@2020-06-01' = {
+resource virtualNetwork 'Microsoft.Network/virtualNetworks@2024-01-01' = {
   name: virtualNetworkName
   location: location
   properties: {
@@ -372,7 +373,7 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2020-06-01' = {
   }
 }
 
-resource apiManagementService 'Microsoft.ApiManagement/service@2021-08-01' = {
+resource apiManagementService 'Microsoft.ApiManagement/service@2023-09-01-preview' = {
   name: apiManagementName
   location: location
   sku: {
@@ -411,7 +412,7 @@ resource apiManagementService 'Microsoft.ApiManagement/service@2021-08-01' = {
   ]
 }
 
-resource apimLogger 'Microsoft.ApiManagement/service/loggers@2022-08-01' = {
+resource apimLogger 'Microsoft.ApiManagement/service/loggers@2023-09-01-preview' = {
   name: appInsights.name
   parent: apiManagementService
   properties: {
@@ -424,7 +425,7 @@ resource apimLogger 'Microsoft.ApiManagement/service/loggers@2022-08-01' = {
   }
 }
 
-resource apimDiagnostics 'Microsoft.ApiManagement/service/diagnostics@2022-08-01' = {
+resource apimDiagnostics 'Microsoft.ApiManagement/service/diagnostics@2023-09-01-preview' = {
   name: 'applicationinsights'
   parent: apiManagementService
   properties: {

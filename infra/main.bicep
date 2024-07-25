@@ -184,7 +184,7 @@ module apim 'core/apim/apim.bicep' = {
     publicIpName: '${abbrs.networkPublicIPAddresses}${resourceBaseNameFinal}'
     virtualNetworkName: '${abbrs.networkVirtualNetworks}${resourceBaseNameFinal}'
     location: location
-    sku: 'Developer'
+    sku: 'StandardV2'
     skuCount: 1 // TODO expose in param for premium sku
     availabilityZones: [] // TODO expose in param for premium sku
     publisherEmail: publisherEmail
