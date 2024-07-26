@@ -367,6 +367,14 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2024-01-01' = {
             id: nsg.id
           }
           serviceEndpoints: apimSubnetServiceEndpoints
+          delegations: [
+            {
+              name: 'Microsoft.Web/serverFarms'
+              properties: {
+                serviceName: 'Microsoft.Web/serverFarms'
+              }
+            }
+          ]
         }
       }
     ]
@@ -451,7 +459,7 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   }
 }
 
-output apimIPs array = apiManagementService.properties.publicIPAddresses
+// output apimIPs array = apiManagementService.properties.publicIPAddresses
 output apimGatewayUrl string = apiManagementService.properties.gatewayUrl
 output appInsightsName string = appInsights.name
 output appInsightsId string = appInsights.id
