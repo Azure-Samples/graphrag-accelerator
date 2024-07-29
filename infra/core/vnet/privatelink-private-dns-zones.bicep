@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 var aiSearchPrivateDnsZoneName = 'privatelink.search.windows.net'
 var blobStoragePrivateDnsZoneName = 'privatelink.blob.${environment().suffixes.storage}'
 var queueStoragePrivateDnsZoneName = 'privatelink.queue.${environment().suffixes.storage}'

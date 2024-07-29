@@ -3,7 +3,6 @@
 
 @description('The name of the private DNS zone.')
 param name string
-
 @description('The name of the virtual networks the DNS zone should be associated with.')
 param vnetNames string[]
 

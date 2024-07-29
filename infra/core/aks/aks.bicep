@@ -49,10 +49,6 @@ param sshRSAPublicKey string
 @description('Enable encryption at host')
 param enableEncryptionAtHost bool = false
 
-// @description('Resource ID of subnet to use for all node pools.')
-// param vnetSubnetId string = ''
-// var vnetSubnetIdVar = !empty(vnetSubnetId) ? vnetSubnetId : null
-
 resource vnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
   name: 'aks-vnet'
   location: location
@@ -62,25 +58,6 @@ resource vnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
         '10.16.0.0/12'
       ]
     }
-    // subnets: [
-    //   {
-    //     name: 'default'
-    //     properties: {
-    //       addressPrefix: '10.16.0.0/24'
-    //       serviceEndpoints: [
-    //         {
-    //           service: 'Microsoft.Storage'
-    //         }
-    //         {
-    //           service: 'Microsoft.Sql'
-    //         }
-    //         {
-    //           service: 'Microsoft.EventHub'
-    //         }
-    //       ]
-    //     }
-    //   }
-    // ]
   }
 }
 
@@ -135,7 +112,7 @@ resource aks 'Microsoft.ContainerService/managedClusters@2023-10-01' = {
         osType: 'Linux'
         mode: 'System'
         enableEncryptionAtHost: enableEncryptionAtHost
-        vnetSubnetID: subnet.id // vnet.properties.subnets[0].id // vnetSubnetIdVar
+        vnetSubnetID: subnet.id
         type: 'VirtualMachineScaleSets'
       }
     ]
@@ -182,7 +159,7 @@ resource aks 'Microsoft.ContainerService/managedClusters@2023-10-01' = {
       osType: 'Linux'
       mode: 'User'
       enableEncryptionAtHost: enableEncryptionAtHost
-      vnetSubnetID: subnet.id // vnet.properties.subnets[0].id // vnetSubnetIdVar
+      vnetSubnetID: subnet.id
       nodeLabels: {
         workload: 'graphrag'
       }
@@ -247,4 +224,4 @@ output kubeletPrincipalId string = aks.properties.identityProfile.kubeletidentit
 output issuer string = aks.properties.oidcIssuerProfile.issuerURL
 output vnetName string = vnet.name
 output vnetId string = vnet.id
-output vnetSubnetId string = subnet.id // vnet.properties.subnets[0].id
+output vnetSubnetId string = subnet.id

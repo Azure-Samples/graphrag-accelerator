@@ -5,7 +5,6 @@
 param name string
 @description('The name of the virtual network the subnet should be created in')
 param vnetName string
-
 param addressPrefix string
 
 resource vnet 'Microsoft.Network/virtualNetworks@2023-06-01' existing = {

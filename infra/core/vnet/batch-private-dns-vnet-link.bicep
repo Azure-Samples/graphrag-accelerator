@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 @description('The resource id of the vnet.')
 param vnetId string
 @description('The name of the private DNS zone.')

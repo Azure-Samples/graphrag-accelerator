@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 #!/usr/bin/env bash
 
-set -x  # uncomment this line to debug
+# set -x  # uncomment this line to debug
 
 aksNamespace="graphrag"
 

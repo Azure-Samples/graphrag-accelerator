@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 param vnetId string
 param privateDnsZoneName string
 var vnet_id_hash = uniqueString(vnetId)
