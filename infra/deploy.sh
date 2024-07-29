@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 #!/usr/bin/env bash
 
-#set -x  # uncomment this line to debug
+#set -eux  # uncomment this line to debug
 
 aksNamespace="graphrag"
 
@@ -530,7 +530,7 @@ createAcrIfNotExists() {
 deployDockerImageToACR() {
     printf "Deploying docker image '${GRAPHRAG_IMAGE}' to container registry '${CONTAINER_REGISTRY_SERVER}'..."
     local SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" &> /dev/null && pwd 2> /dev/null; )";
-    az acr build --registry $CONTAINER_REGISTRY_SERVER -f $SCRIPT_DIR/../docker/Dockerfile-backend --image $GRAPHRAG_IMAGE $SCRIPT_DIR/../ > /dev/null 2>&1
+    az acr build --registry $CONTAINER_REGISTRY_SERVER -f $SCRIPT_DIR/../docker/Dockerfile-backend --image $GRAPHRAG_IMAGE $SCRIPT_DIR/../ #> /dev/null 2>&1
     exitIfCommandFailed $? "Error deploying docker image, exiting..."
     printf " Done.\n"
 }

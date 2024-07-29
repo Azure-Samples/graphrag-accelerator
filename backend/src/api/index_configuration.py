@@ -13,7 +13,7 @@ from fastapi import (
     HTTPException,
 )
 from fastapi.responses import StreamingResponse
-from graphrag.prompt_tune.cli import fine_tune as generate_fine_tune_prompts
+from graphrag.prompt_tune.cli import prompt_tune as generate_fine_tune_prompts
 
 from src.api.azure_clients import (
     AzureStorageClientManager,
