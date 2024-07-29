@@ -88,7 +88,7 @@ var roles = {
 
 module log 'core/log-analytics/log.bicep' = {
   name: 'log'
-  scope: resourceGroup()
+  // scope: resourceGroup()
   params:{
     name: '${abbrs.operationalInsightsWorkspaces}${resourceBaseNameFinal}'
     location: location
@@ -96,20 +96,52 @@ module log 'core/log-analytics/log.bicep' = {
   }
 }
 
+// resource aksVnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
+//   name: 'aks-vnet'
+//   location: location
+//   properties: {
+//     addressSpace: {
+//       addressPrefixes: [
+//         '10.16.0.0/12'
+//       ]
+//     }
+//     subnets: [
+//       {
+//         name: 'default'
+//         properties: {
+//           addressPrefix: '10.16.0.0/24'
+//           serviceEndpoints: [
+//             {
+//               service: 'Microsoft.Storage'
+//             }
+//             {
+//               service: 'Microsoft.Sql'
+//             }
+//             {
+//               service: 'Microsoft.EventHub'
+//             }
+//           ]
+//         }
+//       }
+//     ]
+//   }
+// }
+
 module aks 'core/aks/aks.bicep' = {
   name: 'aks'
-  scope: resourceGroup()
+  // scope: resourceGroup()
   params:{
     clusterName: '${abbrs.containerServiceManagedClusters}${resourceBaseNameFinal}'
     location: location
     sshRSAPublicKey: aksSshRsaPublicKey
     logAnalyticsWorkspaceId: log.outputs.id
+    // vnetSubnetId: aksVnet.properties.subnets[0].id
   }
 }
 
 module cosmosdb 'core/cosmosdb/cosmosdb.bicep' = {
   name: 'cosmosdb'
-  scope: resourceGroup()
+  // scope: resourceGroup()
   params: {
     cosmosDbName: !empty(cosmosDbName) ? cosmosDbName : '${abbrs.documentDBDatabaseAccounts}${resourceBaseNameFinal}'
     location: location
@@ -120,7 +152,7 @@ module cosmosdb 'core/cosmosdb/cosmosdb.bicep' = {
 
 module aiSearch 'core/ai-search/ai-search.bicep' = {
   name: 'aisearch'
-  scope: resourceGroup()
+  // scope: resourceGroup()
   params: {
     name: !empty(aiSearchName) ? aiSearchName : '${abbrs.searchSearchServices}${resourceBaseNameFinal}'
     location: location
@@ -147,7 +179,7 @@ module aiSearch 'core/ai-search/ai-search.bicep' = {
 
 module storage 'core/blob/storage.bicep' = {
   name: 'storage'
-  scope: resourceGroup()
+  // scope: resourceGroup()
   params: {
     name: !empty(storageAccountName) ? storageAccountName : '${abbrs.storageStorageAccounts}${replace(resourceBaseNameFinal, '-', '')}'
     location: location
@@ -175,7 +207,7 @@ module storage 'core/blob/storage.bicep' = {
 
 module apim 'core/apim/apim.bicep' = {
   name: 'apim'
-  scope: resourceGroup()
+  // scope: resourceGroup()
   params: {
     apiManagementName: !empty(apimName) ? apimName : '${abbrs.apiManagementService}${resourceBaseNameFinal}'
     appInsightsName: '${abbrs.insightsComponents}${resourceBaseNameFinal}'
@@ -195,7 +227,7 @@ module apim 'core/apim/apim.bicep' = {
 
 module graphragApi 'core/apim/apim.graphrag-documentation.bicep' = {
   name: 'apimservice'
-  scope: resourceGroup()
+  // scope: resourceGroup()
   params: {
     apimname: apim.outputs.name
     backendUrl: graphRagUrl
@@ -204,7 +236,7 @@ module graphragApi 'core/apim/apim.graphrag-documentation.bicep' = {
 
 module workloadIdentity 'core/identity/identity.bicep' = {
   name: 'workloadIdentity'
-  scope: resourceGroup()
+  // scope: resourceGroup()
   params: {
     name: workloadIdentityName
     location: location
@@ -220,28 +252,30 @@ module workloadIdentity 'core/identity/identity.bicep' = {
 
 module privateDnsZone 'core/vnet/private-dns-zone.bicep' = {
   name: 'private-dns-zone'
-  scope: resourceGroup()
+  // scope: resourceGroup()
   params: {
     name: dnsDomain
     vnetNames: [
-      apim.outputs.vnetName
+      aks.outputs.vnetName
+      // aksVnet.name
     ]
   }
 }
 
 module privatelinkPrivateDns 'core/vnet/privatelink-private-dns-zones.bicep' = if (enablePrivateEndpoints) {
   name: 'privatelink-private-dns-zones'
-  scope: resourceGroup()
+  // scope: resourceGroup()
   params: {
     linkedVnetResourceIds: [
-      apim.outputs.vnetId
+      aks.outputs.vnetId
+      // aksVnet.id
     ]
   }
 }
 
 module azureMonitorPrivateLinkScope 'core/monitor/private-link-scope.bicep' = if (enablePrivateEndpoints) {
   name: 'azureMonitorPrivateLinkScope'
-  scope: resourceGroup()
+  // scope: resourceGroup()
   params: {
     privateLinkScopeName: 'pls-${resourceBaseNameFinal}'
     privateLinkScopedResources: [
@@ -253,12 +287,12 @@ module azureMonitorPrivateLinkScope 'core/monitor/private-link-scope.bicep' = if
 
 module cosmosDbPrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePrivateEndpoints) {
   name: 'cosmosDbPrivateEndpoint'
-  scope: resourceGroup()
+  // scope: resourceGroup()
   params: {
     privateEndpointName: '${abbrs.privateEndpoint}cosmos-${cosmosdb.outputs.name}'
     location: location
     privateLinkServiceId: cosmosdb.outputs.id
-    subnetId: apim.outputs.defaultSubnetId
+    subnetId: aks.outputs.vnetSubnetId // aksVnet.properties.subnets[0].id
     groupId: 'Sql'
     privateDnsZoneConfigs: enablePrivateEndpoints ? privatelinkPrivateDns.outputs.cosmosDbPrivateDnsZoneConfigs : []
   }
@@ -266,12 +300,12 @@ module cosmosDbPrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePr
 
 module blobStoragePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePrivateEndpoints) {
   name: 'blobStoragePrivateEndpoint'
-  scope: resourceGroup()
+  // scope: resourceGroup()
   params: {
     privateEndpointName: '${abbrs.privateEndpoint}blob-${storage.outputs.name}'
     location: location
     privateLinkServiceId: storage.outputs.id
-    subnetId: apim.outputs.defaultSubnetId
+    subnetId: aks.outputs.vnetSubnetId // aksVnet.properties.subnets[0].id
     groupId: 'blob'
     privateDnsZoneConfigs: enablePrivateEndpoints ? privatelinkPrivateDns.outputs.blobStoragePrivateDnsZoneConfigs : []
   }
@@ -279,12 +313,12 @@ module blobStoragePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enabl
 
 module queueStoragePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePrivateEndpoints) {
   name: 'queueStoragePrivateEndpoint'
-  scope: resourceGroup()
+  // scope: resourceGroup()
   params: {
     privateEndpointName: '${abbrs.privateEndpoint}queue-${storage.outputs.name}'
     location: location
     privateLinkServiceId: storage.outputs.id
-    subnetId: apim.outputs.defaultSubnetId
+    subnetId: aks.outputs.vnetSubnetId // aksVnet.properties.subnets[0].id
     groupId: 'queue'
     privateDnsZoneConfigs: enablePrivateEndpoints ? privatelinkPrivateDns.outputs.queueStoragePrivateDnsZoneConfigs : []
   }
@@ -292,12 +326,12 @@ module queueStoragePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enab
 
 module aiSearchPrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePrivateEndpoints) {
   name: 'aiSearchPrivateEndpoint'
-  scope: resourceGroup()
+  // scope: resourceGroup()
   params: {
     privateEndpointName: '${abbrs.privateEndpoint}search-${aiSearch.outputs.name}'
     location: location
     privateLinkServiceId: aiSearch.outputs.id
-    subnetId: apim.outputs.defaultSubnetId
+    subnetId: aks.outputs.vnetSubnetId // aksVnet.properties.subnets[0].id
     groupId: 'searchService'
     privateDnsZoneConfigs: enablePrivateEndpoints ? privatelinkPrivateDns.outputs.aiSearchPrivateDnsZoneConfigs : []
   }
@@ -305,12 +339,12 @@ module aiSearchPrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePr
 
 module privateLinkScopePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePrivateEndpoints) {
   name: 'privateLinkScopePrivateEndpoint'
-  scope: resourceGroup()
+  // scope: resourceGroup()
   params: {
     privateEndpointName: '${abbrs.privateEndpoint}pls-${resourceBaseNameFinal}'
     location: location
     privateLinkServiceId: enablePrivateEndpoints ? azureMonitorPrivateLinkScope.outputs.privateLinkScopeId : ''
-    subnetId: apim.outputs.defaultSubnetId
+    subnetId: aks.outputs.vnetSubnetId // aksVnet.properties.subnets[0].id
     groupId: 'azuremonitor'
     privateDnsZoneConfigs: enablePrivateEndpoints ? privatelinkPrivateDns.outputs.azureMonitorPrivateDnsZoneConfigs : []
   }
@@ -323,6 +357,8 @@ output azure_aks_name string = aks.outputs.name
 output azure_aks_controlplanefqdn string = aks.outputs.controlPlaneFQDN
 output azure_aks_managed_rg string = aks.outputs.managedResourceGroup
 output azure_aks_service_account_name string = aksServiceAccountName
+output azure_aks_vnet_id string = aks.outputs.vnetId // aksVnet.id
+output azure_aks_vnet_name string = aks.outputs.vnetName // aksVnet.name
 output azure_storage_account string = storage.outputs.name
 output azure_storage_account_blob_url string = storage.outputs.primaryEndpoints.blob
 output azure_cosmosdb_endpoint string = cosmosdb.outputs.endpoint

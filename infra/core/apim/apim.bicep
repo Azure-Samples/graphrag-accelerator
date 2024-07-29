@@ -41,19 +41,6 @@ param subnetPrefix string = '10.0.0.0/24'
 @description('Subnet name')
 param subnetName string = 'apim'
 
-@description('Service endpoints enabled on the API Management subnet')
-param apimSubnetServiceEndpoints array = [
-  {
-    service: 'Microsoft.Storage'
-  }
-  {
-    service: 'Microsoft.Sql'
-  }
-  {
-    service: 'Microsoft.EventHub'
-  }
-]
-
 @description('Azure region where the resources will be deployed')
 param location string = resourceGroup().location
 
@@ -366,7 +353,6 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2024-01-01' = {
           networkSecurityGroup: {
             id: nsg.id
           }
-          serviceEndpoints: apimSubnetServiceEndpoints
           delegations: [
             {
               name: 'Microsoft.Web/serverFarms'

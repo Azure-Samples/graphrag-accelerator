@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 #!/usr/bin/env bash
 
-#set -x  # uncomment this line to debug
+set -x  # uncomment this line to debug
 
 aksNamespace="graphrag"
 
@@ -284,22 +284,26 @@ peerVirtualNetworks () {
     echo "Peering APIM VNet to AKS..."
     local apimVnetName=$(jq -r .azure_apim_vnet_name.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$apimVnetName" "Unable to parse apim vnet name from deployment outputs, exiting..."
+    local aksVnetId=$(jq -r .azure_aks_vnet_id.value <<< $AZURE_OUTPUTS)
+    exitIfValueEmpty "$aksVnetId" "Unable to parse aks vnet id from deployment outputs, exiting..."
     datetime="`date +%Y-%m-%d_%H-%M-%S`"
     AZURE_DEPLOY_RESULTS=$(az deployment group create --name "vnet-apim-to-aks-$datetime" --no-prompt -o json --template-file ./core/vnet/vnet-peering.bicep \
         -g $RESOURCE_GROUP \
         --parameters "name=aks" \
         --parameters "vnetName=$apimVnetName" \
-        --parameters "remoteVnetId=$AKS_VNET_ID")
+        --parameters "remoteVnetId=$aksVnetId")
     exitIfCommandFailed $? "Error peering apim vnet to aks..."
 
     echo "Peering AKS VNet to APIM..."
+    local aksVnetName=$(jq -r .azure_aks_vnet_name.value <<< $AZURE_OUTPUTS)
+    exitIfValueEmpty "$aksVnetName" "Unable to parse aks vnet name from deployment outputs, exiting..."
     local apimVnetId=$(jq -r .azure_apim_vnet_id.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$apimVnetId" "Unable to parse apim vnet resource id from deployment outputs, exiting..."
     datetime="`date +%Y-%m-%d_%H-%M-%S`"
     AZURE_DEPLOY_RESULTS=$(az deployment group create --name "vnet-aks-to-apim-$datetime" --no-prompt -o json --template-file ./core/vnet/vnet-peering.bicep \
-        -g $AKS_MANAGED_RG \
+        -g $RESOURCE_GROUP \
         --parameters "name=apim" \
-        --parameters "vnetName=$AKS_VNET_NAME" \
+        --parameters "vnetName=$aksVnetName" \
         --parameters "remoteVnetId=$apimVnetId")
     exitIfCommandFailed $? "Error peering aks vnet to apim..."
     echo "...peering complete"
@@ -307,11 +311,15 @@ peerVirtualNetworks () {
 
 linkPrivateDnsToAks () {
     echo "Linking private DNS zone to AKS..."
+    # local apimVnetId=$(jq -r .azure_apim_vnet_id.value <<< $AZURE_OUTPUTS)
+    # exitIfValueEmpty "$apimVnetId" "Unable to parse apim vnet resource id from deployment outputs, exiting..."
+    local aksVnetId=$(jq -r .azure_aks_vnet_id.value <<< $AZURE_OUTPUTS)
+    exitIfValueEmpty "$aksVnetId" "Unable to parse aks vnet resource id from deployment outputs, exiting..."
     local privateDnsZoneNames=$(jq -r .azure_private_dns_zones.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$privateDnsZoneNames" "Unable to parse private DNS zone names from deployment outputs, exiting..."
     AZURE_DEPLOY_RESULTS=$(az deployment group create --name "private-dns-to-aks" --no-prompt -o json --template-file ./core/vnet/batch-private-dns-vnet-link.bicep \
         -g $RESOURCE_GROUP \
-        --parameters "vnetResourceIds=[\"$AKS_VNET_ID\"]" \
+        --parameters "vnetId=$aksVnetId" \
         --parameters "privateDnsZoneNames=$privateDnsZoneNames")
     exitIfCommandFailed $? "Error linking private DNS to AKS vnet..."
     echo "...linking private DNS complete"
@@ -544,8 +552,9 @@ usage() {
    echo "Description: Deployment script for the GraphRAG Solution Accelerator."
    echo "options:"
    echo "  -h     Print this help menu."
+   echo "  -b     Skip docker build."
    echo "  -d     Disable private endpoint usage."
-   echo "  -g     Developer use only. Grants deployer of this script access to Azure Storage, AI Search, and CosmosDB. Will disable private endpoints (-d) and enable debug mode."
+   echo "  -g     Developer mode. Grants deployer of this script access to Azure Storage, AI Search, and CosmosDB. Will disable private endpoints (-d) and enable debug mode."
    echo "  -p     A JSON file containing the deployment parameters (deploy.parameters.json)."
    echo
 }
@@ -555,9 +564,13 @@ usage() {
 ENABLE_PRIVATE_ENDPOINTS=true
 DEBUG_MODE=off
 GRANT_DEV_ACCESS=0 # false
+SKIP_DOCKER_BUILD=0 # false
 PARAMS_FILE=""
-while getopts ":dgp:h" option; do
+while getopts ":bdgp:h" option; do
     case "${option}" in
+        b)
+            SKIP_DOCKER_BUILD=1
+            ;;
         d)
             ENABLE_PRIVATE_ENDPOINTS=false
             ;;
@@ -596,7 +609,9 @@ createResourceGroupIfNotExists $LOCATION $RESOURCE_GROUP
 createAcrIfNotExists
 
 # Deploy the graphrag backend docker image to ACR
-deployDockerImageToACR
+if [ $SKIP_DOCKER_BUILD -eq 0 ]; then
+    deployDockerImageToACR
+fi
 
 # Generate ssh key for AKS
 createSshkeyIfNotExists $RESOURCE_GROUP
@@ -612,10 +627,12 @@ assignAKSPullRoleToRegistry $RESOURCE_GROUP $AKS_NAME $CONTAINER_REGISTRY_SERVER
 
 # Deploy kubernetes resources
 setupAksCredentials $RESOURCE_GROUP $AKS_NAME
-populateAksVnetInfo $RESOURCE_GROUP $AKS_NAME
-if [ "$ENABLE_PRIVATE_ENDPOINTS" = "true" ]; then
-    linkPrivateDnsToAks
-fi
+# populateAksVnetInfo $RESOURCE_GROUP $AKS_NAME
+
+# if [ "$ENABLE_PRIVATE_ENDPOINTS" = "true" ]; then
+#     linkPrivateDnsToAks
+# fi
+
 peerVirtualNetworks
 
 # Install GraphRAG helm chart

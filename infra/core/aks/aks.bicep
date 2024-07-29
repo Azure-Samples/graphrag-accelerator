@@ -49,9 +49,59 @@ param sshRSAPublicKey string
 @description('Enable encryption at host')
 param enableEncryptionAtHost bool = false
 
-@description('Resource ID of subnet to use for all node pools.')
-param vnetSubnetId string = ''
-var vnetSubnetIdVar = !empty(vnetSubnetId) ? vnetSubnetId : null
+// @description('Resource ID of subnet to use for all node pools.')
+// param vnetSubnetId string = ''
+// var vnetSubnetIdVar = !empty(vnetSubnetId) ? vnetSubnetId : null
+
+resource vnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
+  name: 'aks-vnet'
+  location: location
+  properties: {
+    addressSpace: {
+      addressPrefixes: [
+        '10.16.0.0/12'
+      ]
+    }
+    // subnets: [
+    //   {
+    //     name: 'default'
+    //     properties: {
+    //       addressPrefix: '10.16.0.0/24'
+    //       serviceEndpoints: [
+    //         {
+    //           service: 'Microsoft.Storage'
+    //         }
+    //         {
+    //           service: 'Microsoft.Sql'
+    //         }
+    //         {
+    //           service: 'Microsoft.EventHub'
+    //         }
+    //       ]
+    //     }
+    //   }
+    // ]
+  }
+}
+
+resource subnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' = {
+  parent: vnet
+  name: 'default'
+  properties: {
+    addressPrefix: '10.16.0.0/24'
+    serviceEndpoints: [
+      {
+        service: 'Microsoft.Storage'
+      }
+      {
+        service: 'Microsoft.Sql'
+      }
+      {
+        service: 'Microsoft.EventHub'
+      }
+    ]
+  }
+}
 
 resource aks 'Microsoft.ContainerService/managedClusters@2023-10-01' = {
   name: clusterName
@@ -85,7 +135,7 @@ resource aks 'Microsoft.ContainerService/managedClusters@2023-10-01' = {
         osType: 'Linux'
         mode: 'System'
         enableEncryptionAtHost: enableEncryptionAtHost
-        vnetSubnetID: vnetSubnetIdVar
+        vnetSubnetID: subnet.id // vnet.properties.subnets[0].id // vnetSubnetIdVar
         type: 'VirtualMachineScaleSets'
       }
     ]
@@ -132,7 +182,7 @@ resource aks 'Microsoft.ContainerService/managedClusters@2023-10-01' = {
       osType: 'Linux'
       mode: 'User'
       enableEncryptionAtHost: enableEncryptionAtHost
-      vnetSubnetID: vnetSubnetIdVar
+      vnetSubnetID: subnet.id // vnet.properties.subnets[0].id // vnetSubnetIdVar
       nodeLabels: {
         workload: 'graphrag'
       }
@@ -141,6 +191,15 @@ resource aks 'Microsoft.ContainerService/managedClusters@2023-10-01' = {
       }
       type: 'VirtualMachineScaleSets'
     }
+  }
+}
+
+resource roleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+  name: guid(aks.id, 'Network Contributor')
+  scope: subnet
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7') // Network Contributor role ID
+    principalId: aks.identity.principalId
   }
 }
 
@@ -186,3 +245,6 @@ output controlPlaneFQDN string = aks.properties.fqdn
 output principalId string = aks.identity.principalId
 output kubeletPrincipalId string = aks.properties.identityProfile.kubeletidentity.objectId
 output issuer string = aks.properties.oidcIssuerProfile.issuerURL
+output vnetName string = vnet.name
+output vnetId string = vnet.id
+output vnetSubnetId string = subnet.id // vnet.properties.subnets[0].id
