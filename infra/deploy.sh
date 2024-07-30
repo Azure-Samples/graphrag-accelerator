@@ -10,6 +10,7 @@ aksNamespace="graphrag"
 AISEARCH_AUDIENCE=""
 AISEARCH_ENDPOINT_SUFFIX=""
 APIM_NAME=""
+APIM_TIER=""
 RESOURCE_BASE_NAME=""
 REPORTERS=""
 GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT=""
@@ -130,10 +131,9 @@ populateOptionalParams () {
     # using the default values below is recommended.
     local paramsFile=$1
     echo "Checking optional parameters..."
-    value=$(jq -r .APIM_NAME < $paramsFile)
-    if [ "null" != "$value" ]; then
-        APIM_NAME="$value"
-        printf "\setting tAPIM_NAME=$APIM_NAME\n"
+    if [ -z "$APIM_TIER" ]; then
+        APIM_TIER="Developer"
+        printf "\tsetting APIM_TIER=$APIM_TIER\n"
     fi
     if [ -z "$AISEARCH_ENDPOINT_SUFFIX" ]; then
         AISEARCH_ENDPOINT_SUFFIX="search.windows.net"
@@ -207,7 +207,6 @@ createSshkeyIfNotExists () {
         printf "Creating sshkey... "
         local keyDetails=$(az sshkey create -g $rg --name $keyName -o json)
         exitIfCommandFailed $? "Error creating sshkey."
-        # TODO Upload private key to keyvault
     else
         printf "Yes.\n"
     fi
@@ -224,20 +223,6 @@ setupAksCredentials () {
     printf "Done\n"
 }
 
-populateAksVnetInfo () {
-    local rg=$1
-    local aks=$2
-    printf "Retrieving AKS VNet info... "
-    local aksDetails=$(AZURE_CLIENTS_SHOW_SECRETS_WARNING=False az aks show -g $rg -n $aks -o json)
-    AKS_MANAGED_RG=$(jq -r .networkProfile.loadBalancerProfile.effectiveOutboundIPs[0].resourceGroup <<< $aksDetails)
-    AKS_VNET_NAME=$(az network vnet list -g $AKS_MANAGED_RG -o json | jq -r .[0].name)
-    AKS_VNET_ID=$(az network vnet list -g $AKS_MANAGED_RG -o json | jq -r .[0].id)
-    exitIfValueEmpty "$AKS_MANAGED_RG" "Unable to populate AKS managed resource group name, exiting..."
-    exitIfValueEmpty "$AKS_VNET_NAME" "Unable to populate AKS vnet name, exiting..."
-    exitIfValueEmpty "$AKS_VNET_ID" "Unable to populate AKS vnet resource id, exiting..."
-    printf "Done\n"
-}
-
 deployAzureResources () {
     echo "Deploying Azure resources..."
     SSH_PUBLICKEY=$(jq -r .publicKey <<< $SSHKEY_DETAILS)
@@ -249,6 +234,7 @@ deployAzureResources () {
         --parameters "resourceBaseName=$RESOURCE_BASE_NAME" \
         --parameters "graphRagName=$RESOURCE_GROUP" \
         --parameters "apimName=$APIM_NAME" \
+        --parameters "apimTier=$APIM_TIER" \
         --parameters "publisherName=$PUBLISHER_NAME" \
         --parameters "aksSshRsaPublicKey=$SSH_PUBLICKEY" \
         --parameters "publisherEmail=$PUBLISHER_EMAIL" \
@@ -278,51 +264,6 @@ assignAKSPullRoleToRegistry() {
     exitIfValueEmpty "$registry_id" "Unable to retrieve container registry id, exiting..."
     az aks update --name $aks --resource-group $rg --attach-acr $registry_id -o json > /dev/null 2>&1
     exitIfCommandFailed $? "Error assigning AKS pull role to container registry, exiting..."
-}
-
-peerVirtualNetworks () {
-    echo "Peering APIM VNet to AKS..."
-    local apimVnetName=$(jq -r .azure_apim_vnet_name.value <<< $AZURE_OUTPUTS)
-    exitIfValueEmpty "$apimVnetName" "Unable to parse apim vnet name from deployment outputs, exiting..."
-    local aksVnetId=$(jq -r .azure_aks_vnet_id.value <<< $AZURE_OUTPUTS)
-    exitIfValueEmpty "$aksVnetId" "Unable to parse aks vnet id from deployment outputs, exiting..."
-    datetime="`date +%Y-%m-%d_%H-%M-%S`"
-    AZURE_DEPLOY_RESULTS=$(az deployment group create --name "vnet-apim-to-aks-$datetime" --no-prompt -o json --template-file ./core/vnet/vnet-peering.bicep \
-        -g $RESOURCE_GROUP \
-        --parameters "name=aks" \
-        --parameters "vnetName=$apimVnetName" \
-        --parameters "remoteVnetId=$aksVnetId")
-    exitIfCommandFailed $? "Error peering apim vnet to aks..."
-
-    echo "Peering AKS VNet to APIM..."
-    local aksVnetName=$(jq -r .azure_aks_vnet_name.value <<< $AZURE_OUTPUTS)
-    exitIfValueEmpty "$aksVnetName" "Unable to parse aks vnet name from deployment outputs, exiting..."
-    local apimVnetId=$(jq -r .azure_apim_vnet_id.value <<< $AZURE_OUTPUTS)
-    exitIfValueEmpty "$apimVnetId" "Unable to parse apim vnet resource id from deployment outputs, exiting..."
-    datetime="`date +%Y-%m-%d_%H-%M-%S`"
-    AZURE_DEPLOY_RESULTS=$(az deployment group create --name "vnet-aks-to-apim-$datetime" --no-prompt -o json --template-file ./core/vnet/vnet-peering.bicep \
-        -g $RESOURCE_GROUP \
-        --parameters "name=apim" \
-        --parameters "vnetName=$aksVnetName" \
-        --parameters "remoteVnetId=$apimVnetId")
-    exitIfCommandFailed $? "Error peering aks vnet to apim..."
-    echo "...peering complete"
-}
-
-linkPrivateDnsToAks () {
-    echo "Linking private DNS zone to AKS..."
-    # local apimVnetId=$(jq -r .azure_apim_vnet_id.value <<< $AZURE_OUTPUTS)
-    # exitIfValueEmpty "$apimVnetId" "Unable to parse apim vnet resource id from deployment outputs, exiting..."
-    local aksVnetId=$(jq -r .azure_aks_vnet_id.value <<< $AZURE_OUTPUTS)
-    exitIfValueEmpty "$aksVnetId" "Unable to parse aks vnet resource id from deployment outputs, exiting..."
-    local privateDnsZoneNames=$(jq -r .azure_private_dns_zones.value <<< $AZURE_OUTPUTS)
-    exitIfValueEmpty "$privateDnsZoneNames" "Unable to parse private DNS zone names from deployment outputs, exiting..."
-    AZURE_DEPLOY_RESULTS=$(az deployment group create --name "private-dns-to-aks" --no-prompt -o json --template-file ./core/vnet/batch-private-dns-vnet-link.bicep \
-        -g $RESOURCE_GROUP \
-        --parameters "vnetId=$aksVnetId" \
-        --parameters "privateDnsZoneNames=$privateDnsZoneNames")
-    exitIfCommandFailed $? "Error linking private DNS to AKS vnet..."
-    echo "...linking private DNS complete"
 }
 
 installGraphRAGHelmChart () {
@@ -369,7 +310,7 @@ installGraphRAGHelmChart () {
     else
         reset_x=false
     fi
-    # Your script logic goes here
+
     helm upgrade -i graphrag ./helm/graphrag -f ./helm/graphrag/values.yaml --namespace $aksNamespace --create-namespace \
         --set "serviceAccount.name=$serviceAccountName" \
         --set "serviceAccount.annotations.azure\.workload\.identity/client-id=$workloadId" \
@@ -444,7 +385,6 @@ waitForGraphrag () {
 deployGraphragDnsRecord () {
     waitForGraphragExternalIp
     exitIfValueEmpty "$GRAPHRAG_SERVICE_IP" "Unable to get GraphRAG external IP."
-
     local dnsZoneName=$(jq -r .azure_dns_zone_name.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$dnsZoneName" "Error parsing DNS zone name from azure outputs, exiting..."
     AZURE_GRAPHRAG_DNS_DEPLOY_RESULT=$(az deployment group create -g $RESOURCE_GROUP --name graphrag-dns --template-file core/vnet/private-dns-zone-a-record.bicep --no-prompt \
@@ -598,8 +538,22 @@ fi
 ################################################################################
 # Main Program                                                                 #
 ################################################################################
+cat <<\EOF
+   _____                 _     _____           _____  
+  / ____|               | |   |  __ \    /\   / ____| 
+ | |  __ _ __ __ _ _ __ | |__ | |__) |  /  \ | |  __  
+ | | |_ | '__/ _` | '_ \| '_ \|  _  /  / /\ \| | |_ | 
+ | |__| | | | (_| | |_) | | | | | \ \ / ____ | |__| | 
+  \_____|_|  \__,_| .__/|_| |_|_|  \_/_/_   \_\_____| 
+     /\           | | | |              | |            
+    /  \   ___ ___|_|_| | ___ _ __ __ _| |_ ___  _ __ 
+   / /\ \ / __/ __/ _ | |/ _ | '__/ _` | __/ _ \| '__|
+  / ____ | (_| (_|  __| |  __| | | (_| | || (_) | |   
+ /_/    \_\___\___\___|_|\___|_|  \__,_|\__\___/|_|   
+EOF
+printf "\n\n"
+exit 0
 checkRequiredTools
-
 populateParams $PARAMS_FILE
 
 # Create resource group
@@ -627,13 +581,6 @@ assignAKSPullRoleToRegistry $RESOURCE_GROUP $AKS_NAME $CONTAINER_REGISTRY_SERVER
 
 # Deploy kubernetes resources
 setupAksCredentials $RESOURCE_GROUP $AKS_NAME
-# populateAksVnetInfo $RESOURCE_GROUP $AKS_NAME
-
-# if [ "$ENABLE_PRIVATE_ENDPOINTS" = "true" ]; then
-#     linkPrivateDnsToAks
-# fi
-
-peerVirtualNetworks
 
 # Install GraphRAG helm chart
 installGraphRAGHelmChart
@@ -646,4 +593,19 @@ if [ $GRANT_DEV_ACCESS -eq 1 ]; then
     grantDevAccessToAzureResources
 fi
 
-echo "SUCCESS: GraphRAG deployment to resource group $RESOURCE_GROUP complete"
+cat <<\EOF
+   _____                             __       _             
+  / ____|                           / _|     | |            
+ | (___  _   _  ___ ___ ___ ___ ___| |_ _   _| |            
+  \___ \| | | |/ __/ __/ _ / __/ __|  _| | | | |            
+  ____) | |_| | (_| (_|  __\__ \__ | | | |_| | |            
+ |_____/ \__,_|\___\___\___|___|___|_|  \__,_|_|      _   _ 
+     | |          | |                                | | | |
+   __| | ___ _ __ | | ___  _   _ _ __ ___   ___ _ __ | |_| |
+  / _` |/ _ | '_ \| |/ _ \| | | | '_ ` _ \ / _ | '_ \| __| |
+ | (_| |  __| |_) | | (_) | |_| | | | | | |  __| | | | |_|_|
+  \__,_|\___| .__/|_|\___/ \__, |_| |_| |_|\___|_| |_|\__(_)
+            | |             __/ |                           
+            |_|            |___/                            
+EOF
+printf "\n"

@@ -217,11 +217,11 @@ resource aksManagedNodeOSUpgradeSchedule 'Microsoft.ContainerService/managedClus
 }
 
 output name string = aks.name
-output managedResourceGroup string = aks.properties.nodeResourceGroup
-output controlPlaneFQDN string = aks.properties.fqdn
-output principalId string = aks.identity.principalId
-output kubeletPrincipalId string = aks.properties.identityProfile.kubeletidentity.objectId
+output managed_resource_group string = aks.properties.nodeResourceGroup
+output control_plane_fqdn string = aks.properties.fqdn
+// output principal_id string = aks.identity.principalId
+// output kubelet_principal_id string = aks.properties.identityProfile.kubeletidentity.objectId
 output issuer string = aks.properties.oidcIssuerProfile.issuerURL
-output vnetName string = vnet.name
-output vnetId string = vnet.id
-output vnetSubnetId string = subnet.id
+output vnet_name string = vnet.name
+output vnet_id string = vnet.id
+output vnet_subnet_id string = subnet.id

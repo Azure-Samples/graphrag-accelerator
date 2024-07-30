@@ -5,6 +5,7 @@ param vnetId string
 param privateDnsZoneName string
 var vnet_id_hash = uniqueString(vnetId)
 
+
 resource dnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
   name: privateDnsZoneName
   location: 'global'
@@ -12,7 +13,7 @@ resource dnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
 }
 
 resource dnsZoneLinks 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
-  name: 'vnet-link-${privateDnsZoneName}-${vnet_id_hash}' // uniqueString(vnetId)
+  name: 'vnet-link-${privateDnsZoneName}-${vnet_id_hash}'
   location: 'global'
   parent: dnsZone
   properties: {
@@ -22,5 +23,3 @@ resource dnsZoneLinks 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@202
     }
   }
 }
-
-output vnet_id_hash string = vnet_id_hash

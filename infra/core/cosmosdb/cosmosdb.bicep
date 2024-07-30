@@ -7,8 +7,6 @@ param cosmosDbName string
 @description('The location of the CosmosDB resource.')
 param location string = resourceGroup().location
 
-param principalId string
-
 @allowed([ 'Enabled', 'Disabled' ])
 param publicNetworkAccess string = 'Disabled'
 
@@ -18,7 +16,10 @@ param publicNetworkAccess string = 'Disabled'
   '00000000-0000-0000-0000-000000000002' // Built-in role 'Azure Cosmos DB Built-in Data Contributor'
 ])
 param roleDefinitionId string = '00000000-0000-0000-0000-000000000002'
+
+param principalId string
 var roleAssignmentId = guid(roleDefinitionId, principalId, cosmosDb.id)
+
 
 resource cosmosDb 'Microsoft.DocumentDB/databaseAccounts@2022-11-15' = {
   name: cosmosDbName

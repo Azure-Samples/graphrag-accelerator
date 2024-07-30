@@ -47,22 +47,19 @@ param aksSshRsaPublicKey string
 param enablePrivateEndpoints bool = true
 
 param apimName string = ''
+param apimTier string = 'Developer'
 param storageAccountName string = ''
 param cosmosDbName string = ''
 param aiSearchName string = ''
-
 var graphRagDnsLabel = 'graphrag'
 var dnsDomain = 'graphrag.io'
 var graphRagHostname = '${graphRagDnsLabel}.${dnsDomain}'
 var graphRagUrl = 'http://${graphRagHostname}'
-
 var abbrs = loadJsonContent('abbreviations.json')
 var tags = { 'azd-env-name': graphRagName }
-
 var workloadIdentityName = '${abbrs.managedIdentityUserAssignedIdentities}${resourceBaseNameFinal}'
 var aksServiceAccountName = '${aksNamespace}-workload-sa'
 var workloadIdentitySubject = 'system:serviceaccount:${aksNamespace}:${aksServiceAccountName}'
-
 var roles = {
   storageBlobDataContributor: resourceId(
     'Microsoft.Authorization/roleDefinitions',
@@ -85,6 +82,7 @@ var roles = {
     '1407120a-92aa-4202-b7e9-c0e197c71c8f'  // AI Search Index Data Reader Role
   )
 }
+
 
 module log 'core/log-analytics/log.bicep' = {
   name: 'log'
@@ -176,9 +174,9 @@ module apim 'core/apim/apim.bicep' = {
     appInsightsPublicNetworkAccessForIngestion: enablePrivateEndpoints ? 'Disabled' : 'Enabled'
     nsgName: '${abbrs.networkNetworkSecurityGroups}${resourceBaseNameFinal}'
     publicIpName: '${abbrs.networkPublicIPAddresses}${resourceBaseNameFinal}'
-    virtualNetworkName: '${abbrs.networkVirtualNetworks}${resourceBaseNameFinal}'
+    virtualNetworkName: 'apim-vnet'
     location: location
-    sku: 'StandardV2'
+    sku: apimTier // 'Developer' // 'StandardV2'
     skuCount: 1 // TODO expose in param for premium sku
     availabilityZones: [] // TODO expose in param for premium sku
     publisherEmail: publisherEmail
@@ -188,7 +186,7 @@ module apim 'core/apim/apim.bicep' = {
 }
 
 module graphragApi 'core/apim/apim.graphrag-documentation.bicep' = {
-  name: 'apimservice'
+  name: 'graphrag-docs'
   params: {
     apimname: apim.outputs.name
     backendUrl: graphRagUrl
@@ -196,7 +194,7 @@ module graphragApi 'core/apim/apim.graphrag-documentation.bicep' = {
 }
 
 module workloadIdentity 'core/identity/identity.bicep' = {
-  name: 'workloadIdentity'
+  name: 'workload-identity'
   params: {
     name: workloadIdentityName
     location: location
@@ -215,17 +213,25 @@ module privateDnsZone 'core/vnet/private-dns-zone.bicep' = {
   params: {
     name: dnsDomain
     vnetNames: [
-      apim.outputs.vnetName
-      aks.outputs.vnetName
+      apim.outputs.vnet_name
+      aks.outputs.vnet_name
     ]
+  }
+}
+
+module peerVnets 'core/vnet/vnet-peering.bicep' = {
+  name: 'peering-vnets'
+  params: {
+    vnet1Name: aks.outputs.vnet_name
+    vnet2Name: apim.outputs.vnet_name
   }
 }
 
 module privatelinkPrivateDns 'core/vnet/privatelink-private-dns-zones.bicep' = if (enablePrivateEndpoints) {
   name: 'privatelink-private-dns-zones'
   params: {
-    linkedVnetResourceIds: [
-      aks.outputs.vnetId
+    linkedVnetIds: [
+      aks.outputs.vnet_id
     ]
   }
 }
@@ -236,7 +242,7 @@ module azureMonitorPrivateLinkScope 'core/monitor/private-link-scope.bicep' = if
     privateLinkScopeName: 'pls-${resourceBaseNameFinal}'
     privateLinkScopedResources: [
       log.outputs.id
-      apim.outputs.appInsightsId
+      apim.outputs.app_insights_id
     ]
   }
 }
@@ -247,7 +253,7 @@ module cosmosDbPrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePr
     privateEndpointName: '${abbrs.privateEndpoint}cosmos-${cosmosdb.outputs.name}'
     location: location
     privateLinkServiceId: cosmosdb.outputs.id
-    subnetId: aks.outputs.vnetSubnetId
+    subnetId: aks.outputs.vnet_subnet_id
     groupId: 'Sql'
     privateDnsZoneConfigs: enablePrivateEndpoints ? privatelinkPrivateDns.outputs.cosmosDbPrivateDnsZoneConfigs : []
   }
@@ -259,7 +265,7 @@ module blobStoragePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enabl
     privateEndpointName: '${abbrs.privateEndpoint}blob-${storage.outputs.name}'
     location: location
     privateLinkServiceId: storage.outputs.id
-    subnetId: aks.outputs.vnetSubnetId
+    subnetId: aks.outputs.vnet_subnet_id
     groupId: 'blob'
     privateDnsZoneConfigs: enablePrivateEndpoints ? privatelinkPrivateDns.outputs.blobStoragePrivateDnsZoneConfigs : []
   }
@@ -271,7 +277,7 @@ module queueStoragePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enab
     privateEndpointName: '${abbrs.privateEndpoint}queue-${storage.outputs.name}'
     location: location
     privateLinkServiceId: storage.outputs.id
-    subnetId: aks.outputs.vnetSubnetId
+    subnetId: aks.outputs.vnet_subnet_id
     groupId: 'queue'
     privateDnsZoneConfigs: enablePrivateEndpoints ? privatelinkPrivateDns.outputs.queueStoragePrivateDnsZoneConfigs : []
   }
@@ -283,7 +289,7 @@ module aiSearchPrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePr
     privateEndpointName: '${abbrs.privateEndpoint}search-${aiSearch.outputs.name}'
     location: location
     privateLinkServiceId: aiSearch.outputs.id
-    subnetId: aks.outputs.vnetSubnetId
+    subnetId: aks.outputs.vnet_subnet_id
     groupId: 'searchService'
     privateDnsZoneConfigs: enablePrivateEndpoints ? privatelinkPrivateDns.outputs.aiSearchPrivateDnsZoneConfigs : []
   }
@@ -294,8 +300,8 @@ module privateLinkScopePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (
   params: {
     privateEndpointName: '${abbrs.privateEndpoint}pls-${resourceBaseNameFinal}'
     location: location
-    privateLinkServiceId: enablePrivateEndpoints ? azureMonitorPrivateLinkScope.outputs.privateLinkScopeId : ''
-    subnetId: aks.outputs.vnetSubnetId
+    privateLinkServiceId: enablePrivateEndpoints ? azureMonitorPrivateLinkScope.outputs.private_link_scope_id : ''
+    subnetId: aks.outputs.vnet_subnet_id
     groupId: 'azuremonitor'
     privateDnsZoneConfigs: enablePrivateEndpoints ? privatelinkPrivateDns.outputs.azureMonitorPrivateDnsZoneConfigs : []
   }
@@ -305,21 +311,21 @@ output azure_location string = location
 output azure_tenant_id string = tenant().tenantId
 output azure_ai_search_name string = aiSearch.outputs.name
 output azure_aks_name string = aks.outputs.name
-output azure_aks_controlplanefqdn string = aks.outputs.controlPlaneFQDN
-output azure_aks_managed_rg string = aks.outputs.managedResourceGroup
+output azure_aks_controlplanefqdn string = aks.outputs.control_plane_fqdn
+output azure_aks_managed_rg string = aks.outputs.managed_resource_group
 output azure_aks_service_account_name string = aksServiceAccountName
-output azure_aks_vnet_id string = aks.outputs.vnetId
-output azure_aks_vnet_name string = aks.outputs.vnetName
+output azure_aks_vnet_id string = aks.outputs.vnet_id
+output azure_aks_vnet_name string = aks.outputs.vnet_name
 output azure_storage_account string = storage.outputs.name
-output azure_storage_account_blob_url string = storage.outputs.primaryEndpoints.blob
+output azure_storage_account_blob_url string = storage.outputs.primary_endpoints.blob
 output azure_cosmosdb_endpoint string = cosmosdb.outputs.endpoint
 output azure_cosmosdb_name string = cosmosdb.outputs.name
 output azure_cosmosdb_id string = cosmosdb.outputs.id
-output azure_app_insights_connection_string string = apim.outputs.appInsightsConnectionString
+output azure_app_insights_connection_string string = apim.outputs.app_insights_connection_string
 output azure_apim_name string = apim.outputs.name
-output azure_apim_url string = apim.outputs.apimGatewayUrl
-output azure_apim_vnet_name string = apim.outputs.vnetName
-output azure_apim_vnet_id string = apim.outputs.vnetId
+output azure_apim_url string = apim.outputs.apim_gateway_url
+output azure_apim_vnet_name string = apim.outputs.vnet_name
+output azure_apim_vnet_id string = apim.outputs.vnet_id
 output azure_dns_zone_name string = privateDnsZone.outputs.dns_zone_name
 output azure_graphrag_hostname string = graphRagHostname
 output azure_graphrag_url string = graphRagUrl

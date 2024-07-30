@@ -10,6 +10,7 @@ param location string = resourceGroup().location
 @description('The public network access for ingestion.')
 param publicNetworkAccessForIngestion string = 'Disabled'
 
+
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   name: name
   location: location
@@ -24,4 +25,3 @@ resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10
 }
 
 output id string = logAnalyticsWorkspace.id
-output name string = logAnalyticsWorkspace.name

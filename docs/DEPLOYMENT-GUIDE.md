@@ -89,10 +89,11 @@ In the `deploy.parameters.json` file, provide values for the following required 
 `GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME`   |                                           | Yes | Deployment name of the Azure OpenAI embedding model.
 `GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT` |                                           | No  | Endpoint for cognitive services identity authorization. Will default to `https://cognitiveservices.azure.com/.default` for Azure Commercial cloud but should be defined for deployments in other Azure clouds.
 `APIM_NAME`                            |                                           | No  | Hostname of the API. Must be a globally unique name. The API will be accessible at `https://<APIM_NAME>.azure-api.net`. If not provided a unique name will be generated.
+`APIM_TIER`                            |                                           | No  | The [APIM tier](https://azure.microsoft.com/en-us/pricing/details/api-management) to use. Must be either `Developer` or `StandardV2`. Will default to `Developer` for cost savings.
 `RESOURCE_BASE_NAME`                   |                                           | No  | Suffix to apply to all azure resource names. If not provided a unique suffix will be generated.
 `AISEARCH_ENDPOINT_SUFFIX`             |                                           | No  | Suffix to apply to AI search endpoint. Will default to `search.windows.net` for Azure Commercial cloud but should be overridden for deployments in other Azure clouds.
 `AISEARCH_AUDIENCE`                    |                                           | No  | Audience for AAD for AI Search. Will default to `https://search.azure.com/` for Azure Commercial cloud but should be overridden for deployments in other Azure clouds.
-`REPORTERS`                            | blob,console,app_insights                 | No  | The type of logging to enable. A comma separated string containing at least one of the following `[blob,console,file,app_insights]`. Default value = `blob,console,app_insights`
+`REPORTERS`                            | blob,console,app_insights                 | No  | The type of logging to enable. A comma separated string containing any of the following values: `[blob,console,file,app_insights]`. Will default to `"blob,console,app_insights"`.
 
 ### 5. Deploy solution accelerator to the resource group
 ```shell

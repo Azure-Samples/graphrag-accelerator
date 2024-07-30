@@ -1,21 +1,19 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+@description('Virtual Network IDs to link to')
+param linkedVnetIds array
+
 var aiSearchPrivateDnsZoneName = 'privatelink.search.windows.net'
 var blobStoragePrivateDnsZoneName = 'privatelink.blob.${environment().suffixes.storage}'
 var queueStoragePrivateDnsZoneName = 'privatelink.queue.${environment().suffixes.storage}'
 var cosmosDbPrivateDnsZoneName = 'privatelink.documents.azure.com'
 var storagePrivateDnsZoneNames = [blobStoragePrivateDnsZoneName, queueStoragePrivateDnsZoneName]
-
-var cloudName = toLower(environment().name)
 var privateDnsZoneData = loadJsonContent('private-dns-zone-groups.json')
-
+var cloudName = toLower(environment().name)
 var azureMonitorPrivateDnsZones = privateDnsZoneData[cloudName].azureMonitor
-
 var privateDnsZones = union(azureMonitorPrivateDnsZones, storagePrivateDnsZoneNames, [cosmosDbPrivateDnsZoneName], [aiSearchPrivateDnsZoneName])
 
-@description('Virtual Network IDs to link to')
-param linkedVnetResourceIds array
 
 resource privateDnsZoneResources 'Microsoft.Network/privateDnsZones@2020-06-01' = [
   for name in privateDnsZones: {
@@ -29,7 +27,7 @@ module dnsVnetLinks 'vnet-dns-link.bicep' = [
     name: replace(privateDnsZoneName, '.', '-')
     params: {
       privateDnsZoneName: privateDnsZoneResources[index].name
-      vnetResourceIds: linkedVnetResourceIds
+      vnetResourceIds: linkedVnetIds
     }
   }
 ]

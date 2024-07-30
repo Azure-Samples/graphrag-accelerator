@@ -15,13 +15,12 @@ param publisherName string
 @description('The pricing tier of this API Management service')
 @allowed([
   'Developer'
-  'Premium'
   'StandardV2'
 ])
-param sku string = 'Premium'
+param sku string = 'Developer'
 
 @description('The instance size of this API Management service. This should be a multiple of the number of availability zones getting deployed.')
-param skuCount int = 2
+param skuCount int = 1
 
 @description('Virtual network name')
 param virtualNetworkName string = 'apimvnet'
@@ -353,7 +352,15 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2024-01-01' = {
           networkSecurityGroup: {
             id: nsg.id
           }
-          delegations: [
+          // delegations: [
+          //   {
+          //     name: 'Microsoft.Web/serverFarms'
+          //     properties: {
+          //       serviceName: 'Microsoft.Web/serverFarms'
+          //     }
+          //   }
+          // ]
+          delegations: (sku=='Developer') ? [] : [
             {
               name: 'Microsoft.Web/serverFarms'
               properties: {
@@ -446,12 +453,12 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
 }
 
 // output apimIPs array = apiManagementService.properties.publicIPAddresses
-output apimGatewayUrl string = apiManagementService.properties.gatewayUrl
-output appInsightsName string = appInsights.name
-output appInsightsId string = appInsights.id
-output appInsightsConnectionString string = appInsights.properties.ConnectionString
+output apim_gateway_url string = apiManagementService.properties.gatewayUrl
+// output app_insights_name string = appInsights.name
+output app_insights_id string = appInsights.id
+output app_insights_connection_string string = appInsights.properties.ConnectionString
 output name string = apiManagementService.name
-output vnetName string = virtualNetwork.name
-output vnetId string = virtualNetwork.id
-output defaultSubnetId string = virtualNetwork.properties.subnets[0].id
-output hostnameConfigs array = apiManagementService.properties.hostnameConfigurations
+output vnet_name string = virtualNetwork.name
+output vnet_id string = virtualNetwork.id
+// output default_subnet_id string = virtualNetwork.properties.subnets[0].id
+// output hostname_configs array = apiManagementService.properties.hostnameConfigurations

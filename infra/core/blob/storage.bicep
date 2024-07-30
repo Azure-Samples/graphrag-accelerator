@@ -7,25 +7,28 @@ param name string
 @description('The location of the Storage Account resource.')
 param location string = resourceGroup().location
 
-param tags object = {}
-
 @allowed([ 'Hot', 'Cool', 'Premium' ])
 param accessTier string = 'Hot'
+
+@allowed([ 'AzureDnsZone', 'Standard' ])
+param dnsEndpointType string = 'Standard'
+
+@allowed([ 'Enabled', 'Disabled' ])
+param publicNetworkAccess string = 'Disabled'
+
+@description('Array of objects with fields principalId, principalType, roleDefinitionId')
+param roleAssignments array = []
+
+param tags object = {}
 param allowBlobPublicAccess bool = false
 param allowCrossTenantReplication bool = true
 param allowSharedKeyAccess bool = false
 param defaultToOAuthAuthentication bool = false
 param deleteRetentionPolicy object = {}
-@allowed([ 'AzureDnsZone', 'Standard' ])
-param dnsEndpointType string = 'Standard'
 param kind string = 'StorageV2'
 param minimumTlsVersion string = 'TLS1_2'
-@allowed([ 'Enabled', 'Disabled' ])
-param publicNetworkAccess string = 'Disabled'
 param containers array = []
 
-@description('Array of objects with fields principalId, principalType, roleDefinitionId')
-param roleAssignments array = []
 
 resource storage 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   name: name
@@ -75,4 +78,4 @@ resource roleAssignmentResources 'Microsoft.Authorization/roleAssignments@2022-0
 
 output id string = storage.id
 output name string = storage.name
-output primaryEndpoints object = storage.properties.primaryEndpoints
+output primary_endpoints object = storage.properties.primaryEndpoints
