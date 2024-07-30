@@ -27,7 +27,6 @@ requiredParams=(
     RESOURCE_GROUP
 )
 
-# Note, setting a command result to a local variable will mark $? as successful.  Use a global variable.
 exitIfCommandFailed () {
     local res=$1
     local msg=$2

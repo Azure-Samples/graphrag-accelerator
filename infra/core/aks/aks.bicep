@@ -171,14 +171,14 @@ resource aks 'Microsoft.ContainerService/managedClusters@2023-10-01' = {
   }
 }
 
-resource roleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
-  name: guid(aks.id, 'Network Contributor')
-  scope: subnet
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7') // Network Contributor role ID
-    principalId: aks.identity.principalId
-  }
-}
+// resource roleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+//   name: guid(aks.id, 'Network Contributor')
+//   scope: subnet
+//   properties: {
+//     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7') // Network Contributor role ID
+//     principalId: aks.identity.principalId
+//   }
+// }
 
 resource aksManagedAutoUpgradeSchedule 'Microsoft.ContainerService/managedClusters/maintenanceConfigurations@2024-03-02-preview' = {
   parent: aks
