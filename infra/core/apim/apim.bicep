@@ -452,13 +452,9 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   }
 }
 
-// output apimIPs array = apiManagementService.properties.publicIPAddresses
 output apim_gateway_url string = apiManagementService.properties.gatewayUrl
-// output app_insights_name string = appInsights.name
 output app_insights_id string = appInsights.id
 output app_insights_connection_string string = appInsights.properties.ConnectionString
 output name string = apiManagementService.name
 output vnet_name string = virtualNetwork.name
 output vnet_id string = virtualNetwork.id
-// output default_subnet_id string = virtualNetwork.properties.subnets[0].id
-// output hostname_configs array = apiManagementService.properties.hostnameConfigurations

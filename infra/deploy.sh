@@ -406,7 +406,7 @@ deployGraphragAPI () {
 
     waitForGraphrag $backendSwaggerUrl
 
-    # download the openapi spec from the backend and import it into APIM
+    # download the openapi spec from the backend and load it into APIM
     az rest --method get --url $backendSwaggerUrl -o json > core/apim/graphrag-openapi.json 2>/dev/null
     AZURE_GRAPHRAG_API_RESULT=$(az deployment group create --resource-group $RESOURCE_GROUP --name graphrag-api --template-file core/apim/apim.graphrag-servicedef.bicep --no-prompt \
         --parameters "backendUrl=$graphragUrl" \
@@ -492,7 +492,6 @@ usage() {
    echo "Description: Deployment script for the GraphRAG Solution Accelerator."
    echo "options:"
    echo "  -h     Print this help menu."
-   echo "  -b     Skip docker build."
    echo "  -d     Disable private endpoint usage."
    echo "  -g     Developer mode. Grants deployer of this script access to Azure Storage, AI Search, and CosmosDB. Will disable private endpoints (-d) and enable debug mode."
    echo "  -p     A JSON file containing the deployment parameters (deploy.parameters.json)."
@@ -504,13 +503,9 @@ usage() {
 ENABLE_PRIVATE_ENDPOINTS=true
 DEBUG_MODE=off
 GRANT_DEV_ACCESS=0 # false
-SKIP_DOCKER_BUILD=0 # false
 PARAMS_FILE=""
-while getopts ":bdgp:h" option; do
+while getopts ":dgp:h" option; do
     case "${option}" in
-        b)
-            SKIP_DOCKER_BUILD=1
-            ;;
         d)
             ENABLE_PRIVATE_ENDPOINTS=false
             ;;
@@ -552,7 +547,7 @@ cat <<\EOF
  /_/    \_\___\___\___|_|\___|_|  \__,_|\__\___/|_|   
 EOF
 printf "\n\n"
-exit 0
+
 checkRequiredTools
 populateParams $PARAMS_FILE
 
@@ -563,9 +558,7 @@ createResourceGroupIfNotExists $LOCATION $RESOURCE_GROUP
 createAcrIfNotExists
 
 # Deploy the graphrag backend docker image to ACR
-if [ $SKIP_DOCKER_BUILD -eq 0 ]; then
-    deployDockerImageToACR
-fi
+deployDockerImageToACR
 
 # Generate ssh key for AKS
 createSshkeyIfNotExists $RESOURCE_GROUP
