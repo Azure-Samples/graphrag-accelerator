@@ -27,10 +27,37 @@ requiredParams=(
     RESOURCE_GROUP
 )
 
+errorBanner () {
+    #https://cowsay-svelte.vercel.app
+    echo '
+ ________________________________
+/ Uh oh - an error has occurred. \
+\ Please see the message below.  /
+ --------------------------------
+   \
+    \
+       /~\
+      |oo )
+      _\=/_
+     /     \
+    //|/.\|\\
+   ||  \_/  ||
+   || |\ /| ||
+    # \_ _/  #
+      | | |
+      | | |
+      []|[]
+      | | |
+     /_]_[_\
+
+    '
+}
+
 exitIfCommandFailed () {
     local res=$1
     local msg=$2
     if [ 0 -ne $res ]; then
+        errorBanner
         printf "$msg\n"
         exit 1
     fi
@@ -40,6 +67,7 @@ exitIfValueEmpty () {
     local value=$1
     local msg=$2
     if [ -z "$value" ]; then
+        errorBanner
         printf "$msg\n"
         exit 1
     fi
@@ -343,8 +371,10 @@ waitForGraphragExternalIp () {
     local available="false"
     printf "Checking for GraphRAG external IP"
     for ((i=0;i < $maxTries; i++)); do
-        TMP_GRAPHRAG_SERVICE_IP=$(kubectl get ingress --namespace $aksNamespace graphrag --template "{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}" 2> /dev/null)
-        if [ $? -eq 0 ]; then
+        # TMP_GRAPHRAG_SERVICE_IP=$(kubectl get ingress --namespace $aksNamespace graphrag --template "{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}" 2> /dev/null)
+        TMP_GRAPHRAG_SERVICE_IP=$(kubectl get ingress --namespace graphrag graphrag -o json | jq .status.loadBalancer.ingress[0].ip)
+        # jq returns "null" if the value is not found
+        if [[ "$TMP_GRAPHRAG_SERVICE_IP" != "null" ]]; then
             available="true"
             GRAPHRAG_SERVICE_IP=$TMP_GRAPHRAG_SERVICE_IP
             break
@@ -477,7 +507,7 @@ createAcrIfNotExists() {
 deployDockerImageToACR() {
     printf "Deploying docker image '${GRAPHRAG_IMAGE}' to container registry '${CONTAINER_REGISTRY_SERVER}'..."
     local SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" &> /dev/null && pwd 2> /dev/null; )";
-    az acr build --registry $CONTAINER_REGISTRY_SERVER -f $SCRIPT_DIR/../docker/Dockerfile-backend --image $GRAPHRAG_IMAGE $SCRIPT_DIR/../ > /dev/null 2>&1
+    az acr build --registry $CONTAINER_REGISTRY_SERVER -f $SCRIPT_DIR/../docker/Dockerfile-backend --image $GRAPHRAG_IMAGE $SCRIPT_DIR/../
     exitIfCommandFailed $? "Error deploying docker image, exiting..."
     printf " Done.\n"
 }
