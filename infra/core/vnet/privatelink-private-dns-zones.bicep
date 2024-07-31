@@ -27,7 +27,7 @@ module dnsVnetLinks 'vnet-dns-link.bicep' = [
     name: replace(privateDnsZoneName, '.', '-')
     params: {
       privateDnsZoneName: privateDnsZoneResources[index].name
-      vnetResourceIds: linkedVnetIds
+      vnetIds: linkedVnetIds
     }
   }
 ]
