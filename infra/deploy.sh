@@ -276,7 +276,7 @@ createSshkeyIfNotExists () {
     SSHKEY_DETAILS=$keyDetails
 }
 
-setupAksCredentials () {
+getAksCredentials () {
     local rg=$1
     local aks=$2
     printf "Getting AKS credentials... "
@@ -345,14 +345,12 @@ installGraphRAGHelmChart () {
 
     local cosmosEndpoint=$(jq -r .azure_cosmosdb_endpoint.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$cosmosEndpoint" "Unable to parse CosmosDB endpoint from Azure outputs, exiting..."
-    echo "cosmos endpoint: $cosmosEndpoint"
 
     local graphragHostname=$(jq -r .azure_graphrag_hostname.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$graphragHostname" "Unable to parse graphrag hostname from deployment outputs, exiting..."
 
     local storageAccountBlobUrl=$(jq -r .azure_storage_account_blob_url.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$storageAccountBlobUrl" "Unable to parse storage account blob url from deployment outputs, exiting..."
-    echo "storage account url: $storageAccountBlobUrl"
 
     local graphragImageName=$(sed -rn "s/([^:]+).*/\1/p" <<< "$GRAPHRAG_IMAGE")
     local graphragImageVersion=$(sed -rn "s/[^:]+:(.*)/\1/p" <<< "$GRAPHRAG_IMAGE")
@@ -624,7 +622,7 @@ assignAOAIRoleToManagedIdentity
 assignAKSPullRoleToRegistry $RESOURCE_GROUP $AKS_NAME $CONTAINER_REGISTRY_SERVER
 
 # Deploy kubernetes resources
-setupAksCredentials $RESOURCE_GROUP $AKS_NAME
+getAksCredentials $RESOURCE_GROUP $AKS_NAME
 
 # Install GraphRAG helm chart
 installGraphRAGHelmChart

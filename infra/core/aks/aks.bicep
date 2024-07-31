@@ -49,36 +49,38 @@ param sshRSAPublicKey string
 @description('Enable encryption at host')
 param enableEncryptionAtHost bool = false
 
-resource vnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
-  name: 'aks-vnet'
-  location: location
-  properties: {
-    addressSpace: {
-      addressPrefixes: [
-        '10.16.0.0/12'
-      ]
-    }
-  }
-}
+param subnetId string
 
-resource subnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' = {
-  parent: vnet
-  name: 'default'
-  properties: {
-    addressPrefix: '10.16.0.0/24'
-    serviceEndpoints: [
-      {
-        service: 'Microsoft.Storage'
-      }
-      {
-        service: 'Microsoft.Sql'
-      }
-      {
-        service: 'Microsoft.EventHub'
-      }
-    ]
-  }
-}
+// resource vnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
+//   name: 'aks-vnet'
+//   location: location
+//   properties: {
+//     addressSpace: {
+//       addressPrefixes: [
+//         '10.16.0.0/12'
+//       ]
+//     }
+//   }
+// }
+
+// resource subnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' = {
+//   parent: vnet
+//   name: 'default'
+//   properties: {
+//     addressPrefix: '10.16.0.0/24'
+//     serviceEndpoints: [
+//       {
+//         service: 'Microsoft.Storage'
+//       }
+//       {
+//         service: 'Microsoft.Sql'
+//       }
+//       {
+//         service: 'Microsoft.EventHub'
+//       }
+//     ]
+//   }
+// }
 
 resource aks 'Microsoft.ContainerService/managedClusters@2023-10-01' = {
   name: clusterName
@@ -112,7 +114,7 @@ resource aks 'Microsoft.ContainerService/managedClusters@2023-10-01' = {
         osType: 'Linux'
         mode: 'System'
         enableEncryptionAtHost: enableEncryptionAtHost
-        vnetSubnetID: subnet.id
+        vnetSubnetID: subnetId
         type: 'VirtualMachineScaleSets'
       }
     ]
@@ -159,7 +161,7 @@ resource aks 'Microsoft.ContainerService/managedClusters@2023-10-01' = {
       osType: 'Linux'
       mode: 'User'
       enableEncryptionAtHost: enableEncryptionAtHost
-      vnetSubnetID: subnet.id
+      vnetSubnetID: subnetId
       nodeLabels: {
         workload: 'graphrag'
       }
@@ -211,6 +213,3 @@ output name string = aks.name
 output managed_resource_group string = aks.properties.nodeResourceGroup
 output control_plane_fqdn string = aks.properties.fqdn
 output issuer string = aks.properties.oidcIssuerProfile.issuerURL
-output vnet_name string = vnet.name
-output vnet_id string = vnet.id
-output vnet_subnet_id string = subnet.id
