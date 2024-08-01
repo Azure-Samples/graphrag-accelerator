@@ -361,9 +361,9 @@ installGraphRAGHelmChart () {
     exitIfCommandFailed $? "Error updating helm dependencies, exiting..."
     # Some platforms require manually adding helm repositories to the local helm registry
     # This is a workaround for the issue where the helm chart is not able to add the repository itself
-    yq '.dependencies | map(["helm", "repo", "add", .name, .repository] | join(" "))' ./helm/graphrag/Chart.yaml | sed 's/^..//' | sh --;
-    helm dependency build ./helm/graphrag --namespace $aksNamespace
-    exitIfCommandFailed $? "Error building helm dependencies, exiting..."
+    # yq '.dependencies | map(["helm", "repo", "add", .name, .repository] | join(" "))' ./helm/graphrag/Chart.yaml | sed 's/^..//' | sh --;
+    # helm dependency build ./helm/graphrag --namespace $aksNamespace
+    # exitIfCommandFailed $? "Error building helm dependencies, exiting..."
     local escapedReporters=$(sed "s/,/\\\,/g" <<< "$REPORTERS")
     reset_x=true
     if ! [ -o xtrace ]; then
@@ -405,7 +405,7 @@ waitForGraphragExternalIp () {
     local available="false"
     printf "Checking for GraphRAG external IP"
     for ((i=0;i < $maxTries; i++)); do
-        TMP_GRAPHRAG_SERVICE_IP=$(kubectl get ingress --namespace graphrag graphrag -o json | jq .status.loadBalancer.ingress[0].ip)
+        TMP_GRAPHRAG_SERVICE_IP=$(kubectl get ingress --namespace graphrag graphrag -o json | jq -r .status.loadBalancer.ingress[0].ip)
         # jq returns "null" if the value is not found
         if [[ "$TMP_GRAPHRAG_SERVICE_IP" != "null" ]]; then
             available="true"
@@ -426,7 +426,7 @@ waitForGraphrag () {
     local backendSwaggerUrl=$1
     local -i maxTries=20
     local available="false"
-    printf "Checking for GraphRAG availability"
+    printf "Checking for GraphRAG API availability"
     for ((i=0;i < $maxTries; i++)); do
         az rest --method get --url $backendSwaggerUrl > /dev/null 2>&1
         if [ $? -eq 0 ]; then
@@ -440,7 +440,7 @@ waitForGraphrag () {
         printf " Available.\n"
     else
         printf " Failed.\n"
-        exit 1
+        exitIfValueEmpty "" "GraphRAG API unavailable, exiting..."
     fi
 }
 
@@ -458,7 +458,7 @@ deployGraphragDnsRecord () {
 
 deployGraphragAPI () {
     echo "Registering GraphRAG API with APIM..."
-    local apimGatewayUrl=$(jq -r .azure_apim_url.value <<< $AZURE_OUTPUTS)
+    local apimGatewayUrl=$(jq -r .azure_apim_gateway_url.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$apimGatewayUrl" "Unable to parse APIM gateway url from Azure outputs, exiting..."
     local apimName=$(jq -r .azure_apim_name.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$apimName" "Error parsing apim name from azure outputs, exiting..."

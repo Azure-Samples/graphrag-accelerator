@@ -157,6 +157,7 @@ module aks 'core/aks/aks.bicep' = {
     sshRSAPublicKey: aksSshRsaPublicKey
     logAnalyticsWorkspaceId: log.outputs.id
     subnetId: vnet.properties.subnets[1].id // aks subnet
+    privateDnsZoneName: privateDnsZone.outputs.dns_zone_name
   }
 }
 
@@ -368,7 +369,7 @@ output azure_cosmosdb_name string = cosmosdb.outputs.name
 output azure_cosmosdb_id string = cosmosdb.outputs.id
 output azure_app_insights_connection_string string = apim.outputs.app_insights_connection_string
 output azure_apim_name string = apim.outputs.name
-output azure_apim_url string = apim.outputs.apim_gateway_url
+output azure_apim_gateway_url string = apim.outputs.apim_gateway_url
 output azure_dns_zone_name string = privateDnsZone.outputs.dns_zone_name
 output azure_graphrag_hostname string = graphRagHostname
 output azure_graphrag_url string = graphRagUrl
