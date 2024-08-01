@@ -51,38 +51,14 @@ param enableEncryptionAtHost bool = false
 
 param subnetId string
 
-// resource vnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
-//   name: 'aks-vnet'
-//   location: location
-//   properties: {
-//     addressSpace: {
-//       addressPrefixes: [
-//         '10.16.0.0/12'
-//       ]
-//     }
-//   }
-// }
+param privateDnsZoneName string
 
-// resource subnet 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' = {
-//   parent: vnet
-//   name: 'default'
-//   properties: {
-//     addressPrefix: '10.16.0.0/24'
-//     serviceEndpoints: [
-//       {
-//         service: 'Microsoft.Storage'
-//       }
-//       {
-//         service: 'Microsoft.Sql'
-//       }
-//       {
-//         service: 'Microsoft.EventHub'
-//       }
-//     ]
-//   }
-// }
 
-resource aks 'Microsoft.ContainerService/managedClusters@2023-10-01' = {
+resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' existing = {
+  name: privateDnsZoneName
+}
+
+resource aks 'Microsoft.ContainerService/managedClusters@2024-02-01' = {
   name: clusterName
   location: location
   identity: {
@@ -120,6 +96,14 @@ resource aks 'Microsoft.ContainerService/managedClusters@2023-10-01' = {
     ]
     autoScalerProfile: {
       expander: 'least-waste'
+    }
+    ingressProfile: {
+      webAppRouting: {
+        enabled: true
+        dnsZoneResourceIds: [
+          privateDnsZone.id
+        ]
+      }
     }
     linuxProfile: {
       adminUsername: linuxAdminUsername
@@ -206,6 +190,21 @@ resource aksManagedNodeOSUpgradeSchedule 'Microsoft.ContainerService/managedClus
       startDate: '2024-06-11'
       startTime: '12:00'
     }
+  }
+}
+
+var privateDnsZoneContributorRoleId = resourceId(
+  'Microsoft.Authorization/roleDefinitions',
+  'b12aa53e-6015-4669-85d0-8515ebb3ae7f'
+)
+
+resource webAppRoutingPrivateDnsContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid('akswebapprouting-${privateDnsZoneContributorRoleId}-${privateDnsZone.id}')
+  scope: privateDnsZone
+  properties: {
+    principalId: aks.properties.ingressProfile.webAppRouting.identity.objectId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: privateDnsZoneContributorRoleId
   }
 }
 
