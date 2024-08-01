@@ -28,27 +28,14 @@ requiredParams=(
 )
 
 errorBanner () {
-    #https://cowsay-svelte.vercel.app
+    # https://cowsay-svelte.vercel.app
 cat << "EOF"
- ________________________________
-/ Uh oh - an error has occurred. \
-\ Please see the message below.  /
- --------------------------------
-   \
-    \
-       /~\
-      |oo )
-      _\=/_
-     /     \
-    //|/.\|\\
-   ||  \_/  ||
-   || |\ /| ||
-    # \_ _/  #
-      | | |
-      | | |
-      []|[]
-      | | |
-     /_]_[_\
+ _______________________________
+/ Uh oh, an error has occurred. \
+\ Please see the message below. /
+ -------------------------------
+  \
+¯\_(ツ)_/¯
 EOF
 printf "\n"
 }
@@ -400,7 +387,7 @@ installGraphRAGHelmChart () {
     exitIfCommandFailed $helmResult "Error deploying helm chart, exiting..."
 }
 
-waitForGraphragExternalIp () {
+waitForExternalIp () {
     local -i maxTries=14
     local available="false"
     printf "Checking for GraphRAG external IP"
@@ -444,8 +431,8 @@ waitForGraphrag () {
     fi
 }
 
-deployGraphragDnsRecord () {
-    waitForGraphragExternalIp
+deployDnsRecord () {
+    waitForExternalIp
     exitIfValueEmpty "$GRAPHRAG_SERVICE_IP" "Unable to get GraphRAG external IP."
     local dnsZoneName=$(jq -r .azure_dns_zone_name.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$dnsZoneName" "Error parsing DNS zone name from azure outputs, exiting..."
@@ -628,7 +615,7 @@ getAksCredentials $RESOURCE_GROUP $AKS_NAME
 installGraphRAGHelmChart
 
 # Import and setup GraphRAG API in APIM
-deployGraphragDnsRecord
+deployDnsRecord
 deployGraphragAPI
 
 if [ $GRANT_DEV_ACCESS -eq 1 ]; then
