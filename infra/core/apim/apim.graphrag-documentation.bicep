@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-param backendUrl string
 param apimname string
+param backendUrl string
 
 resource api_docs 'Microsoft.ApiManagement/service/apis@2023-09-01-preview' = {
   name: '${apimname}/documentation'

@@ -14,7 +14,7 @@ resource dnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
   properties: {}
 }
 
-resource vnets 'Microsoft.Network/virtualNetworks@2023-06-01' existing = [
+resource vnets 'Microsoft.Network/virtualNetworks@2024-01-01' existing = [
   for vnetName in vnetNames: {
     name: vnetName
   }

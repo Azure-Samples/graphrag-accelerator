@@ -193,6 +193,7 @@ resource aksManagedNodeOSUpgradeSchedule 'Microsoft.ContainerService/managedClus
   }
 }
 
+// Private DNS Zone Contributor role
 var privateDnsZoneContributorRoleId = resourceId(
   'Microsoft.Authorization/roleDefinitions',
   'b12aa53e-6015-4669-85d0-8515ebb3ae7f'

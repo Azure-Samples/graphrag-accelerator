@@ -7,7 +7,7 @@ param privateLinkServiceId string
 @description('The resource ID of the subnet to deploy the private endpoint to')
 param subnetId string
 
-@description('map of group id to array of private dns zone configs to associate with the private endpoint')
+@description('Map of group id to array of private dns zone configs to associate with the private endpoint')
 param privateDnsZoneConfigs array
 
 param privateEndpointName string
