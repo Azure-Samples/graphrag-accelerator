@@ -20,16 +20,11 @@ ingress:
   className: nginx-internal
   host: graphrag.graphrag.io
   tls: []
-  annotations:
-    # nginx.ingress.kubernetes.io/send-timeout: "3600"
-    # nginx.ingress.kubernetes.io/proxy-connect-timeout: "3600"
-    # nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
-    # nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-    # nginx.ingress.kubernetes.io/proxy-next-upstream-timeout: "3600"
+  loadBalancerAnnotations:
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
 
 graphragConfig:
   COSMOS_URI_ENDPOINT: ""
-  DEBUG_MODE: "off"
   GRAPHRAG_API_BASE: ""
   GRAPHRAG_API_VERSION: ""
   GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT: "https://cognitiveservices.azure.com/.default"
@@ -63,6 +58,7 @@ index:
     # runAsUser: 1000
 
   service:
+    annotations: {}
     type: ClusterIP
     port: 80
 

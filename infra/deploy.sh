@@ -333,8 +333,8 @@ installGraphRAGHelmChart () {
     local cosmosEndpoint=$(jq -r .azure_cosmosdb_endpoint.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$cosmosEndpoint" "Unable to parse CosmosDB endpoint from Azure outputs, exiting..."
 
-    local graphragHostname=$(jq -r .azure_graphrag_hostname.value <<< $AZURE_OUTPUTS)
-    exitIfValueEmpty "$graphragHostname" "Unable to parse graphrag hostname from deployment outputs, exiting..."
+    local graphragHostname=$(jq -r .azure_dns_zone_name.value <<< $AZURE_OUTPUTS)
+    exitIfValueEmpty "$graphragHostname" "Unable to parse dns zone name from deployment outputs, exiting..."
 
     local storageAccountBlobUrl=$(jq -r .azure_storage_account_blob_url.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$storageAccountBlobUrl" "Unable to parse storage account blob url from deployment outputs, exiting..."
@@ -344,13 +344,6 @@ installGraphRAGHelmChart () {
     exitIfValueEmpty "$graphragImageName" "Unable to parse graphrag image name, exiting..."
     exitIfValueEmpty "$graphragImageVersion" "Unable to parse graphrag image version, exiting..."
 
-    helm dependency update ./helm/graphrag
-    exitIfCommandFailed $? "Error updating helm dependencies, exiting..."
-    # Some platforms require manually adding helm repositories to the local helm registry
-    # This is a workaround for the issue where the helm chart is not able to add the repository itself
-    # yq '.dependencies | map(["helm", "repo", "add", .name, .repository] | join(" "))' ./helm/graphrag/Chart.yaml | sed 's/^..//' | sh --;
-    # helm dependency build ./helm/graphrag --namespace $aksNamespace
-    # exitIfCommandFailed $? "Error building helm dependencies, exiting..."
     local escapedReporters=$(sed "s/,/\\\,/g" <<< "$REPORTERS")
     reset_x=true
     if ! [ -o xtrace ]; then
@@ -364,14 +357,11 @@ installGraphRAGHelmChart () {
         --set "serviceAccount.annotations.azure\.workload\.identity/client-id=$workloadId" \
         --set "index.image.repository=$CONTAINER_REGISTRY_SERVER/$graphragImageName" \
         --set "index.image.tag=$graphragImageVersion" \
-        --set "query.image.repository=$CONTAINER_REGISTRY_SERVER/$graphragImageName" \
-        --set "query.image.tag=$graphragImageVersion" \
         --set "ingress.host=$graphragHostname" \
         --set "graphragConfig.APP_INSIGHTS_CONNECTION_STRING=$appInsightsConnectionString" \
         --set "graphragConfig.AI_SEARCH_URL=https://$aiSearchName.$AISEARCH_ENDPOINT_SUFFIX" \
         --set "graphragConfig.AI_SEARCH_AUDIENCE=$AISEARCH_AUDIENCE" \
         --set "graphragConfig.COSMOS_URI_ENDPOINT=$cosmosEndpoint" \
-        --set "graphragConfig.DEBUG_MODE=$DEBUG_MODE" \
         --set "graphragConfig.GRAPHRAG_API_BASE=$GRAPHRAG_API_BASE" \
         --set "graphragConfig.GRAPHRAG_API_VERSION=$GRAPHRAG_API_VERSION" \
         --set "graphragConfig.GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT=$GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT" \
@@ -550,7 +540,6 @@ usage() {
 [ $# -eq 0 ] && usage && exit 0
 # parse arguments
 ENABLE_PRIVATE_ENDPOINTS=true
-DEBUG_MODE=off
 GRANT_DEV_ACCESS=0 # false
 PARAMS_FILE=""
 while getopts ":dgp:h" option; do
@@ -561,7 +550,6 @@ while getopts ":dgp:h" option; do
         g)
             ENABLE_PRIVATE_ENDPOINTS=false
             GRANT_DEV_ACCESS=1 # true
-            DEBUG_MODE=on
             ;;
         p)
             PARAMS_FILE=${OPTARG}

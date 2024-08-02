@@ -14,8 +14,5 @@ spec:
   type: {{ .Values.index.service.type }}
   ports:
     - port: {{ .Values.index.service.port }}
-      targetPort: http
-      protocol: TCP
-      name: http
   selector:
     {{- include "graphrag.index.selectorLabels" . | nindent 4 }}
