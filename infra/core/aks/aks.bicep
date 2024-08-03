@@ -209,6 +209,22 @@ resource webAppRoutingPrivateDnsContributor 'Microsoft.Authorization/roleAssignm
   }
 }
 
+var networkContributorRoleId = resourceId(
+  'Microsoft.Authorization/roleDefinitions',
+  '4d97b98b-1d4f-4787-a291-c67834d212e7'
+)
+
+// 'Network Contributor' role assignment to AKS Kubelet identity
+resource kubletRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid('kubelet-${networkContributorRoleId}-${aks.id}')
+  scope: resourceGroup()
+  properties: {
+    principalId: aks.identity.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: networkContributorRoleId
+  }
+}
+
 output name string = aks.name
 output managed_resource_group string = aks.properties.nodeResourceGroup
 output control_plane_fqdn string = aks.properties.fqdn

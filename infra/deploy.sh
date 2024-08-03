@@ -30,12 +30,23 @@ requiredParams=(
 errorBanner () {
     # https://cowsay-svelte.vercel.app
 cat << "EOF"
- _______________________________
-/ Uh oh, an error has occurred. \
-\ Please see the message below. /
- -------------------------------
-  \
-¯\_(ツ)_/¯
+ ________________________________
+/  Uh oh, an error has occurred. \
+\  Please see message below.     /
+ ‾‾‾‾‾‾‾‾‾‾/‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+          /
+      __ /
+     /  \
+    ~    ~
+   / \  /_\
+   \o/  \o/
+    |    |
+    ||   |/
+    ||   ||
+    ||   ||
+    | \_/ |
+    \     /
+     \___/
 EOF
 printf "\n"
 }
@@ -298,9 +309,8 @@ assignAOAIRoleToManagedIdentity() {
     echo "Assigning 'Cognitive Services OpenAI Contributor' AOAI role to managed identity..."
     local servicePrincipalId=$(jq -r .azure_workload_identity_principal_id.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$servicePrincipalId" "Unable to parse service principal id from azure outputs, exiting..."
-    local scope=$(az cognitiveservices account list --query "[?contains(properties.endpoint, '$GRAPHRAG_API_BASE')] | [0].id" -o json)
-    scope=$(jq -r <<< $scope) # strip out quotes
-    az role assignment create --role "Cognitive Services OpenAI Contributor" --assignee "$servicePrincipalId" --scope "$scope" > /dev/null 2>&1
+    local scope=$(az cognitiveservices account list --query "[?contains(properties.endpoint, '$GRAPHRAG_API_BASE')] | [0].id" -o tsv)
+    az role assignment create --only-show-errors --role "Cognitive Services OpenAI Contributor" --assignee "$servicePrincipalId" --scope "$scope"
     exitIfCommandFailed $? "Error assigning role to service principal, exiting..."
 }
 
@@ -333,8 +343,8 @@ installGraphRAGHelmChart () {
     local cosmosEndpoint=$(jq -r .azure_cosmosdb_endpoint.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$cosmosEndpoint" "Unable to parse CosmosDB endpoint from Azure outputs, exiting..."
 
-    local graphragHostname=$(jq -r .azure_dns_zone_name.value <<< $AZURE_OUTPUTS)
-    exitIfValueEmpty "$graphragHostname" "Unable to parse dns zone name from deployment outputs, exiting..."
+    local graphragHostname=$(jq -r .azure_graphrag_hostname.value <<< $AZURE_OUTPUTS)
+    exitIfValueEmpty "$graphragHostname" "Unable to parse graphrag hostname from deployment outputs, exiting..."
 
     local storageAccountBlobUrl=$(jq -r .azure_storage_account_blob_url.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$storageAccountBlobUrl" "Unable to parse storage account blob url from deployment outputs, exiting..."
@@ -446,8 +456,9 @@ deployGraphragAPI () {
     waitForGraphrag $backendSwaggerUrl
 
     # download the openapi spec from the backend and load it into APIM
-    az rest --method get --url $backendSwaggerUrl -o json > core/apim/graphrag-openapi.json 2>/dev/null
-    AZURE_GRAPHRAG_API_RESULT=$(az deployment group create --resource-group $RESOURCE_GROUP --name graphrag-api --template-file core/apim/apim.graphrag-servicedef.bicep --no-prompt \
+    az rest --only-show-errors --method get --url $backendSwaggerUrl -o json > core/apim/graphrag-openapi.json
+    exitIfCommandFailed $? "Error downloading graphrag openapi spec, exiting..."
+    AZURE_GRAPHRAG_API_RESULT=$(az deployment group create --resource-group $RESOURCE_GROUP --name upload-graphrag-api --template-file core/apim/apim.graphrag-servicedef.bicep --no-prompt \
         --parameters "backendUrl=$graphragUrl" \
         --parameters "name=GraphRAG" \
         --parameters "apimname=$apimName")
@@ -517,7 +528,7 @@ createAcrIfNotExists() {
 deployDockerImageToACR() {
     printf "Deploying docker image '${GRAPHRAG_IMAGE}' to container registry '${CONTAINER_REGISTRY_SERVER}'..."
     local SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" &> /dev/null && pwd 2> /dev/null; )";
-    az acr build --registry $CONTAINER_REGISTRY_SERVER -f $SCRIPT_DIR/../docker/Dockerfile-backend --image $GRAPHRAG_IMAGE $SCRIPT_DIR/../
+    az acr build --only-show-errors --registry $CONTAINER_REGISTRY_SERVER -f $SCRIPT_DIR/../docker/Dockerfile-backend --image $GRAPHRAG_IMAGE $SCRIPT_DIR/../
     exitIfCommandFailed $? "Error deploying docker image, exiting..."
     printf " Done.\n"
 }

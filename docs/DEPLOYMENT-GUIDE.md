@@ -21,11 +21,12 @@ The setup/deployment process has been mostly automated with a shell script and B
 
 
 #### RBAC Permissions
-You will need the following <a href="https://learn.microsoft.com/en-us/azure/role-based-access-control/overview">Azure Role Based Access </a>permissions at the Subscription level to deploy the GraphRAG solution accelerator.  By default, Azure resources will be deployed with <a href="https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview">Azure Managed Identities </a>in place, keeping with security best practices.  Due to this enhanced security configuration, higher level permissions are required in order to deploy the necessary Azure resources:
+You will need the following <a href="https://learn.microsoft.com/en-us/azure/role-based-access-control/overview">Azure Role Based Access </a>permissions to deploy the GraphRAG solution accelerator.  By default, Azure resources will be deployed with <a href="https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview">Azure Managed Identities </a>in place, keeping with security best practices.  Due to this enhanced security configuration, higher level permissions are required in order to deploy the necessary Azure resources:
 | Permission | Scope |
 | :--- | ---: |
-Contributor            | Subscription
+Contributor                                    | Subscription
 Role Based Access Control (RBAC) Administrator | Subscription
+Owner                                          | Resource Group
 
 #### Resource Providers
 The Azure subscription that you deploy this solution accelerator in will require both the `Microsoft.OperationsManagement` and `Microsoft.AlertsManagement` resource providers to be registered.
