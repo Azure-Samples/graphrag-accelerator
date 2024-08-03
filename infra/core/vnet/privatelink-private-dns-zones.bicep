@@ -82,4 +82,4 @@ output aiSearchPrivateDnsZoneConfigs array = [
   }
 ]
 
-output privateDnsZones array = privateDnsZones
+output private_dns_zones array = privateDnsZones

@@ -60,6 +60,7 @@ var tags = { 'azd-env-name': graphRagName }
 var workloadIdentityName = '${abbrs.managedIdentityUserAssignedIdentities}${resourceBaseNameFinal}'
 var aksServiceAccountName = '${aksNamespace}-workload-sa'
 var workloadIdentitySubject = 'system:serviceaccount:${aksNamespace}:${aksServiceAccountName}'
+@description('Role definitions for various roles that will be assigned at deployment time. Learn more: https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles')
 var roles = {
   storageBlobDataContributor: resourceId(
     'Microsoft.Authorization/roleDefinitions',
@@ -377,6 +378,6 @@ output azure_workload_identity_client_id string = workloadIdentity.outputs.clien
 output azure_workload_identity_principal_id string = workloadIdentity.outputs.principal_id
 output azure_workload_identity_name string = workloadIdentity.outputs.name
 output azure_private_dns_zones array = enablePrivateEndpoints ? union(
-  privatelinkPrivateDns.outputs.privateDnsZones,
+  privatelinkPrivateDns.outputs.private_dns_zones,
   [privateDnsZone.outputs.dns_zone_name]
 ) : []

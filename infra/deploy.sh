@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 #!/usr/bin/env bash
 
-# set -x  # uncomment this line to debug
+set -x  # uncomment this line to debug
 
 aksNamespace="graphrag"
 
@@ -28,7 +28,7 @@ requiredParams=(
 )
 
 errorBanner () {
-    # https://cowsay-svelte.vercel.app
+# https://cowsay-svelte.vercel.app
 cat << "EOF"
  ________________________________
 /  Uh oh, an error has occurred. \
@@ -52,6 +52,7 @@ printf "\n"
 }
 
 successBanner () {
+# https://patorjk.com/software/taag
 cat << "EOF"
    _____                             __       _             
   / ____|                           / _|     | |            
@@ -71,6 +72,7 @@ printf "\n\n"
 }
 
 startBanner () {
+# https://patorjk.com/software/taag
 cat << "EOF"
    _____                 _     _____           _____  
   / ____|               | |   |  __ \    /\   / ____| 
@@ -100,7 +102,8 @@ exitIfCommandFailed () {
 exitIfValueEmpty () {
     local value=$1
     local msg=$2
-    if [ -z "$value" ]; then
+    # check if the value is empty or "null" (jq returns "null" when a value is not found)
+    if [ -z "$value" ] || [[ "$paramValue" == "null" ]]; then
         errorBanner
         printf "$msg\n"
         exit 1
@@ -154,8 +157,9 @@ checkRequiredTools () {
     local major minor patch
     IFS='.' read -r major minor patch <<< "$JQ_VERSION"
     if [ -z $patch ]; then
-        # NOTE: older acceptable versions of jq report a version number without the patch number.
-        # if patch version is not present, set it to 0
+        # NOTE: older acceptable versions of jq report a version 
+        # number without the patch number. if patch version is
+        # not present, set it to 0
         patch=0
         JQ_VERSION="$major.$minor.$patch"
     fi
@@ -171,7 +175,7 @@ checkRequiredParams () {
     local paramsFile=$1
     for param in "${requiredParams[@]}"; do
         local paramValue=$(jq -r .$param < $paramsFile)
-        if [ "null" == "$paramValue" ] || [ -z "$paramValue" ]; then
+        if [ -z "$paramValue" ] || [ "$paramValue" == "null" ]; then
             echo "Parameter $param is required, exiting..."
             exit 1
         fi
@@ -182,14 +186,15 @@ populateRequiredParams () {
     local paramsFile=$1
     printf "Checking required parameters... "
     checkRequiredParams $paramsFile
-    # The jq command below sets environment variable based on the key-value pairs in a JSON-formatted file
+    # The jq command below sets environment variable based on the key-value
+    # pairs in a JSON-formatted file
     eval $(jq -r 'to_entries | .[] | "export \(.key)=\(.value)"' $paramsFile)
     printf "Done.\n"
 }
 
 populateOptionalParams () {
-    # a list of optional environment variables that could be set in the params file.
-    # using the default values below is recommended.
+    # Optional environment variables may be set in the parameters file.
+    # Otherwise using the default values below is recommended.
     local paramsFile=$1
     echo "Checking optional parameters..."
     if [ -z "$APIM_TIER" ]; then
@@ -278,20 +283,23 @@ getAksCredentials () {
     local rg=$1
     local aks=$2
     printf "Getting AKS credentials... "
-    tempResult=$(az aks get-credentials -g $rg -n $aks --overwrite-existing 2>&1)
-    exitIfCommandFailed $? "Error getting AKS credentials, exiting...\n$tempResult"
+    az aks get-credentials -g $rg -n $aks --overwrite-existing 2>&1
+    exitIfCommandFailed $? "Error getting AKS credentials, exiting..."
     kubectl config set-context $aks --namespace=$aksNamespace
     printf "Done\n"
 }
 
 deployAzureResources () {
     echo "Deploying Azure resources..."
-    SSH_PUBLICKEY=$(jq -r .publicKey <<< $SSHKEY_DETAILS)
+    local SSH_PUBLICKEY=$(jq -r .publicKey <<< $SSHKEY_DETAILS)
     exitIfValueEmpty "$SSH_PUBLICKEY" "Unable to read ssh publickey, exiting..."
-    datetime="`date +%Y-%m-%d_%H-%M-%S`"
-    deploy_name="graphrag-deploy-$datetime"
-    echo "Deployment name: $deploy_name"
-    AZURE_DEPLOY_RESULTS=$(az deployment group create --name "$deploy_name" --resource-group $RESOURCE_GROUP --no-prompt -o json --template-file ./main.bicep \
+    local datetime="`date +%Y-%m-%d_%H-%M-%S`"
+    local deployName="graphrag-deploy-$datetime"
+    echo "Deployment name: $deployName"
+    local AZURE_DEPLOY_RESULTS=$(az deployment group create --name "$deployName" \
+        --no-prompt \
+        --resource-group $RESOURCE_GROUP \
+        --template-file ./main.bicep \
         --parameters "resourceBaseName=$RESOURCE_BASE_NAME" \
         --parameters "graphRagName=$RESOURCE_GROUP" \
         --parameters "apimName=$APIM_NAME" \
@@ -299,35 +307,43 @@ deployAzureResources () {
         --parameters "publisherName=$PUBLISHER_NAME" \
         --parameters "aksSshRsaPublicKey=$SSH_PUBLICKEY" \
         --parameters "publisherEmail=$PUBLISHER_EMAIL" \
-        --parameters "enablePrivateEndpoints=$ENABLE_PRIVATE_ENDPOINTS")
+        --parameters "enablePrivateEndpoints=$ENABLE_PRIVATE_ENDPOINTS" \
+        --output json)
     exitIfCommandFailed $? "Error deploying Azure resources..."
     AZURE_OUTPUTS=$(jq -r .properties.outputs <<< $AZURE_DEPLOY_RESULTS)
     exitIfCommandFailed $? "Error parsing outputs from Azure resource deployment..."
 }
 
 assignAOAIRoleToManagedIdentity() {
-    echo "Assigning 'Cognitive Services OpenAI Contributor' AOAI role to managed identity..."
+    printf "Assigning 'Cognitive Services OpenAI Contributor' role to managed identity... "
     local servicePrincipalId=$(jq -r .azure_workload_identity_principal_id.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$servicePrincipalId" "Unable to parse service principal id from azure outputs, exiting..."
     local scope=$(az cognitiveservices account list --query "[?contains(properties.endpoint, '$GRAPHRAG_API_BASE')] | [0].id" -o tsv)
-    az role assignment create --only-show-errors --role "Cognitive Services OpenAI Contributor" --assignee "$servicePrincipalId" --scope "$scope"
+    az role assignment create --only-show-errors \
+        --role "Cognitive Services OpenAI Contributor" \
+        --assignee "$servicePrincipalId" \
+        --scope "$scope" > /dev/null 2>&1
     exitIfCommandFailed $? "Error assigning role to service principal, exiting..."
+    print "Done.\n"
 }
 
 assignAKSPullRoleToRegistry() {
-    echo "Assigning 'ACRPull' role to AKS to access container registry..."
+    printf "Assigning 'ACRPull' role to AKS for container registry access... "
     local rg=$1
     local aks=$2
     local registry=$3
-    local registry_id=$(az acr show --name $registry --query id -o json)
-    registry_id=$(jq -r <<< $registry_id) # strip out quotes
-    exitIfValueEmpty "$registry_id" "Unable to retrieve container registry id, exiting..."
-    az aks update --name $aks --resource-group $rg --attach-acr $registry_id -o json > /dev/null 2>&1
+    local registryId=$(az acr show --name $registry --query id --output tsv)
+    exitIfValueEmpty "$registryId" "Unable to retrieve container registry id, exiting..."
+    az aks update --name $aks \
+        --resource-group $rg \
+        --attach-acr $registryId \
+        --output json > /dev/null 2>&1
     exitIfCommandFailed $? "Error assigning AKS pull role to container registry, exiting..."
+    print " Done.\n"
 }
 
 installGraphRAGHelmChart () {
-    printf "Deploying graphrag helm chart... "
+    echo "Deploying graphrag helm chart... "
     local workloadId=$(jq -r .azure_workload_identity_client_id.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$workloadId" "Unable to parse workload id from Azure outputs, exiting..."
 
@@ -362,11 +378,12 @@ installGraphRAGHelmChart () {
         reset_x=false
     fi
 
-    helm upgrade -i graphrag ./helm/graphrag -f ./helm/graphrag/values.yaml --namespace $aksNamespace --create-namespace \
+    helm upgrade -i graphrag ./helm/graphrag -f ./helm/graphrag/values.yaml \
+        --namespace $aksNamespace --create-namespace \
         --set "serviceAccount.name=$serviceAccountName" \
         --set "serviceAccount.annotations.azure\.workload\.identity/client-id=$workloadId" \
-        --set "index.image.repository=$CONTAINER_REGISTRY_SERVER/$graphragImageName" \
-        --set "index.image.tag=$graphragImageVersion" \
+        --set "master.image.repository=$CONTAINER_REGISTRY_SERVER/$graphragImageName" \
+        --set "master.image.tag=$graphragImageVersion" \
         --set "ingress.host=$graphragHostname" \
         --set "graphragConfig.APP_INSIGHTS_CONNECTION_STRING=$appInsightsConnectionString" \
         --set "graphragConfig.AI_SEARCH_URL=https://$aiSearchName.$AISEARCH_ENDPOINT_SUFFIX" \
@@ -393,7 +410,7 @@ waitForExternalIp () {
     printf "Checking for GraphRAG external IP"
     for ((i=0;i < $maxTries; i++)); do
         TMP_GRAPHRAG_SERVICE_IP=$(kubectl get ingress --namespace graphrag graphrag -o json | jq -r .status.loadBalancer.ingress[0].ip)
-        # jq returns "null" if the value is not found
+        # jq returns "null" if a value is not found
         if [[ "$TMP_GRAPHRAG_SERVICE_IP" != "null" ]]; then
             available="true"
             GRAPHRAG_SERVICE_IP=$TMP_GRAPHRAG_SERVICE_IP
@@ -409,7 +426,7 @@ waitForExternalIp () {
     fi
 }
 
-waitForGraphrag () {
+waitForGraphragBackend () {
     local backendSwaggerUrl=$1
     local -i maxTries=20
     local available="false"
@@ -436,10 +453,13 @@ deployDnsRecord () {
     exitIfValueEmpty "$GRAPHRAG_SERVICE_IP" "Unable to get GraphRAG external IP."
     local dnsZoneName=$(jq -r .azure_dns_zone_name.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$dnsZoneName" "Error parsing DNS zone name from azure outputs, exiting..."
-    AZURE_GRAPHRAG_DNS_DEPLOY_RESULT=$(az deployment group create -g $RESOURCE_GROUP --name graphrag-dns --template-file core/vnet/private-dns-zone-a-record.bicep --no-prompt \
+    az deployment group create --only-show-errors --no-prompt \
+        --name graphrag-dns \
+        --resource-group $RESOURCE_GROUP \
+        --template-file core/vnet/private-dns-zone-a-record.bicep \
         --parameters "name=graphrag" \
         --parameters "dnsZoneName=$dnsZoneName" \
-        --parameters "ipv4Address=$GRAPHRAG_SERVICE_IP")
+        --parameters "ipv4Address=$GRAPHRAG_SERVICE_IP"
     exitIfCommandFailed $? "Error creating GraphRAG DNS record, exiting..."
 }
 
@@ -453,56 +473,76 @@ deployGraphragAPI () {
     local graphragUrl=$(jq -r .azure_graphrag_url.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$graphragUrl" "Error parsing GraphRAG URL from azure outputs, exiting..."
 
-    waitForGraphrag $backendSwaggerUrl
+    waitForGraphragBackend $backendSwaggerUrl
 
     # download the openapi spec from the backend and load it into APIM
     az rest --only-show-errors --method get --url $backendSwaggerUrl -o json > core/apim/graphrag-openapi.json
     exitIfCommandFailed $? "Error downloading graphrag openapi spec, exiting..."
-    AZURE_GRAPHRAG_API_RESULT=$(az deployment group create --resource-group $RESOURCE_GROUP --name upload-graphrag-api --template-file core/apim/apim.graphrag-servicedef.bicep --no-prompt \
+    az deployment group create --only-show-errors --no-prompt \
+        --name upload-graphrag-api \
+        --resource-group $RESOURCE_GROUP \
+        --template-file core/apim/apim.graphrag-servicedef.bicep \
         --parameters "backendUrl=$graphragUrl" \
         --parameters "name=GraphRAG" \
-        --parameters "apimname=$apimName")
+        --parameters "apimname=$apimName"
     exitIfCommandFailed $? "Error registering graphrag API, exiting..."
     # cleanup
     rm core/apim/graphrag-openapi.json
 }
 
 grantDevAccessToAzureResources() {
-    # This function is used to grant the deployer of this script "developer" access to GraphRAG Azure resources
-    # by assigning the necessary RBAC roles for Azure Storage, AI Search, and CosmosDB to the signed-in user.
-    # This will grant the deployer access to the storage account, cosmos db, and AI search services in the resource group via the Azure portal.
+    # This function is used to grant the deployer of this script "developer" access
+    # to GraphRAG Azure resources by assigning the necessary RBAC roles for
+    # Azure Storage, AI Search, and CosmosDB to the signed-in user. This will grant
+    # the deployer access to data in the storage account, cosmos db, and AI search services
+    # from the Azure portal.
     echo "Granting deployer developer access to Azure resources..."
 
     # get subscription id of the active subscription
-    local azureAccount=$(az account show -o json)
-    local subscriptionId=$(jq -r .id <<< $azureAccount)
+    local subscriptionId=$(az account show --output json | jq -r .id)
     exitIfValueEmpty $subscriptionId "Subscription ID not found"
 
     # get principal/object id of the signed in user
-    local azureUserDetails=$(az ad signed-in-user show -o json)
-    local principalId=$(jq -r .id <<< $azureUserDetails)
+    local principalId=$(az ad signed-in-user show --output json | jq -r .id)
     exitIfValueEmpty $principalId "Principal ID not found"
 
     # assign storage account roles
-    local storageAccountDetails=$(az storage account list --resource-group $RESOURCE_GROUP -o json)
-    local storageAccountName=$(jq -r .[0].name <<< $storageAccountDetails)
+    local storageAccountName=$(az storage account list --resource-group $RESOURCE_GROUP --output json | jq -r .[0].name)
     exitIfValueEmpty $storageAccountName "Storage account not found"
-    az role assignment create --role "Storage Blob Data Contributor" --assignee $principalId --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Storage/storageAccounts/$storageAccountName" > /dev/null
-    az role assignment create --role "Storage Queue Data Contributor" --assignee $principalId --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Storage/storageAccounts/$storageAccountName" > /dev/null
+    az role assignment create \
+        --role "Storage Blob Data Contributor" \
+        --assignee $principalId \
+        --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Storage/storageAccounts/$storageAccountName" > /dev/null
+    az role assignment create \
+        --role "Storage Queue Data Contributor" \
+        --assignee $principalId \
+        --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Storage/storageAccounts/$storageAccountName" > /dev/null
 
     # assign cosmos db role
-    local cosmosDbDetails=$(az cosmosdb list --resource-group $RESOURCE_GROUP -o json)
-    local cosmosDbName=$(jq -r .[0].name <<< $cosmosDbDetails)
+    local cosmosDbName=$(az cosmosdb list --resource-group $RESOURCE_GROUP -o json | jq -r .[0].name)
     exitIfValueEmpty $cosmosDbName "CosmosDB account not found"
-    az cosmosdb sql role assignment create --account-name $cosmosDbName --resource-group $RESOURCE_GROUP --scope "/" --principal-id $principalId --role-definition-id /subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.DocumentDB/databaseAccounts/graphrag/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002 > /dev/null
+    az cosmosdb sql role assignment create \
+        --account-name $cosmosDbName \
+        --resource-group $RESOURCE_GROUP \
+        --scope "/" \
+        --principal-id $principalId \
+        --role-definition-id /subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.DocumentDB/databaseAccounts/graphrag/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002 > /dev/null
 
     # assign AI search roles
-    local searchServiceDetails=$(az search service list --resource-group $RESOURCE_GROUP -o json)
-    local searchServiceName=$(jq -r .[0].name <<< $searchServiceDetails)
+    local searchServiceName=$(az search service list --resource-group $RESOURCE_GROUP -o json | jq -r .[0].name)
     exitIfValueEmpty $searchServiceName "AI Search service not found"
-    az role assignment create --role "Contributor" --assignee $principalId --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Search/searchServices/$searchServiceName" > /dev/null
-    az role assignment create --role "Search Index Data Contributor" --assignee $principalId --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Search/searchServices/$searchServiceName" > /dev/null
-    az role assignment create --role "Search Index Data Reader" --assignee $principalId --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Search/searchServices/$searchServiceName" > /dev/null
+    az role assignment create \
+        --role "Contributor" \
+        --assignee $principalId \
+        --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Search/searchServices/$searchServiceName" > /dev/null
+    az role assignment create \
+        --role "Search Index Data Contributor" \
+        --assignee $principalId \
+        --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Search/searchServices/$searchServiceName" > /dev/null
+    az role assignment create \
+        --role "Search Index Data Reader" \
+        --assignee $principalId \
+        --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Search/searchServices/$searchServiceName" > /dev/null
 }
 
 createAcrIfNotExists() {
@@ -517,20 +557,27 @@ createAcrIfNotExists() {
     fi
     # else deploy a new container registry
     printf "No.\nCreating container registry... "
-    AZURE_ACR_DEPLOY_RESULT=$(az deployment group create --resource-group $RESOURCE_GROUP --name "acr-deployment" --template-file core/acr/acr.bicep --only-show-errors --no-prompt -o json \
+    local acrDeployResult=$(az deployment group create --only-show-errors --no-prompt \
+        --resource-group $RESOURCE_GROUP \
+        --name "acr-deployment" \
+        --template-file core/acr/acr.bicep \
+        --output json \
         --parameters "name=$CONTAINER_REGISTRY_SERVER")
     exitIfCommandFailed $? "Error creating container registry, exiting..."
-    CONTAINER_REGISTRY_SERVER=$(jq -r .properties.outputs.loginServer.value <<< $AZURE_ACR_DEPLOY_RESULT)
+    CONTAINER_REGISTRY_SERVER=$(jq -r .properties.outputs.login_server.value <<< $acrDeployResult)
     exitIfValueEmpty "$CONTAINER_REGISTRY_SERVER" "Unable to parse container registry login server from deployment, exiting..."
     printf "'$CONTAINER_REGISTRY_SERVER' created.\n"
 }
 
 deployDockerImageToACR() {
-    printf "Deploying docker image '${GRAPHRAG_IMAGE}' to container registry '${CONTAINER_REGISTRY_SERVER}'..."
-    local SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" &> /dev/null && pwd 2> /dev/null; )";
-    az acr build --only-show-errors --registry $CONTAINER_REGISTRY_SERVER -f $SCRIPT_DIR/../docker/Dockerfile-backend --image $GRAPHRAG_IMAGE $SCRIPT_DIR/../
+    echo "Deploying docker image '${GRAPHRAG_IMAGE}' to container registry '${CONTAINER_REGISTRY_SERVER}'..."
+    local scriptDir="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" &> /dev/null && pwd 2> /dev/null; )";
+    az acr build --only-show-errors \
+        --registry $CONTAINER_REGISTRY_SERVER \
+        --file $scriptDir/../docker/Dockerfile-backend \
+        --image $GRAPHRAG_IMAGE \
+        $scriptDir/../
     exitIfCommandFailed $? "Error deploying docker image, exiting..."
-    printf " Done.\n"
 }
 
 ################################################################################

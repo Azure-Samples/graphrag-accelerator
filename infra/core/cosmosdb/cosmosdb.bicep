@@ -10,10 +10,10 @@ param location string = resourceGroup().location
 @allowed([ 'Enabled', 'Disabled' ])
 param publicNetworkAccess string = 'Disabled'
 
-@description('Role definition id to assign to the principal.  Learn more: https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-setup-rbac')
+@description('Role definition id to assign to the principal. Learn more: https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-setup-rbac')
 @allowed([
-  '00000000-0000-0000-0000-000000000001' // Built-in role 'Azure Cosmos DB Built-in Data Reader'
-  '00000000-0000-0000-0000-000000000002' // Built-in role 'Azure Cosmos DB Built-in Data Contributor'
+  '00000000-0000-0000-0000-000000000001' // 'Azure Cosmos DB Built-in Data Reader' role
+  '00000000-0000-0000-0000-000000000002' // 'Azure Cosmos DB Built-in Data Contributor' role
 ])
 param roleDefinitionId string = '00000000-0000-0000-0000-000000000002'
 

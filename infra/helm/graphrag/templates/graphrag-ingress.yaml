@@ -1,7 +1,7 @@
 {{- if .Values.ingress.enabled -}}
 {{- $fullName := include "graphrag.fullname" . -}}
-{{- $indexFullName := include "graphrag.index.fullname" . -}}
-{{- $indexSvcPort := .Values.index.service.port -}}
+{{- $masterFullName := include "graphrag.master.fullname" . -}}
+{{- $masterSvcPort := .Values.master.service.port -}}
 {{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion -}}
 apiVersion: networking.k8s.io/v1
 {{- else if semverCompare ">=1.14-0" .Capabilities.KubeVersion.GitVersion -}}
@@ -42,11 +42,11 @@ spec:
             backend:
               {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
               service:
-                name: {{ $indexFullName }}
+                name: {{ $masterFullName }}
                 port:
-                  number: {{ $indexSvcPort }}
+                  number: {{ $masterSvcPort }}
               {{- else }}
-              serviceName: {{ $indexFullName }}
-              servicePort: {{ $indexSvcPort }}
+              serviceName: {{ $masterFullName }}
+              servicePort: {{ $masterSvcPort }}
               {{- end }}
 {{- end }}
