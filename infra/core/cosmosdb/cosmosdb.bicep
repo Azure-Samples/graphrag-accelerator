@@ -12,13 +12,12 @@ param publicNetworkAccess string = 'Disabled'
 
 @description('Role definition id to assign to the principal. Learn more: https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-setup-rbac')
 @allowed([
-  '00000000-0000-0000-0000-000000000001' // 'Azure Cosmos DB Built-in Data Reader' role
-  '00000000-0000-0000-0000-000000000002' // 'Azure Cosmos DB Built-in Data Contributor' role
+  '00000000-0000-0000-0000-000000000001' // 'Cosmos DB Built-in Data Reader' role
+  '00000000-0000-0000-0000-000000000002' // 'Cosmos DB Built-in Data Contributor' role
 ])
 param roleDefinitionId string = '00000000-0000-0000-0000-000000000002'
 
 param principalId string
-var roleAssignmentId = guid(roleDefinitionId, principalId, cosmosDb.id)
 
 
 resource cosmosDb 'Microsoft.DocumentDB/databaseAccounts@2022-11-15' = {
@@ -204,9 +203,9 @@ resource containerStoreContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatab
   }
 }
 
-resource cosmosDbIdentityAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2023-11-15' = {
+resource sqlRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2023-11-15' = {
+  name: guid('${roleDefinitionId}-${principalId}-${cosmosDb.id}')
   parent: cosmosDb
-  name: roleAssignmentId
   properties: {
     roleDefinitionId: '/${subscription().id}/resourceGroups/${resourceGroup().name}/providers/Microsoft.DocumentDB/databaseAccounts/${cosmosDb.name}/sqlRoleDefinitions/${roleDefinitionId}'
     principalId: principalId

@@ -53,6 +53,12 @@ param subnetId string
 
 param privateDnsZoneName string
 
+@description('Array of objects with fields principalType, roleDefinitionId')
+param ingressRoleAssignments array = []
+
+@description('Array of objects with fields principalType, roleDefinitionId')
+param systemRoleAssignments array = []
+
 
 resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' existing = {
   name: privateDnsZoneName
@@ -193,37 +199,31 @@ resource aksManagedNodeOSUpgradeSchedule 'Microsoft.ContainerService/managedClus
   }
 }
 
-// Private DNS Zone Contributor role
-var privateDnsZoneContributorRoleId = resourceId(
-  'Microsoft.Authorization/roleDefinitions',
-  'b12aa53e-6015-4669-85d0-8515ebb3ae7f'
-)
-
-resource webAppRoutingPrivateDnsContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid('akswebapprouting-${privateDnsZoneContributorRoleId}-${privateDnsZone.id}')
-  scope: privateDnsZone
-  properties: {
-    principalId: aks.properties.ingressProfile.webAppRouting.identity.objectId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: privateDnsZoneContributorRoleId
+// role assignment to ingress identity
+resource webAppRoutingPrivateDnsContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
+  for role in ingressRoleAssignments: {
+    name: guid('${role.roleDefinitionId}-${privateDnsZone.id}')
+    scope: privateDnsZone
+    properties: {
+      principalId: aks.properties.ingressProfile.webAppRouting.identity.objectId
+      principalType: role.principalType
+      roleDefinitionId: role.roleDefinitionId
+    }
   }
-}
+]
 
-var networkContributorRoleId = resourceId(
-  'Microsoft.Authorization/roleDefinitions',
-  '4d97b98b-1d4f-4787-a291-c67834d212e7'
-)
-
-// 'Network Contributor' role assignment to AKS Kubelet identity
-resource kubletRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid('kubelet-${networkContributorRoleId}-${aks.id}')
-  scope: resourceGroup()
-  properties: {
-    principalId: aks.identity.principalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: networkContributorRoleId
+// role assignment to AKS system identity
+resource systemRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
+  for role in systemRoleAssignments: {
+    name: guid('${role.roleDefinitionId}-${aks.id}')
+    scope: resourceGroup()
+    properties: {
+      principalId: aks.identity.principalId
+      principalType: role.principalType
+      roleDefinitionId: role.roleDefinitionId
+    }
   }
-}
+]
 
 output name string = aks.name
 output managed_resource_group string = aks.properties.nodeResourceGroup

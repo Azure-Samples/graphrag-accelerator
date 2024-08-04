@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 #!/usr/bin/env bash
 
-set -x  # uncomment this line to debug
+set -u # change to set -ux to debug
 
 aksNamespace="graphrag"
 
@@ -11,6 +11,10 @@ AISEARCH_AUDIENCE=""
 AISEARCH_ENDPOINT_SUFFIX=""
 APIM_NAME=""
 APIM_TIER=""
+CLOUD_NAME=""
+GRAPHRAG_IMAGE=""
+PUBLISHER_EMAIL=""
+PUBLISHER_NAME=""
 RESOURCE_BASE_NAME=""
 REPORTERS=""
 GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT=""
@@ -103,7 +107,7 @@ exitIfValueEmpty () {
     local value=$1
     local msg=$2
     # check if the value is empty or "null" (jq returns "null" when a value is not found)
-    if [ -z "$value" ] || [[ "$paramValue" == "null" ]]; then
+    if [ -z "$value" ] || [[ "$value" == "null" ]]; then
         errorBanner
         printf "$msg\n"
         exit 1
@@ -217,10 +221,6 @@ populateOptionalParams () {
         PUBLISHER_EMAIL="publisher@microsoft.com"
         printf "\tsetting PUBLISHER_EMAIL=$PUBLISHER_EMAIL\n"
     fi
-    if [ -z "$CONTAINER_REGISTRY_EMAIL" ]; then
-        CONTAINER_REGISTRY_EMAIL="publisher@microsoft.com"
-        printf "\tsetting CONTAINER_REGISTRY_EMAIL=$CONTAINER_REGISTRY_EMAIL\n"
-    fi
     if [ -z "$CLOUD_NAME" ]; then
         CLOUD_NAME="AzurePublicCloud"
         printf "\tsetting CLOUD_NAME=$CLOUD_NAME\n"
@@ -324,7 +324,7 @@ assignAOAIRoleToManagedIdentity() {
         --assignee "$servicePrincipalId" \
         --scope "$scope" > /dev/null 2>&1
     exitIfCommandFailed $? "Error assigning role to service principal, exiting..."
-    print "Done.\n"
+    printf "Done.\n"
 }
 
 assignAKSPullRoleToRegistry() {
@@ -334,12 +334,13 @@ assignAKSPullRoleToRegistry() {
     local registry=$3
     local registryId=$(az acr show --name $registry --query id --output tsv)
     exitIfValueEmpty "$registryId" "Unable to retrieve container registry id, exiting..."
-    az aks update --name $aks \
+    local result=$(az aks update \
+        --name $aks \
         --resource-group $rg \
         --attach-acr $registryId \
-        --output json > /dev/null 2>&1
-    exitIfCommandFailed $? "Error assigning AKS pull role to container registry, exiting..."
-    print " Done.\n"
+        --output json)
+    exitIfCommandFailed $? "Error assigning AKS pull role to container registry, exiting...\n$result"
+    printf " Done.\n"
 }
 
 installGraphRAGHelmChart () {
@@ -430,7 +431,7 @@ waitForGraphragBackend () {
     local backendSwaggerUrl=$1
     local -i maxTries=20
     local available="false"
-    printf "Checking for GraphRAG API availability"
+    printf "Checking for GraphRAG API availability..."
     for ((i=0;i < $maxTries; i++)); do
         az rest --method get --url $backendSwaggerUrl > /dev/null 2>&1
         if [ $? -eq 0 ]; then
@@ -459,7 +460,7 @@ deployDnsRecord () {
         --template-file core/vnet/private-dns-zone-a-record.bicep \
         --parameters "name=graphrag" \
         --parameters "dnsZoneName=$dnsZoneName" \
-        --parameters "ipv4Address=$GRAPHRAG_SERVICE_IP"
+        --parameters "ipv4Address=$GRAPHRAG_SERVICE_IP" > /dev/null
     exitIfCommandFailed $? "Error creating GraphRAG DNS record, exiting..."
 }
 
@@ -484,7 +485,7 @@ deployGraphragAPI () {
         --template-file core/apim/apim.graphrag-servicedef.bicep \
         --parameters "backendUrl=$graphragUrl" \
         --parameters "name=GraphRAG" \
-        --parameters "apimname=$apimName"
+        --parameters "apimname=$apimName" > /dev/null
     exitIfCommandFailed $? "Error registering graphrag API, exiting..."
     # cleanup
     rm core/apim/graphrag-openapi.json

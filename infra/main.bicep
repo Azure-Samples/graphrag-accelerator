@@ -82,6 +82,14 @@ var roles = {
     'Microsoft.Authorization/roleDefinitions',
     '1407120a-92aa-4202-b7e9-c0e197c71c8f'  // AI Search Index Data Reader Role
   )
+  privateDnsZoneContributor: resourceId (
+    'Microsoft.Authorization/roleDefinitions',
+    'b12aa53e-6015-4669-85d0-8515ebb3ae7f'  // Private DNS Zone Contributor Role
+  )
+  networkContributor: resourceId (
+    'Microsoft.Authorization/roleDefinitions',
+    '4d97b98b-1d4f-4787-a291-c67834d212e7'  // Network Contributor Role
+  )
 }
 
 
@@ -113,7 +121,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
     }
     subnets: [
       {
-        name: '${abbrs.networkVirtualNetworksSubnets}-apim'
+        name: '${abbrs.networkVirtualNetworksSubnets}apim'
         properties: {
           addressPrefix: '10.0.0.0/16'
           networkSecurityGroup: {
@@ -130,7 +138,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
         }
       }
       {
-        name: '${abbrs.networkVirtualNetworksSubnets}-aks'
+        name: '${abbrs.networkVirtualNetworksSubnets}aks'
         properties: {
           addressPrefix: '10.1.0.0/16'
           serviceEndpoints: [
@@ -159,6 +167,18 @@ module aks 'core/aks/aks.bicep' = {
     logAnalyticsWorkspaceId: log.outputs.id
     subnetId: vnet.properties.subnets[1].id // aks subnet
     privateDnsZoneName: privateDnsZone.outputs.dns_zone_name
+    ingressRoleAssignments: [
+      {
+        principalType: 'ServicePrincipal'
+        roleDefinitionId: roles.privateDnsZoneContributor
+      }
+    ]
+    systemRoleAssignments: [
+      {
+        principalType: 'ServicePrincipal'
+        roleDefinitionId: roles.networkContributor
+      }
+    ]
   }
 }
 
@@ -198,7 +218,7 @@ module aiSearch 'core/ai-search/ai-search.bicep' = {
   }
 }
 
-module storage 'core/blob/storage.bicep' = {
+module storage 'core/storage/storage.bicep' = {
   name: 'storage'
   params: {
     name: !empty(storageAccountName) ? storageAccountName : '${abbrs.storageStorageAccounts}${replace(resourceBaseNameFinal, '-', '')}'
