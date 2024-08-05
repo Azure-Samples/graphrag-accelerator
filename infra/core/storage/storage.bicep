@@ -76,6 +76,6 @@ resource storageRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-
   }
 ]
 
-output id string = storage.id
 output name string = storage.name
-output primary_endpoints object = storage.properties.primaryEndpoints
+output id string = storage.id
+output primaryEndpoints object = storage.properties.primaryEndpoints

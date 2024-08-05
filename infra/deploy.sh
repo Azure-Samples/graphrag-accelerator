@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 #!/usr/bin/env bash
 
-set -u # change to set -ux to debug
+# set -ux # uncomment this line to debug
 
 aksNamespace="graphrag"
 
@@ -18,7 +18,7 @@ PUBLISHER_NAME=""
 RESOURCE_BASE_NAME=""
 REPORTERS=""
 GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT=""
-CONTAINER_REGISTRY_SERVER=""
+CONTAINER_REGISTRY_NAME=""
 
 requiredParams=(
     LOCATION
@@ -293,6 +293,8 @@ deployAzureResources () {
     echo "Deploying Azure resources..."
     local SSH_PUBLICKEY=$(jq -r .publicKey <<< $SSHKEY_DETAILS)
     exitIfValueEmpty "$SSH_PUBLICKEY" "Unable to read ssh publickey, exiting..."
+    local aoaiName=$(az cognitiveservices account list --query "[?contains(properties.endpoint, '$GRAPHRAG_API_BASE')] | [0].name" -o tsv)
+    exitIfValueEmpty "$aoaiName" "Unable to retrieve AOAI name from GRAPHRAG_API_BASE, exiting..."
     local datetime="`date +%Y-%m-%d_%H-%M-%S`"
     local deployName="graphrag-deploy-$datetime"
     echo "Deployment name: $deployName"
@@ -308,10 +310,12 @@ deployAzureResources () {
         --parameters "aksSshRsaPublicKey=$SSH_PUBLICKEY" \
         --parameters "publisherEmail=$PUBLISHER_EMAIL" \
         --parameters "enablePrivateEndpoints=$ENABLE_PRIVATE_ENDPOINTS" \
+        --parameters "acrName=$CONTAINER_REGISTRY_NAME" \
         --output json)
     exitIfCommandFailed $? "Error deploying Azure resources..."
     AZURE_OUTPUTS=$(jq -r .properties.outputs <<< $AZURE_DEPLOY_RESULTS)
     exitIfCommandFailed $? "Error parsing outputs from Azure resource deployment..."
+    assignAOAIRoleToManagedIdentity
 }
 
 assignAOAIRoleToManagedIdentity() {
@@ -325,22 +329,6 @@ assignAOAIRoleToManagedIdentity() {
         --scope "$scope" > /dev/null 2>&1
     exitIfCommandFailed $? "Error assigning role to service principal, exiting..."
     printf "Done.\n"
-}
-
-assignAKSPullRoleToRegistry() {
-    printf "Assigning 'ACRPull' role to AKS for container registry access... "
-    local rg=$1
-    local aks=$2
-    local registry=$3
-    local registryId=$(az acr show --name $registry --query id --output tsv)
-    exitIfValueEmpty "$registryId" "Unable to retrieve container registry id, exiting..."
-    local result=$(az aks update \
-        --name $aks \
-        --resource-group $rg \
-        --attach-acr $registryId \
-        --output json)
-    exitIfCommandFailed $? "Error assigning AKS pull role to container registry, exiting...\n$result"
-    printf " Done.\n"
 }
 
 installGraphRAGHelmChart () {
@@ -366,6 +354,9 @@ installGraphRAGHelmChart () {
     local storageAccountBlobUrl=$(jq -r .azure_storage_account_blob_url.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$storageAccountBlobUrl" "Unable to parse storage account blob url from deployment outputs, exiting..."
 
+    local containerRegistryName=$(jq -r .azure_acr_login_server.value <<< $AZURE_OUTPUTS)
+    exitIfValueEmpty "$containerRegistryName" "Unable to parse container registry url from deployment outputs, exiting..." 
+
     local graphragImageName=$(sed -rn "s/([^:]+).*/\1/p" <<< "$GRAPHRAG_IMAGE")
     local graphragImageVersion=$(sed -rn "s/[^:]+:(.*)/\1/p" <<< "$GRAPHRAG_IMAGE")
     exitIfValueEmpty "$graphragImageName" "Unable to parse graphrag image name, exiting..."
@@ -383,7 +374,7 @@ installGraphRAGHelmChart () {
         --namespace $aksNamespace --create-namespace \
         --set "serviceAccount.name=$serviceAccountName" \
         --set "serviceAccount.annotations.azure\.workload\.identity/client-id=$workloadId" \
-        --set "master.image.repository=$CONTAINER_REGISTRY_SERVER/$graphragImageName" \
+        --set "master.image.repository=$containerRegistryName/$graphragImageName" \
         --set "master.image.tag=$graphragImageVersion" \
         --set "ingress.host=$graphragHostname" \
         --set "graphragConfig.APP_INSIGHTS_CONNECTION_STRING=$appInsightsConnectionString" \
@@ -546,35 +537,13 @@ grantDevAccessToAzureResources() {
         --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Search/searchServices/$searchServiceName" > /dev/null
 }
 
-createAcrIfNotExists() {
-    # check if container registry exists
-    printf "Checking if container registry exists... "
-    local existingRegistry
-    existingRegistry=$(az acr show --name $CONTAINER_REGISTRY_SERVER --query loginServer -o tsv 2>/dev/null)
-    if [ $? -eq 0 ]; then
-        printf "Yes.\nUsing existing registry '$existingRegistry'.\n"
-        CONTAINER_REGISTRY_SERVER=$existingRegistry
-        return 0
-    fi
-    # else deploy a new container registry
-    printf "No.\nCreating container registry... "
-    local acrDeployResult=$(az deployment group create --only-show-errors --no-prompt \
-        --resource-group $RESOURCE_GROUP \
-        --name "acr-deployment" \
-        --template-file core/acr/acr.bicep \
-        --output json \
-        --parameters "name=$CONTAINER_REGISTRY_SERVER")
-    exitIfCommandFailed $? "Error creating container registry, exiting..."
-    CONTAINER_REGISTRY_SERVER=$(jq -r .properties.outputs.login_server.value <<< $acrDeployResult)
-    exitIfValueEmpty "$CONTAINER_REGISTRY_SERVER" "Unable to parse container registry login server from deployment, exiting..."
-    printf "'$CONTAINER_REGISTRY_SERVER' created.\n"
-}
-
 deployDockerImageToACR() {
-    echo "Deploying docker image '${GRAPHRAG_IMAGE}' to container registry '${CONTAINER_REGISTRY_SERVER}'..."
+    local containerRegistry=$(jq -r .azure_acr_login_server.value <<< $AZURE_OUTPUTS)
+    exitIfValueEmpty "$containerRegistry" "Unable to parse container registry from azure deployment outputs, exiting..."
+    echo "Deploying docker image '${GRAPHRAG_IMAGE}' to container registry '${containerRegistry}'..."
     local scriptDir="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" &> /dev/null && pwd 2> /dev/null; )";
     az acr build --only-show-errors \
-        --registry $CONTAINER_REGISTRY_SERVER \
+        --registry $containerRegistry \
         --file $scriptDir/../docker/Dockerfile-backend \
         --image $GRAPHRAG_IMAGE \
         $scriptDir/../
@@ -638,10 +607,7 @@ populateParams $PARAMS_FILE
 createResourceGroupIfNotExists $LOCATION $RESOURCE_GROUP
 
 # Create azure container registry if it does not exist
-createAcrIfNotExists
-
-# Deploy the graphrag backend docker image to ACR
-deployDockerImageToACR
+# createAcrIfNotExists
 
 # Generate ssh key for AKS
 createSshkeyIfNotExists $RESOURCE_GROUP
@@ -649,16 +615,12 @@ createSshkeyIfNotExists $RESOURCE_GROUP
 # Deploy Azure resources
 deployAzureResources
 
-# Setup RBAC roles to access an already deployed Azure OpenAI service.
+# Deploy the graphrag backend docker image to ACR
+deployDockerImageToACR
+
+# Retrieve AKS credentials and install GraphRAG helm chart
 AKS_NAME=$(jq -r .azure_aks_name.value <<< $AZURE_OUTPUTS)
-exitIfValueEmpty "$AKS_NAME" "Unable to parse AKS name from azure deployment outputs, exiting..."
-assignAOAIRoleToManagedIdentity
-assignAKSPullRoleToRegistry $RESOURCE_GROUP $AKS_NAME $CONTAINER_REGISTRY_SERVER
-
-# Deploy kubernetes resources
 getAksCredentials $RESOURCE_GROUP $AKS_NAME
-
-# Install GraphRAG helm chart
 installGraphRAGHelmChart
 
 # Import and setup GraphRAG API in APIM

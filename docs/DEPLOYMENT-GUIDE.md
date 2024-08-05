@@ -80,8 +80,8 @@ In the `deploy.parameters.json` file, provide values for the following required 
 | :--- | :--- | --- | ---: |
 `RESOURCE_GROUP`                       | <my_resource_group>                       | Yes | The resource group that GraphRAG will be deployed in. Will get created automatically if the resource group does not exist.
 `LOCATION`                             | <my_location>                             | Yes | The azure cloud region to deploy GraphRAG resources in.
-`CONTAINER_REGISTRY_SERVER`            | <my_container_registry>.azurecr.io        | No  | Name of an existing Azure Container Registry where the `graphrag` backend docker image is hosted. Will get created automatically if not provided.
-`GRAPHRAG_IMAGE`                       | graphrag:backend                          | No  | The name and tag of the graphrag docker image in the container registry. Will default to `graphrag:backend`.
+`CONTAINER_REGISTRY_NAME`              | <my_container_registry_name>              | No  | Name of an Azure Container Registry where the `graphrag` backend docker image will be hosted. Leave off `.azurecr.io` from the name. If not provided, a unique name will be generated (recommended).
+`GRAPHRAG_IMAGE`                       | graphrag:backend                          | No  | The name and tag of the graphrag docker image in the container registry. Will default to `graphrag:backend` and be hosted at `my_container_registry_name>.azurecr.io/graphrag:backend`.
 `GRAPHRAG_API_BASE`                    | https://<my_openai_name>.openai.azure.com | Yes | Azure OpenAI service endpoint.
 `GRAPHRAG_API_VERSION`                 | 2023-03-15-preview                        | Yes | Azure OpenAI API version.
 `GRAPHRAG_LLM_MODEL`                   | gpt-4                                     | Yes | Name of the gpt-4 turbo model.

@@ -213,6 +213,6 @@ resource sqlRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignm
   }
 }
 
-output id string = cosmosDb.id
 output name string = cosmosDb.name
+output id string = cosmosDb.id
 output endpoint string = cosmosDb.properties.documentEndpoint

@@ -28,4 +28,5 @@ resource scopedResources 'microsoft.insights/privateLinkScopes/scopedResources@2
   }
 ]
 
-output private_link_scope_id string = privateLinkScope.id
+output name string = privateLinkScope.name
+output id string = privateLinkScope.id

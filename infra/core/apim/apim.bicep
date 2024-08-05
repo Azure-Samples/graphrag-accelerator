@@ -110,9 +110,6 @@ resource apiManagementService 'Microsoft.ApiManagement/service@2023-09-01-previe
       'Microsoft.WindowsAzure.ApiManagement.Gateway.Protocols.Server.Http2': 'false'
     }
   }
-  // dependsOn: [
-  //   virtualNetwork
-  // ]
 }
 
 resource apimLogger 'Microsoft.ApiManagement/service/loggers@2023-09-01-preview' = {
@@ -154,7 +151,8 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   }
 }
 
-output apim_gateway_url string = apiManagementService.properties.gatewayUrl
-output app_insights_id string = appInsights.id
-output app_insights_connection_string string = appInsights.properties.ConnectionString
 output name string = apiManagementService.name
+output id string = apiManagementService.id
+output apimGatewayUrl string = apiManagementService.properties.gatewayUrl
+output appInsightsId string = appInsights.id
+output appInsightsConnectionString string = appInsights.properties.ConnectionString

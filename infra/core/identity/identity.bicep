@@ -25,5 +25,5 @@ resource federatedCredentialResources 'Microsoft.ManagedIdentity/userAssignedIde
 ]
 
 output name string = identity.name
-output client_id string = identity.properties.clientId
-output principal_id string = identity.properties.principalId
+output clientId string = identity.properties.clientId
+output principalId string = identity.properties.principalId

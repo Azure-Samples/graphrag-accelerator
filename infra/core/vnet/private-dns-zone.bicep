@@ -34,5 +34,5 @@ resource dnsZoneLinks 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@202
   }
 ]
 
-output dns_zone_name string = dnsZone.name
-output dns_zone_id string = dnsZone.id
+output name string = dnsZone.name
+output id string = dnsZone.id

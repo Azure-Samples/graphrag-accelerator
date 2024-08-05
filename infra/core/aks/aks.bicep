@@ -171,7 +171,7 @@ resource aksManagedAutoUpgradeSchedule 'Microsoft.ContainerService/managedCluste
       schedule: {
         weekly: {
           intervalWeeks: 1
-          dayOfWeek: 'Sunday'
+          dayOfWeek: 'Monday'
         }
       }
       durationHours: 4
@@ -226,6 +226,8 @@ resource systemRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-0
 ]
 
 output name string = aks.name
-output managed_resource_group string = aks.properties.nodeResourceGroup
-output control_plane_fqdn string = aks.properties.fqdn
+output id string = aks.id
+output managedResourceGroup string = aks.properties.nodeResourceGroup
+output controlPlaneFqdn string = aks.properties.fqdn
+output kubeletPrincipalId string = aks.properties.identityProfile.kubeletidentity.objectId
 output issuer string = aks.properties.oidcIssuerProfile.issuerURL

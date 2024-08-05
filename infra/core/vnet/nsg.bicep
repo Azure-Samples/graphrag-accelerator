@@ -1,3 +1,5 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 
 @description('Name of the NSG for the API Management service.')
 param nsgName string = 'apim-nsg-${uniqueString(resourceGroup().id)}'
