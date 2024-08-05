@@ -606,9 +606,6 @@ populateParams $PARAMS_FILE
 # Create resource group
 createResourceGroupIfNotExists $LOCATION $RESOURCE_GROUP
 
-# Create azure container registry if it does not exist
-# createAcrIfNotExists
-
 # Generate ssh key for AKS
 createSshkeyIfNotExists $RESOURCE_GROUP
 
