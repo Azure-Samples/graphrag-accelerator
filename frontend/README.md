@@ -23,4 +23,53 @@ The frontend application can be run locally as a docker container. If a `.env` f
 ```
 To access the app , visit `localhost:8080` in your browser.
 
-This UI application can also be hosted in Azure as a [Web App](https://azure.microsoft.com/en-us/products/app-service/web).
+This UI application can also be hosted in Azure as a Web App using included deployment script. Here are the steps: 
+
+### 4. Create Azure App Registration
+
+To enable authentication and authorization for the frontend application, you need to create an Azure App Registration with ID tokens enabled. You may need Owner level permissions on the subscription for some of the steps. Follow the steps below:
+
+1. Go to the [Azure portal](https://portal.azure.com) and sign in with your Azure account.
+2. Navigate to the **Azure Active Directory** service.
+3. Select **App registrations** from the left-hand menu.
+4. Click on the **New registration** button.
+5. Provide a name for your app registration and select the appropriate account type.
+6. Under the **Redirect URIs** section, Select Web Platform from dropdown menu. Add following the URL text field `http://localhost:8080/.auth/login/aad/callback`. The deployment script will later update this with actual URL of the webapp.
+7. Under the **Authentication** section, select **ID tokens** as the supported token type.
+8. Save the app registration and note down the **Application (client) ID**,
+9. Under the **Overview** section, note down the **Application (client) ID**, **Object ID** and **Directory (tenant) ID**.
+
+### 5. Populate the deploy parameters
+
+Before running the deploy script, make sure to populate the `frontend_deploy.parameters.json` file with the required values. Here's how:
+
+1. Open the `frontend_deploy.parameters.json` file located in the `frontend` directory.
+2. Replace the placeholder values with the actual values for the following required variables, you can also define variables which are optional in this json file to override default values:
+
+| Variable Name   | Required | Example                                | Description                                                     |
+| :-------------- | :------- | :------------------------------------- | :-------------------------------------------------------------- |
+| LOCATION        | Yes      | eastus                                 | The Azure region where the resources will be deployed.          |
+| RESOURCE_GROUP  | Yes      | my-resource-group                      | The name of the Azure resource group where the resources will be created. |
+| SUBSCRIPTION_ID | Yes      | 12345678-1234-1234-1234-1234567890ab   | The ID of the Azure subscription where the resources will be deployed. |
+| AAD_CLIENT_ID   | Yes      | 12345678-1234-1234-1234-1234567890ab   | The client ID of the Azure Active Directory (AAD) app registration. |
+| AAD_OBJECT_ID   | Yes      | 12345678-1234-1234-1234-1234567890ab   | The object ID of the Azure Active Directory (AAD) app registration. |
+| AAD_TENANT_ID   | Yes      | 12345678-1234-1234-1234-1234567890ab   | The ID of the Azure Active Directory (AAD) tenant.               |			
+| AAD_TOKEN_ISSUER_URL | No       | https://login.microsoftonline.com/12345678-1234-1234-1234-1234567890ab/v2.0 | The URL of the Azure Active Directory (AAD) token issuer. Defaults to the tenant-specific issuer URL. |
+| IMAGE_NAME           | No       | graphrag:frontend                      | The name of the Docker image for the frontend application. Defaults to "graphrag:frontend". |
+| REGISTRY_NAME        | No       | myresourcegroupreg                      | The name of the Azure Container Registry. Defaults to the resource group name with "reg" appended. |
+| APP_SERVICE_PLAN     | No       | myresourcegroup-asp                     | The name of the Azure App Service plan. Defaults to the resource group name with "asp" appended. |
+| WEB_APP              | No       | myresourcegroup-playground              | The name of the Azure Web App. Defaults to the resource group name with "playground" appended. |
+| WEB_APP_IDENTITY     | No       | myresourcegroup-playground-identity     | The name of the managed identity for the Azure Web App. Defaults to the web app name with "identity" appended. |
+
+Save the `frontend_deploy.parameters.json` file after populating the values.
+
+### 6. Run the deploy script
+
+To deploy the frontend application, follow these steps:
+
+1. Open a terminal and navigate to the root directory of the `frontend` application.
+2. Run the deploy script by executing the following command:
+
+```
+> ./deploy.sh -p frontend_deploy.parameters.json
+```
