@@ -118,7 +118,7 @@ function create_federated_identity_credentials() {
             --aad-client-id $AAD_CLIENT_ID \
             --aad-token-issuer-url $AAD_TOKEN_ISSUER_URL
 
-        az rest --method POST --uri "https://graph.microsoft.com/beta/applications/$AAD_OBJECT_ID/federatedIdentityCredentials" --body "{'name': '$WEB_APP', 'issuer': 'https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47/v2.0', 'subject': '$WEBAPP_IDENTITY_OBJECT_ID', 'audiences': [ 'api://AzureADTokenExchange' ]}"
+        az rest --method POST --uri "https://graph.microsoft.com/beta/applications/$AAD_OBJECT_ID/federatedIdentityCredentials" --body "{'name': '$WEB_APP', 'issuer': '$AAD_TOKEN_ISSUER_URL', 'subject': '$WEBAPP_IDENTITY_OBJECT_ID', 'audiences': [ 'api://AzureADTokenExchange' ]}"
     fi
 }
 
