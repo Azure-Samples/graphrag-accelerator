@@ -24,37 +24,19 @@ If release name contains chart name it will be used as a full name.
 {{- end }}
 
 {{/*
-Create a graphrag-query fully qualified app name.
+Create a graphrag-master fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "graphrag.query.fullname" -}}
-{{- if .Values.query.fullnameOverride }}
-{{- .Values.query.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- define "graphrag.master.fullname" -}}
+{{- if .Values.master.fullnameOverride }}
+{{- .Values.master.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
 {{- $name := default .Chart.Name .Values.nameOverride }}
 {{- if contains $name .Release.Name }}
-{{- printf "%s-%s" .Release.Name .Values.query.name | trunc 63 | trimSuffix "-" }}
+{{- printf "%s-%s" .Release.Name .Values.master.name | trunc 63 | trimSuffix "-" }}
 {{- else }}
-{{- printf "%s-%s-%s" .Release.Name $name .Values.query.name | trunc 63 | trimSuffix "-" }}
-{{- end }}
-{{- end }}
-{{- end }}
-
-{{/*
-Create a graphrag-index fully qualified app name.
-We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
-If release name contains chart name it will be used as a full name.
-*/}}
-{{- define "graphrag.index.fullname" -}}
-{{- if .Values.index.fullnameOverride }}
-{{- .Values.index.fullnameOverride | trunc 63 | trimSuffix "-" }}
-{{- else }}
-{{- $name := default .Chart.Name .Values.nameOverride }}
-{{- if contains $name .Release.Name }}
-{{- printf "%s-%s" .Release.Name .Values.index.name | trunc 63 | trimSuffix "-" }}
-{{- else }}
-{{- printf "%s-%s-%s" .Release.Name $name .Values.index.name | trunc 63 | trimSuffix "-" }}
+{{- printf "%s-%s-%s" .Release.Name $name .Values.master.name | trunc 63 | trimSuffix "-" }}
 {{- end }}
 {{- end }}
 {{- end }}
@@ -91,24 +73,14 @@ app.kubernetes.io/name: {{ include "graphrag.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
-{{- define "graphrag.query.labels" -}}
+{{- define "graphrag.master.labels" -}}
 {{ include "graphrag.common.labels" . }}
-{{ include "graphrag.query.selectorLabels" . }}
+{{ include "graphrag.master.selectorLabels" . }}
 {{- end -}}
 
-{{- define "graphrag.query.selectorLabels" -}}
+{{- define "graphrag.master.selectorLabels" -}}
 {{ include "graphrag.common.selectorLabels" . }}
-component: {{ .Values.query.name | quote }}
-{{- end -}}
-
-{{- define "graphrag.index.labels" -}}
-{{ include "graphrag.common.labels" . }}
-{{ include "graphrag.index.selectorLabels" . }}
-{{- end -}}
-
-{{- define "graphrag.index.selectorLabels" -}}
-{{ include "graphrag.common.selectorLabels" . }}
-component: {{ .Values.index.name | quote }}
+component: {{ .Values.master.name | quote }}
 {{- end -}}
 
 {{/*

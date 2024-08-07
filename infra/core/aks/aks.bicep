@@ -49,11 +49,22 @@ param sshRSAPublicKey string
 @description('Enable encryption at host')
 param enableEncryptionAtHost bool = false
 
-@description('Resource ID of subnet to use for all node pools.')
-param vnetSubnetId string = ''
-var vnetSubnetIdVar = !empty(vnetSubnetId) ? vnetSubnetId : null
+param subnetId string
 
-resource aks 'Microsoft.ContainerService/managedClusters@2023-10-01' = {
+param privateDnsZoneName string
+
+@description('Array of objects with fields principalType, roleDefinitionId')
+param ingressRoleAssignments array = []
+
+@description('Array of objects with fields principalType, roleDefinitionId')
+param systemRoleAssignments array = []
+
+
+resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' existing = {
+  name: privateDnsZoneName
+}
+
+resource aks 'Microsoft.ContainerService/managedClusters@2024-02-01' = {
   name: clusterName
   location: location
   identity: {
@@ -85,12 +96,20 @@ resource aks 'Microsoft.ContainerService/managedClusters@2023-10-01' = {
         osType: 'Linux'
         mode: 'System'
         enableEncryptionAtHost: enableEncryptionAtHost
-        vnetSubnetID: vnetSubnetIdVar
+        vnetSubnetID: subnetId
         type: 'VirtualMachineScaleSets'
       }
     ]
     autoScalerProfile: {
       expander: 'least-waste'
+    }
+    ingressProfile: {
+      webAppRouting: {
+        enabled: true
+        dnsZoneResourceIds: [
+          privateDnsZone.id
+        ]
+      }
     }
     linuxProfile: {
       adminUsername: linuxAdminUsername
@@ -132,7 +151,7 @@ resource aks 'Microsoft.ContainerService/managedClusters@2023-10-01' = {
       osType: 'Linux'
       mode: 'User'
       enableEncryptionAtHost: enableEncryptionAtHost
-      vnetSubnetID: vnetSubnetIdVar
+      vnetSubnetID: subnetId
       nodeLabels: {
         workload: 'graphrag'
       }
@@ -152,7 +171,7 @@ resource aksManagedAutoUpgradeSchedule 'Microsoft.ContainerService/managedCluste
       schedule: {
         weekly: {
           intervalWeeks: 1
-          dayOfWeek: 'Sunday'
+          dayOfWeek: 'Monday'
         }
       }
       durationHours: 4
@@ -180,9 +199,35 @@ resource aksManagedNodeOSUpgradeSchedule 'Microsoft.ContainerService/managedClus
   }
 }
 
+// role assignment to ingress identity
+resource webAppRoutingPrivateDnsContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
+  for role in ingressRoleAssignments: {
+    name: guid('${role.roleDefinitionId}-${privateDnsZone.id}')
+    scope: privateDnsZone
+    properties: {
+      principalId: aks.properties.ingressProfile.webAppRouting.identity.objectId
+      principalType: role.principalType
+      roleDefinitionId: role.roleDefinitionId
+    }
+  }
+]
+
+// role assignment to AKS system identity
+resource systemRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
+  for role in systemRoleAssignments: {
+    name: guid('${role.roleDefinitionId}-${aks.id}')
+    scope: resourceGroup()
+    properties: {
+      principalId: aks.identity.principalId
+      principalType: role.principalType
+      roleDefinitionId: role.roleDefinitionId
+    }
+  }
+]
+
 output name string = aks.name
+output id string = aks.id
 output managedResourceGroup string = aks.properties.nodeResourceGroup
-output controlPlaneFQDN string = aks.properties.fqdn
-output principalId string = aks.identity.principalId
+output controlPlaneFqdn string = aks.properties.fqdn
 output kubeletPrincipalId string = aks.properties.identityProfile.kubeletidentity.objectId
 output issuer string = aks.properties.oidcIssuerProfile.issuerURL

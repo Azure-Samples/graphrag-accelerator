@@ -5,7 +5,7 @@ param backendUrl string
 param name string
 param apimname string
 
-resource api 'Microsoft.ApiManagement/service/apis@2023-03-01-preview' = {
+resource api 'Microsoft.ApiManagement/service/apis@2023-09-01-preview' = {
   name: '${apimname}/${name}'
   properties: {
     displayName: 'GraphRAG'
@@ -34,5 +34,3 @@ resource api 'Microsoft.ApiManagement/service/apis@2023-03-01-preview' = {
     }
   }
 }
-
-
