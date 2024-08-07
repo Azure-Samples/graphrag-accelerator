@@ -67,10 +67,6 @@ var roles = {
     'Microsoft.Authorization/roleDefinitions',
     'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
   )
-  storageQueueDataContributor: resourceId(
-    'Microsoft.Authorization/roleDefinitions',
-    '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
-  )
   aiSearchContributor: resourceId(
     'Microsoft.Authorization/roleDefinitions',
     'b24988ac-6180-42a0-ab88-20f7382dd24c'  // AI Search Contributor Role
@@ -255,11 +251,6 @@ module storage 'core/storage/storage.bicep' = {
         principalType: 'ServicePrincipal'
         roleDefinitionId: roles.storageBlobDataContributor
       }
-      {
-        principalId: workloadIdentity.outputs.principalId
-        principalType: 'ServicePrincipal'
-        roleDefinitionId: roles.storageQueueDataContributor
-      }
     ]
     deleteRetentionPolicy: {
       enabled: true
@@ -361,18 +352,6 @@ module blobStoragePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enabl
     subnetId: vnet.properties.subnets[1].id // aks subnet
     groupId: 'blob'
     privateDnsZoneConfigs: enablePrivateEndpoints ? privatelinkPrivateDns.outputs.blobStoragePrivateDnsZoneConfigs : []
-  }
-}
-
-module queueStoragePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePrivateEndpoints) {
-  name: 'deploy-queue-storage-private-endpoint'
-  params: {
-    privateEndpointName: '${abbrs.privateEndpoint}queue-${storage.outputs.name}'
-    location: location
-    privateLinkServiceId: storage.outputs.id
-    subnetId: vnet.properties.subnets[1].id // aks subnet
-    groupId: 'queue'
-    privateDnsZoneConfigs: enablePrivateEndpoints ? privatelinkPrivateDns.outputs.queueStoragePrivateDnsZoneConfigs : []
   }
 }
 

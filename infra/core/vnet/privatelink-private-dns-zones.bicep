@@ -6,9 +6,8 @@ param linkedVnetIds array
 
 var aiSearchPrivateDnsZoneName = 'privatelink.search.windows.net'
 var blobStoragePrivateDnsZoneName = 'privatelink.blob.${environment().suffixes.storage}'
-var queueStoragePrivateDnsZoneName = 'privatelink.queue.${environment().suffixes.storage}'
 var cosmosDbPrivateDnsZoneName = 'privatelink.documents.azure.com'
-var storagePrivateDnsZoneNames = [blobStoragePrivateDnsZoneName, queueStoragePrivateDnsZoneName]
+var storagePrivateDnsZoneNames = [blobStoragePrivateDnsZoneName]
 var privateDnsZoneData = loadJsonContent('private-dns-zone-groups.json')
 var cloudName = toLower(environment().name)
 var azureMonitorPrivateDnsZones = privateDnsZoneData[cloudName].azureMonitor
@@ -48,16 +47,6 @@ output blobStoragePrivateDnsZoneConfigs array = [
     properties: {
       #disable-next-line use-resource-id-functions
       privateDnsZoneId: privateDnsZoneResources[indexOf(privateDnsZones, blobStoragePrivateDnsZoneName)].id
-    }
-  }
-]
-
-output queueStoragePrivateDnsZoneConfigs array = [
-  {
-    name: queueStoragePrivateDnsZoneName
-    properties: {
-      #disable-next-line use-resource-id-functions
-      privateDnsZoneId: privateDnsZoneResources[indexOf(privateDnsZones, queueStoragePrivateDnsZoneName)].id
     }
   }
 ]

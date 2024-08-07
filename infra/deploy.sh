@@ -505,10 +505,6 @@ grantDevAccessToAzureResources() {
         --role "Storage Blob Data Contributor" \
         --assignee $principalId \
         --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Storage/storageAccounts/$storageAccountName" > /dev/null
-    az role assignment create \
-        --role "Storage Queue Data Contributor" \
-        --assignee $principalId \
-        --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Storage/storageAccounts/$storageAccountName" > /dev/null
 
     # assign cosmos db role
     local cosmosDbName=$(az cosmosdb list --resource-group $RESOURCE_GROUP -o json | jq -r .[0].name)
