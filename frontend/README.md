@@ -27,7 +27,7 @@ This UI application can also be hosted in Azure as a Web App using included depl
 
 ### 4. Create Azure App Registration
 
-To enable authentication and authorization for the frontend application, you need to create an Azure App Registration with ID tokens enabled. You may need Owner level permissions on the subscription for some of the steps. Follow the steps below:
+To enable authentication and authorization for the frontend application, you need to create an Azure App Registration with ID tokens enabled. You may need Owner level permissions on the subscription for some of the steps. This app registration is only used for Authentication and Authorization to the frontend web app. Follow the steps below:
 
 1. Go to the [Azure portal](https://portal.azure.com) and sign in with your Azure account.
 2. Navigate to the **Azure Active Directory** service.
@@ -61,7 +61,7 @@ Before running the deploy script, make sure to populate the `frontend_deploy.par
 | WEB_APP              | No       | myresourcegroup-playground              | The name of the Azure Web App. Defaults to the resource group name with "playground" appended. |
 | WEB_APP_IDENTITY     | No       | myresourcegroup-playground-identity     | The name of the managed identity for the Azure Web App. Defaults to the web app name with "identity" appended. |
 
-Save the `frontend_deploy.parameters.json` file after populating the values.
+Save the `frontend_deploy.parameters.json` file after populating the values. Make sure you have created and populated `.env` file mentioned in Step 2 above if you want the webapp to automatically connect to the graphrag backend API.
 
 ### 6. Run the deploy script
 
