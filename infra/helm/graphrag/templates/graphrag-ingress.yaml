@@ -1,14 +1,7 @@
 {{- if .Values.ingress.enabled -}}
 {{- $fullName := include "graphrag.fullname" . -}}
-{{- $indexFullName := include "graphrag.index.fullname" . -}}
-{{- $indexSvcPort := .Values.index.service.port -}}
-{{- $queryFullName := include "graphrag.query.fullname" . -}}
-{{- $querySvcPort := .Values.query.service.port -}}
-{{- if and .Values.ingress.className (not (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion)) }}
-  {{- if not (hasKey .Values.ingress.annotations "kubernetes.io/ingress.class") }}
-  {{- $_ := set .Values.ingress.annotations "kubernetes.io/ingress.class" .Values.ingress.className}}
-  {{- end }}
-{{- end }}
+{{- $masterFullName := include "graphrag.master.fullname" . -}}
+{{- $masterSvcPort := .Values.master.service.port -}}
 {{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion -}}
 apiVersion: networking.k8s.io/v1
 {{- else if semverCompare ">=1.14-0" .Capabilities.KubeVersion.GitVersion -}}
@@ -19,6 +12,7 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: {{ $fullName }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "graphrag.labels" . | nindent 4 }}
   {{- with .Values.ingress.annotations }}
@@ -43,28 +37,16 @@ spec:
     - host: {{ .Values.ingress.host | quote }}
       http:
         paths:
-          - path: "/query"
-            pathType: "Prefix"
-            backend:
-              {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
-              service:
-                name: {{ $queryFullName }}
-                port:
-                  number: {{ $querySvcPort }}
-              {{- else }}
-              serviceName: {{ $queryFullName }}
-              servicePort: {{ $querySvcPort }}
-              {{- end }}
           - path: "/"
             pathType: "Prefix"
             backend:
               {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
               service:
-                name: {{ $indexFullName }}
+                name: {{ $masterFullName }}
                 port:
-                  number: {{ $indexSvcPort }}
+                  number: {{ $masterSvcPort }}
               {{- else }}
-              serviceName: {{ $indexFullName }}
-              servicePort: {{ $indexSvcPort }}
+              serviceName: {{ $masterFullName }}
+              servicePort: {{ $masterSvcPort }}
               {{- end }}
 {{- end }}
