@@ -54,10 +54,10 @@ Before running the `deploy.sh` script, please fill out the `frontend_deploy.para
 | LOCATION             | Yes      | eastus                                 | The Azure region where resources will be deployed. |
 | RESOURCE_GROUP       | Yes      | my-resource-group                      | The name of the Azure resource group where the resources will be created. |
 | SUBSCRIPTION_ID      | Yes      | 12345678-1234-1234-1234-1234567890ab   | The ID of the Azure subscription where the resources will be deployed. |
-| AAD_CLIENT_ID        | Yes      | 12345678-1234-1234-1234-1234567890ab   | The client ID of the Azure Active Directory (AAD) app registration. |
-| AAD_OBJECT_ID        | Yes      | 12345678-1234-1234-1234-1234567890ab   | The object ID of the Azure Active Directory (AAD) app registration. |
-| AAD_TENANT_ID        | Yes      | 12345678-1234-1234-1234-1234567890ab   | The ID of the Azure Active Directory (AAD) tenant. |
-| AAD_TOKEN_ISSUER_URL | No  | https://login.microsoftonline.com/12345678-1234-1234-1234-1234567890ab/v2.0 | The URL of the Azure Active Directory (AAD) token issuer. Defaults to the tenant-specific issuer URL. |
+| AAD_CLIENT_ID        | Yes      | 12345678-1234-1234-1234-1234567890ab   | The client ID of the Microsoft Entra ID (AAD) app registration. |
+| AAD_OBJECT_ID        | Yes      | 12345678-1234-1234-1234-1234567890ab   | The object ID of the Microsoft Entra ID (AAD) app registration. |
+| AAD_TENANT_ID        | Yes      | 12345678-1234-1234-1234-1234567890ab   | The ID of the Microsoft Entra ID (AAD) tenant. |
+| AAD_TOKEN_ISSUER_URL | No  | https://login.microsoftonline.com/12345678-1234-1234-1234-1234567890ab/v2.0 | The URL of the Microsoft Entra ID (AAD) token issuer. Defaults to the tenant-specific issuer URL. |
 | IMAGE_NAME           | No  | graphrag:frontend                      | The name of the Docker image for the frontend application. Defaults to "graphrag:frontend". |
 | REGISTRY_NAME        | No  | myresourcegroupreg                     | The name of the Azure Container Registry. Defaults to the resource group name with "reg" appended. |
 | APP_SERVICE_PLAN     | No  | myresourcegroup-asp                    | The name of the Azure App Service plan. Defaults to the resource group name with "asp" appended. |
@@ -69,6 +69,7 @@ to the GraphRAG backend API, create and populate a `.env` file described in step
 
 ### 3. Run the deploy script
 
+Prerequisite : Please install az-cli version >=2.61.0
 To deploy the frontend application, follow these steps:
 
 1. Open a terminal and navigate to the root directory of the `frontend` application.

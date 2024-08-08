@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -eu # add -x to debug
+set -eux
 
 function load_env_variables() {
     set -a
@@ -63,9 +63,6 @@ function create_acr() {
     --admin-enabled true
 }
 
-function login_to_acr() {
-    az acr login --name $REGISTRY_NAME
-}
 
 function build_and_push_image() {
     local SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" &> /dev/null && pwd 2> /dev/null; )";
@@ -209,7 +206,6 @@ function main() {
     set_variables
     create_resource_group
     create_acr
-    login_to_acr
     build_and_push_image
     create_app_service_plan
     create_web_app
