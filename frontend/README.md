@@ -80,3 +80,5 @@ To deploy the frontend application, follow these steps:
 # cd to graphrag-accelerator/frontend directory
 > bash deploy.sh -p frontend_deploy.parameters.json
 ```
+
+First visit to the frontend frontend web app URL (https://PLACEHOLDER.azurewebsites.net) will take a few seconds to load, this is expected behaviour.
