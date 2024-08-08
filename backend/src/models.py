@@ -331,13 +331,15 @@ class PipelineJob:
     def human_readable_storage_name(self, human_readable_storage_name: str) -> None:
         self._human_readable_storage_name = human_readable_storage_name
         self.update_db()
-    
+        
     @property
     def sanitized_storage_name(self) -> str:
         return self._sanitized_storage_name
 
     @sanitized_storage_name.setter
     def sanitized_storage_name(self, sanitized_storage_name: str) -> None:
+        self._sanitized_storage_name = sanitized_storage_name
+        self.update_db()
 
     @property
     def entity_extraction_prompt(self) -> str:
