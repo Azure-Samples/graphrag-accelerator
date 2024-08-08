@@ -57,8 +57,10 @@ function create_resource_group {
 }
 
 function create_acr() {
-    az acr create --resource-group $RESOURCE_GROUP --name $REGISTRY_NAME --sku Basic
-    az acr update -n $REGISTRY_NAME --admin-enabled true
+    az acr create --resource-group $RESOURCE_GROUP \
+    --name $REGISTRY_NAME \
+    --sku Basic \
+    --admin-enabled true
 }
 
 function login_to_acr() {
@@ -85,10 +87,10 @@ function create_web_app() {
 }
 
 function create_web_app_identity() {
-    IDENTITY_RESULT=$(az identity create --resource-group $RESOURCE_GROUP --name $WEB_APP_IDENTITY)
-    WEBAPP_IDENTITY_ID=$(echo $IDENTITY_RESULT | jq -r '.id')
-    WEBAPP_IDENTITY_OBJECT_ID=$(echo $IDENTITY_RESULT | jq -r '.principalId')
-    WEBAPP_IDENTITY_CLIENT_ID=$(echo $IDENTITY_RESULT | jq -r '.clientId')
+    IDENTITY_RESULT=$(az identity create --resource-group $RESOURCE_GROUP --name $WEB_APP_IDENTITY --output json)
+    WEBAPP_IDENTITY_ID=$(jq -r .id <<< $IDENTITY_RESULT)
+    WEBAPP_IDENTITY_OBJECT_ID=$(jq -r .principalId <<< $IDENTITY_RESULT)
+    WEBAPP_IDENTITY_CLIENT_ID=$(jq -r .clientId <<< $IDENTITY_RESULT)
     az webapp identity assign --name $WEB_APP \
         --resource-group $RESOURCE_GROUP \
         --identities $WEBAPP_IDENTITY_ID
@@ -119,7 +121,7 @@ function configure_app_settings() {
 }
 
 function create_federated_identity_credentials() {
-    EXISTING_CREDENTIAL_SUBJECTS=$(az rest --method GET --uri "https://graph.microsoft.com/beta/applications/$AAD_OBJECT_ID/federatedIdentityCredentials" | jq -r '.value[].subject')
+    EXISTING_CREDENTIAL_SUBJECTS=$(az rest --method GET --uri "https://graph.microsoft.com/beta/applications/$AAD_OBJECT_ID/federatedIdentityCredentials" -o json | jq -r '.value[].subject')
     if [[ "$EXISTING_CREDENTIAL_SUBJECTS" == *"$WEBAPP_IDENTITY_OBJECT_ID"* ]]; then
         echo "Federated identity credential already exists for the subject: $WEBAPP_IDENTITY_OBJECT_ID"
     else
