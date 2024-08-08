@@ -1,5 +1,6 @@
 # Frontend Application Launch Instructions
-A small frontend application, a streamlit app, is provided to demonstrate how to build a UI on top of the solution accelerator API.
+A small frontend application (a streamlit app) is provided to demonstrate how to build and deploy a UI on top of the solution accelerator API.
+This application is optional and not required for the API to function properly.
 
 ### 1. Deploy the GraphRAG solution accelerator
 Follow instructions from the [deployment guide](../docs/DEPLOYMENT-GUIDE.md) to deploy a full instance of the solution accelerator.
@@ -52,17 +53,17 @@ Before running the `deploy.sh` script, please fill out the `frontend_deploy.para
 | Variable Name        | Required | Example                                | Description                                                     |
 | :------------------- | :------- | :------------------------------------- | :-------------------------------------------------------------- |
 | LOCATION             | Yes      | eastus                                 | The Azure region where resources will be deployed. |
-| RESOURCE_GROUP       | Yes      | my-resource-group                      | The name of the Azure resource group where the resources will be created. |
+| RESOURCE_GROUP       | Yes      | my-resource-group                      | The name of the Azure resource group where resources will be created. At this time, the name must follow [Azure Container Registry](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/resource-name-rules#microsoftcontainerregistry) naming guidelines. |
 | SUBSCRIPTION_ID      | Yes      | 12345678-1234-1234-1234-1234567890ab   | The ID of the Azure subscription where the resources will be deployed. |
 | AAD_CLIENT_ID        | Yes      | 12345678-1234-1234-1234-1234567890ab   | The client ID of the Microsoft Entra ID (AAD) app registration. |
 | AAD_OBJECT_ID        | Yes      | 12345678-1234-1234-1234-1234567890ab   | The object ID of the Microsoft Entra ID (AAD) app registration. |
 | AAD_TENANT_ID        | Yes      | 12345678-1234-1234-1234-1234567890ab   | The ID of the Microsoft Entra ID (AAD) tenant. |
-| AAD_TOKEN_ISSUER_URL | No  | https://login.microsoftonline.com/12345678-1234-1234-1234-1234567890ab/v2.0 | The URL of the Microsoft Entra ID (AAD) token issuer. Defaults to the tenant-specific issuer URL. |
-| IMAGE_NAME           | No  | graphrag:frontend                      | The name of the Docker image for the frontend application. Defaults to "graphrag:frontend". |
-| REGISTRY_NAME        | No  | myresourcegroupreg                     | The name of the Azure Container Registry. Defaults to the resource group name with "reg" appended. |
-| APP_SERVICE_PLAN     | No  | myresourcegroup-asp                    | The name of the Azure App Service plan. Defaults to the resource group name with "asp" appended. |
-| WEB_APP              | No  | myresourcegroup-playground             | The name of the Azure Web App. Defaults to the resource group name with "playground" appended. |
-| WEB_APP_IDENTITY     | No  | myresourcegroup-playground-identity    | The name of the managed identity for the Azure Web App. Defaults to the web app name with "identity" appended. |
+| AAD_TOKEN_ISSUER_URL | No       | https://login.microsoftonline.com/12345678-1234-1234-1234-1234567890ab/v2.0 | The URL of the Microsoft Entra ID (AAD) token issuer. Defaults to the tenant-specific issuer URL. |
+| IMAGE_NAME           | No       | graphrag:frontend                      | The name of the Docker image for the frontend application. Defaults to `graphrag:frontend`. |
+| REGISTRY_NAME        | No       | myresourcegroupreg                     | The name of the Azure Container Registry. Defaults to the resource group name with `reg` appended. |
+| APP_SERVICE_PLAN     | No       | myresourcegroup-asp                    | The name of the Azure App Service plan. Defaults to the resource group name with `asp` appended. |
+| WEB_APP              | No       | myresourcegroup-playground             | The name of the Azure Web App. Defaults to the resource group name with `playground` appended. |
+| WEB_APP_IDENTITY     | No       | myresourcegroup-playground-identity    | The name of the managed identity for the Azure Web App. Defaults to the web app name with `identity` appended. |
 
 Save the `frontend_deploy.parameters.json` file after populating the values. If you would like the webapp to automatically connect
 to the GraphRAG backend API, create and populate a `.env` file described in step 2, otherwise the webapp will ask for login credentials.
