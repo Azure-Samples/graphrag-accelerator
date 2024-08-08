@@ -1,14 +1,14 @@
 @description('The name of the Container Registry resource. Will be automatically generated if not provided.')
-param name string = ''
+param registryName string
 
 @description('The location of the Container Registry resource.')
 param location string = resourceGroup().location
 
-var resourceBaseNameFinal = !empty(name) ? name : toLower(uniqueString('${subscription().id}/resourceGroups/${resourceGroup().name}'))
-var abbrs = loadJsonContent('../../abbreviations.json')
+@description('Array of objects with fields principalId, principalType, roleDefinitionId')
+param roleAssignments array = []
 
 resource registry 'Microsoft.ContainerRegistry/registries@2023-11-01-preview' = {
-  name: !empty(name) ? name : '${abbrs.containerRegistryRegistries}${resourceBaseNameFinal}'
+  name: registryName
   location: location
   sku: {
     name: 'Standard'
@@ -27,5 +27,14 @@ resource registry 'Microsoft.ContainerRegistry/registries@2023-11-01-preview' = 
   }
 }
 
+resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
+  for role in roleAssignments: {
+    name: guid('${role.principalId}-${role.principalType}-${role.roleDefinitionId}')
+    scope: registry
+    properties: role
+  }
+]
+
 output name string = registry.name
+output id string = registry.id
 output loginServer string = registry.properties.loginServer

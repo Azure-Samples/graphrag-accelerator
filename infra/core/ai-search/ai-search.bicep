@@ -29,12 +29,12 @@ resource aiSearch 'Microsoft.Search/searchServices@2024-03-01-preview' = {
 }
 
 resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
-  for roleAssignment in roleAssignments: {
-    name: guid('${roleAssignment.principalId}-${roleAssignment.principalType}-${roleAssignment.roleDefinitionId}')
+  for role in roleAssignments: {
+    name: guid('${role.principalId}-${role.principalType}-${role.roleDefinitionId}')
     scope: aiSearch
-    properties: roleAssignment
+    properties: role
   }
 ]
 
-output id string = aiSearch.id
 output name string = aiSearch.name
+output id string = aiSearch.id

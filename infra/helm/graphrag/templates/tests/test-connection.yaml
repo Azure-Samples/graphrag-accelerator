@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: "{{ include "graphrag.query.fullname" . }}-test-connection"
+  name: "{{ include "graphrag.master.fullname" . }}-test-connection"
   labels:
-    {{- include "graphrag.query.labels" . | nindent 4 }}
+    {{- include "graphrag.master.labels" . | nindent 4 }}
   annotations:
     "helm.sh/hook": test
 spec:
@@ -11,5 +11,5 @@ spec:
     - name: wget
       image: busybox
       command: ['wget']
-      args: ['{{ include "graphrag.query.fullname" . }}:{{ .Values.query.service.port }}']
+      args: ['{{ include "graphrag.master.fullname" . }}:{{ .Values.master.service.port }}']
   restartPolicy: Never
