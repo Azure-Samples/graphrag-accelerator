@@ -168,7 +168,6 @@ function update_appreg_redirect_uris() {
     if ! echo "${CURRENT_URIS}" | grep -q "${NEW_REDIRECT_URI}"; then
         az ad app update --id $AAD_CLIENT_ID --web-redirect-uris ${CURRENT_URIS[@]} "$NEW_REDIRECT_URI"
     fi
-
 }
 
 function restart_web_app() {
