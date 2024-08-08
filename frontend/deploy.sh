@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -eux
+set -eu # add -x to debug
 
 function load_env_variables() {
     set -a
@@ -31,7 +31,7 @@ function populateRequiredParams () {
     local paramsFile=$1
     printf "Checking required parameters... "
     checkRequiredParams $paramsFile
-    # The jq command below sets environment variable based on the key-value pairs in a JSON-formatted file
+    # The jq command below sets environment variables based on the key-value pairs in a JSON-formatted file
     eval $(jq -r 'to_entries | .[] | "export \(.key)=\(.value)"' $paramsFile)
     printf "Done.\n"
 }
@@ -49,7 +49,7 @@ function set_variables() {
     APP_SERVICE_PLAN=${APP_SERVICE_PLAN:-"${RESOURCE_GROUP}-asp"}
     WEB_APP=${WEB_APP:-"${RESOURCE_GROUP}-playground"}
     WEB_APP_IDENTITY=${WEB_APP_IDENTITY:-"${WEB_APP}-identity"}
-    #BACKEND_RESOURCE_GROUP=${BACKEND_RESOURCE_GROUP:-""} #Needed for backend outbound vnet integration
+    #BACKEND_RESOURCE_GROUP=${BACKEND_RESOURCE_GROUP:-""} # needed for backend outbound vnet integration
 }
 function create_resource_group {
     az account set --subscription $SUBSCRIPTION_ID
@@ -71,11 +71,17 @@ function build_and_push_image() {
 }
 
 function create_app_service_plan() {
-    az appservice plan create --name $APP_SERVICE_PLAN --resource-group $RESOURCE_GROUP --sku B3 --is-linux
+    az appservice plan create --name $APP_SERVICE_PLAN \
+        --resource-group $RESOURCE_GROUP \
+        --sku B3 \
+        --is-linux
 }
 
 function create_web_app() {
-    az webapp create --resource-group $RESOURCE_GROUP --plan $APP_SERVICE_PLAN --name $WEB_APP --deployment-container-image-name $REGISTRY_NAME.azurecr.io/$IMAGE_NAME
+    az webapp create --resource-group $RESOURCE_GROUP \
+        --plan $APP_SERVICE_PLAN \
+        --name $WEB_APP \
+        --deployment-container-image-name $REGISTRY_NAME.azurecr.io/$IMAGE_NAME
 }
 
 function create_web_app_identity() {
@@ -83,13 +89,19 @@ function create_web_app_identity() {
     WEBAPP_IDENTITY_ID=$(echo $IDENTITY_RESULT | jq -r '.id')
     WEBAPP_IDENTITY_OBJECT_ID=$(echo $IDENTITY_RESULT | jq -r '.principalId')
     WEBAPP_IDENTITY_CLIENT_ID=$(echo $IDENTITY_RESULT | jq -r '.clientId')
-    az webapp identity assign --name $WEB_APP --resource-group $RESOURCE_GROUP --identities $WEBAPP_IDENTITY_ID
+    az webapp identity assign --name $WEB_APP \
+        --resource-group $RESOURCE_GROUP \
+        --identities $WEBAPP_IDENTITY_ID
 }
 
 function configure_registry_credentials() {
     ACR_ID=$(az acr show --name $REGISTRY_NAME --resource-group $RESOURCE_GROUP --query id --output tsv)
-    az role assignment create --assignee $WEBAPP_IDENTITY_CLIENT_ID --role AcrPull --scope $ACR_ID
-    az webapp config container set --name $WEB_APP --resource-group $RESOURCE_GROUP --container-image-name $REGISTRY_NAME.azurecr.io/$IMAGE_NAME
+    az role assignment create --assignee $WEBAPP_IDENTITY_CLIENT_ID \
+        --role AcrPull \
+        --scope $ACR_ID
+    az webapp config container set --name $WEB_APP \
+        --resource-group $RESOURCE_GROUP \
+        --container-image-name $REGISTRY_NAME.azurecr.io/$IMAGE_NAME
 }
 
 function configure_app_settings() {
@@ -101,8 +113,9 @@ function configure_app_settings() {
         APP_SETTINGS="$APP_SETTINGS $name=$value"
     done < .env
     echo $APP_SETTINGS
-
-    az webapp config appsettings set --name $WEB_APP --resource-group $RESOURCE_GROUP --settings $APP_SETTINGS
+    az webapp config appsettings set --name $WEB_APP \
+        --resource-group $RESOURCE_GROUP \
+        --settings $APP_SETTINGS
 }
 
 function create_federated_identity_credentials() {
@@ -117,24 +130,34 @@ function create_federated_identity_credentials() {
             --action LoginWithAzureActiveDirectory \
             --aad-client-id $AAD_CLIENT_ID \
             --aad-token-issuer-url $AAD_TOKEN_ISSUER_URL
-
-        az rest --method POST --uri "https://graph.microsoft.com/beta/applications/$AAD_OBJECT_ID/federatedIdentityCredentials" --body "{'name': '$WEB_APP', 'issuer': '$AAD_TOKEN_ISSUER_URL', 'subject': '$WEBAPP_IDENTITY_OBJECT_ID', 'audiences': [ 'api://AzureADTokenExchange' ]}"
+        az rest --method POST \
+            --uri "https://graph.microsoft.com/beta/applications/$AAD_OBJECT_ID/federatedIdentityCredentials" \
+            --body "{'name': '$WEB_APP', 'issuer': '$AAD_TOKEN_ISSUER_URL', 'subject': '$WEBAPP_IDENTITY_OBJECT_ID', 'audiences': [ 'api://AzureADTokenExchange' ]}"
     fi
 }
 
 function configure_auth_settings() {
-    az webapp config appsettings set --resource-group $RESOURCE_GROUP --name $WEB_APP --slot-settings OVERRIDE_USE_MI_FIC_ASSERTION_CLIENTID=$WEBAPP_IDENTITY_CLIENT_ID --verbose
-    az webapp config appsettings list --resource-group $RESOURCE_GROUP --name $WEB_APP
+    az webapp config appsettings set --resource-group $RESOURCE_GROUP \
+        --name $WEB_APP \
+        --slot-settings OVERRIDE_USE_MI_FIC_ASSERTION_CLIENTID=$WEBAPP_IDENTITY_CLIENT_ID \
+        --verbose
+    az webapp config appsettings list --resource-group $RESOURCE_GROUP \
+        --name $WEB_APP
 
     authSettings=$(az rest --method GET --url "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Web/sites/$WEB_APP/config/authsettingsV2/list?api-version=2020-12-01")
     echo $authSettings > auth.json
     jq '.properties.identityProviders.azureActiveDirectory.registration.clientSecretSettingName = "OVERRIDE_USE_MI_FIC_ASSERTION_CLIENTID"' auth.json > tmp.json && mv tmp.json auth.json
-    az rest --method PUT --url "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Web/sites/$WEB_APP/config/authsettingsV2?api-version=2020-12-01" --body @auth.json --headers "Content-Type=application/json"
+    az rest --method PUT \
+        --url "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Web/sites/$WEB_APP/config/authsettingsV2?api-version=2020-12-01" \
+        --body @auth.json \
+        --headers "Content-Type=application/json"
     rm auth.json
 }
 
 function enable_https() {
-    az webapp update --name $WEB_APP --resource-group $RESOURCE_GROUP --set httpsOnly=true
+    az webapp update --name $WEB_APP \
+        --resource-group $RESOURCE_GROUP \
+        --set httpsOnly=true
 }
 
 function update_appreg_redirect_uris() {
@@ -152,9 +175,9 @@ function restart_web_app() {
     az webapp restart --name $WEB_APP --resource-group $RESOURCE_GROUP
 }
 
-# #Following function adds outbound vnet integration on webapp so that frontend container can access resources in the AKS cluster directly.
-# #This also creates a new subnet named "frontend" in the backend resource group's vnet if it does not exist.
-# # This may not be needed in simplified backend architecture but useful for folks using old architecture.
+## The following function adds outbound vnet integration on the webapp so that the frontend container can access resources in the AKS cluster directly.
+## This will create a new subnet named "frontend" in the backend resource group's vnet if it does not exist.
+## This may not be needed in simplified backend architecture but useful for folks using a prior version of the accelerator that had a different network architecture.
 # function add_vnet_integration() {
 #     VNET_NAME=$(az network vnet list --resource-group $BACKEND_RESOURCE_GROUP --query "[0].name" --output tsv)
 #     VNET_ID=$(az network vnet list --resource-group $BACKEND_RESOURCE_GROUP --query "[0].id" --output tsv)
