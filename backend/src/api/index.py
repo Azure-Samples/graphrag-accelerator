@@ -5,6 +5,7 @@ import asyncio
 import inspect
 import os
 import traceback
+from time import time
 from typing import cast
 
 import yaml
@@ -146,12 +147,13 @@ async def setup_indexing_pipeline(
         existing_job._summarize_descriptions_prompt = (
             summarize_descriptions_prompt_content
         )
+        existing_job._epoch_request_time = int(time())
         existing_job.update_db()
     else:
         pipelinejob.create_item(
             id=sanitized_index_name,
-            index_name=sanitized_index_name,
-            storage_name=sanitized_storage_name,
+            human_readable_index_name=index_name,
+            human_readable_storage_name=storage_name,
             entity_extraction_prompt=entity_extraction_prompt_content,
             community_report_prompt=community_report_prompt_content,
             summarize_descriptions_prompt=summarize_descriptions_prompt_content,
@@ -177,6 +179,8 @@ async def setup_indexing_pipeline(
             "type": "index",
         }
     )
+
+    return BaseResponse(status="Indexing operation scheduled")
 
     # schedule AKS job
     try:
@@ -227,8 +231,8 @@ async def _start_indexing_pipeline(index_name: str):
     reporter = ReporterSingleton().get_instance()
     pipelinejob = PipelineJob()
     pipeline_job = pipelinejob.load_item(sanitized_index_name)
-    sanitized_storage_name = pipeline_job.storage_name
-    storage_name = retrieve_original_blob_container_name(sanitized_storage_name)
+    sanitized_storage_name = pipeline_job.sanitized_storage_name
+    storage_name = pipeline_job.human_readable_index_name
 
     # download nltk dependencies
     bootstrap()
@@ -381,7 +385,7 @@ def _generate_aks_job_manifest(
     The manifest file must be valid YAML with certain values replaced by the provided arguments.
     """
     # NOTE: the relative file locations are based on the WORKDIR set in Dockerfile-indexing
-    with open("src/aks-batch-job-template.yaml", "r") as f:
+    with open("src/indexing-job-template.yaml", "r") as f:
         manifest = yaml.safe_load(f)
     manifest["metadata"]["name"] = f"indexing-job-{sanitize_name(index_name)}"
     manifest["spec"]["template"]["spec"]["serviceAccountName"] = service_account_name
@@ -542,10 +546,8 @@ async def get_index_job_status(index_name: str):
         pipeline_job = pipelinejob.load_item(sanitized_index_name)
         return IndexStatusResponse(
             status_code=200,
-            index_name=retrieve_original_blob_container_name(pipeline_job.index_name),
-            storage_name=retrieve_original_blob_container_name(
-                pipeline_job.storage_name
-            ),
+            index_name=pipeline_job.human_readable_index_name,
+            storage_name=pipeline_job.human_readable_storage_name,
             status=pipeline_job.status.value,
             percent_complete=pipeline_job.percent_complete,
             progress=pipeline_job.progress,
