@@ -1,6 +1,6 @@
 # Frontend Application Launch Instructions
 A small frontend application (a streamlit app) is provided to demonstrate how to build and deploy a UI on top of the solution accelerator API.
-This application is optional and not required for the API to function properly.
+This application is optional and not required for the solution accelerator API to function properly.
 
 ### 1. Deploy the GraphRAG solution accelerator
 Follow instructions from the [deployment guide](../docs/DEPLOYMENT-GUIDE.md) to deploy a full instance of the solution accelerator.
@@ -26,7 +26,7 @@ The frontend application can run locally as a docker container.
 To access the app , visit `localhost:8080` in your browser.
 
 ## Host UI in Azure
-The frontend application can also be hosted in Azure as a Web App using the included deployment script. Here are the steps:
+The frontend application can also be hosted in Azure as a Web App using the provided `frontend/deploy.sh` script.
 
 ### 1. Create Azure App Registration
 
@@ -45,10 +45,9 @@ This app registration will be used for Authentication and Authorization to the f
 
 ### 2. Populate the deploy parameters
 
-Before running the `deploy.sh` script, please fill out the `frontend_deploy.parameters.json` file with the required values described below.
+Please fill out `frontend/frontend_deploy.parameters.json` with the required values described below.
 
-1. Open the `frontend_deploy.parameters.json` file located in the `frontend` directory.
-2. Replace the placeholder values with the actual values for the following required variables, you may also define variables which are optional in the json file if you wish to override default values:
+1. Replace the placeholder values with actual values for the following required variables, you may also add optional variables in the json file if you wish to override the default values:
 
 | Variable Name        | Required | Example                                | Description                                                     |
 | :------------------- | :------- | :------------------------------------- | :-------------------------------------------------------------- |
@@ -65,20 +64,20 @@ Before running the `deploy.sh` script, please fill out the `frontend_deploy.para
 | WEB_APP              | No       | myresourcegroup-playground             | The name of the Azure Web App. Defaults to the resource group name with `playground` appended. |
 | WEB_APP_IDENTITY     | No       | myresourcegroup-playground-identity    | The name of the managed identity for the Azure Web App. Defaults to the web app name with `identity` appended. |
 
-Save the `frontend_deploy.parameters.json` file after populating the values. If you would like the webapp to automatically connect
-to the GraphRAG backend API, create and populate a `.env` file described in step 2, otherwise the webapp will ask for login credentials.
+Save the `frontend/frontend_deploy.parameters.json` file after populating the values. If you would like the webapp to automatically connect
+to the solution accelerator backend API, create and populate a `.env` file described in step 2, otherwise the webapp will ask for login credentials to the APIM service that was deployed as part of the backend API.
 
 ### 3. Run the deploy script
 
 Prerequisite : Please install az-cli version >=2.61.0
-To deploy the frontend application, follow these steps:
+To deploy the frontend application:
 
-1. Open a terminal and navigate to the root directory of the `frontend` application.
-2. Run the deploy script by executing the following command:
+1. Open a terminal and navigate to the `<graphrag_repo>/frontend` directory.
+2. Run the deploy script:
 
 ```
 # cd to graphrag-accelerator/frontend directory
 > bash deploy.sh -p frontend_deploy.parameters.json
 ```
 
-First visit to the frontend frontend web app URL (https://PLACEHOLDER.azurewebsites.net) will take a few seconds to load, this is expected behaviour.
+One the frontend application has been deployed, please take note of the URL that is displayed at the end of the script. It will have the form `(https://PLACEHOLDER.azurewebsites.net)`. The Web App service will take 2-3 minutes initially to load the first time. This is expected behavior.
