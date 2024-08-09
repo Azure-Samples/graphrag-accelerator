@@ -1,14 +1,15 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-# NOTE: the location of this file is important, as it is referenced by the api/index.py script
+# NOTE: the location of this file is important as it gets referenced by the src/main.py script
 # and depends on the relative path to this file when uvicorn is run
+
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: graphrag-indexing-manager
+  name: graphrag-index-manager
 spec:
-  schedule: "* * * * *"
+  schedule: "*/5 * * * *"
   jobTemplate:
     spec:
       ttlSecondsAfterFinished: 30
@@ -17,19 +18,19 @@ spec:
           labels:
             azure.workload.identity/use: "true"
         spec:
-          serviceAccountName: graphrag-workload-sa
+          serviceAccountName: PLACEHOLDER
           restartPolicy: OnFailure
           containers:
           - name: index-job-manager
-            image: cr7dkpyk2ywuwme.azurecr.io/graphrag:backend
+            image: PLACEHOLDER
             imagePullPolicy: Always
             resources:
               requests:
+                cpu: "0.5"
+                memory: "0.5Gi"
+              limits:
                 cpu: "1"
                 memory: "1Gi"
-              limits:
-                cpu: "2"
-                memory: "2Gi"
             envFrom:
             - configMapRef:
                 name: graphrag

@@ -26,7 +26,6 @@ from kubernetes import (
     client,
     config,
 )
-from kubernetes.client.rest import ApiException
 
 from src.api.azure_clients import (
     AzureStorageClientManager,
@@ -35,7 +34,6 @@ from src.api.azure_clients import (
 )
 from src.api.common import (
     delete_blob_container,
-    retrieve_original_blob_container_name,
     sanitize_name,
     validate_blob_container_name,
     verify_subscription_key_exist,
@@ -130,7 +128,7 @@ async def setup_indexing_pipeline(
         ):
             raise HTTPException(
                 status_code=202,  # request has been accepted for processing but is not complete.
-                detail=f"an index with name {index_name} already exists and has not finished building.",
+                detail=f"Index '{index_name}' already exists and has not finished building.",
             )
         # if indexing job is in a failed state, delete the associated K8s job and pod to allow for a new job to be scheduled
         if PipelineJobState(existing_job.status) == PipelineJobState.FAILED:
@@ -160,13 +158,15 @@ async def setup_indexing_pipeline(
             status=PipelineJobState.SCHEDULED,
         )
 
-    """
-    At this point, we know:
-    1) the index name is valid
-    2) the data container exists
-    3) there is no indexing job with this name currently running or a previous job has finished
-    """
+    return BaseResponse(status="Indexing job scheduled")
+
+
+async def _start_indexing_pipeline(index_name: str):
+    # get sanitized name
+    sanitized_index_name = sanitize_name(index_name)
+
     # update or create new item in container-store in cosmosDB
+    _blob_service_client = BlobServiceClientSingleton().get_instance()
     if not _blob_service_client.get_container_client(sanitized_index_name).exists():
         _blob_service_client.create_container(sanitized_index_name)
     container_store_client = get_database_container_client(
@@ -179,54 +179,6 @@ async def setup_indexing_pipeline(
             "type": "index",
         }
     )
-
-    return BaseResponse(status="Indexing operation scheduled")
-
-    # schedule AKS job
-    try:
-        config.load_incluster_config()
-        # get container image name
-        core_v1 = client.CoreV1Api()
-        pod_name = os.environ["HOSTNAME"]
-        pod = core_v1.read_namespaced_pod(
-            name=pod_name, namespace=os.environ["AKS_NAMESPACE"]
-        )
-        # retrieve job manifest template and replace necessary values
-        job_manifest = _generate_aks_job_manifest(
-            docker_image_name=pod.spec.containers[0].image,
-            index_name=index_name,
-            service_account_name=pod.spec.service_account_name,
-        )
-        try:
-            batch_v1 = client.BatchV1Api()
-            batch_v1.create_namespaced_job(
-                body=job_manifest, namespace=os.environ["AKS_NAMESPACE"]
-            )
-        except ApiException:
-            raise HTTPException(
-                status_code=500,
-                detail="exception when calling BatchV1Api->create_namespaced_job",
-            )
-        return BaseResponse(status="Indexing operation scheduled")
-    except Exception:
-        reporter = ReporterSingleton().get_instance()
-        job_details = {
-            "storage_name": storage_name,
-            "index_name": index_name,
-        }
-        reporter.on_error(
-            "Error creating a new index",
-            details={"job_details": job_details},
-        )
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error occurred during setup of indexing job for index {index_name}",
-        )
-
-
-async def _start_indexing_pipeline(index_name: str):
-    # get sanitized name
-    sanitized_index_name = sanitize_name(index_name)
 
     reporter = ReporterSingleton().get_instance()
     pipelinejob = PipelineJob()
@@ -335,7 +287,7 @@ async def _start_indexing_pipeline(index_name: str):
         )
 
         workflow_callbacks.on_log(
-            message=f"Indexing pipeline complete for index {index_name}.",
+            message=f"Indexing pipeline complete for index'{index_name}'.",
             details={
                 "index": index_name,
                 "storage_name": storage_name,
@@ -357,45 +309,22 @@ async def _start_indexing_pipeline(index_name: str):
         }
         # log error in local index directory logs
         workflow_callbacks.on_error(
-            message=f"Indexing pipeline failed for index {index_name}.",
+            message=f"Indexing pipeline failed for index '{index_name}'.",
             cause=e,
             stack=traceback.format_exc(),
             details=error_details,
         )
         # log error in global index directory logs
         reporter.on_error(
-            message=f"Indexing pipeline failed for index {index_name}.",
+            message=f"Indexing pipeline failed for index '{index_name}'.",
             cause=e,
             stack=traceback.format_exc(),
             details=error_details,
         )
         raise HTTPException(
             status_code=500,
-            detail=f"Error encountered during indexing job for index {index_name}.",
+            detail=f"Error encountered during indexing job for index '{index_name}'.",
         )
-
-
-def _generate_aks_job_manifest(
-    docker_image_name: str,
-    index_name: str,
-    service_account_name: str,
-) -> dict:
-    """Generate an AKS Jobs manifest file with the specified parameters.
-
-    The manifest file must be valid YAML with certain values replaced by the provided arguments.
-    """
-    # NOTE: the relative file locations are based on the WORKDIR set in Dockerfile-indexing
-    with open("src/indexing-job-template.yaml", "r") as f:
-        manifest = yaml.safe_load(f)
-    manifest["metadata"]["name"] = f"indexing-job-{sanitize_name(index_name)}"
-    manifest["spec"]["template"]["spec"]["serviceAccountName"] = service_account_name
-    manifest["spec"]["template"]["spec"]["containers"][0]["image"] = docker_image_name
-    manifest["spec"]["template"]["spec"]["containers"][0]["command"] = [
-        "python",
-        "run-indexing-job.py",
-        f"-i={index_name}",
-    ]
-    return manifest
 
 
 @index_route.get(
@@ -478,7 +407,6 @@ async def delete_index(index_name: str):
     Delete a specified index.
     """
     sanitized_index_name = sanitize_name(index_name)
-    reporter = ReporterSingleton().get_instance()
     try:
         # kill indexing job if it is running
         if os.getenv("KUBERNETES_SERVICE_HOST"):  # only found if in AKS
@@ -522,6 +450,7 @@ async def delete_index(index_name: str):
             index_client.delete_index(ai_search_index_name)
 
     except Exception:
+        reporter = ReporterSingleton().get_instance()
         reporter.on_error(
             message=f"Error encountered while deleting all data for index {index_name}.",
             stack=None,

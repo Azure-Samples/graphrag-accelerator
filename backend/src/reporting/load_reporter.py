@@ -66,6 +66,8 @@ def load_pipeline_reporter(
                             num_workflow_steps=num_workflow_steps,
                         )
                     )
+            case Reporters.CONSOLE:
+                pass
             case _:
                 print(f"WARNING: unknown reporter type: {reporter}. Skipping.")
     # always register the console reporter as a fallback

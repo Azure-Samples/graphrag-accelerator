@@ -1,7 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-# NOTE: the location of this file is important, as it is referenced by the api/index.py script
+# NOTE: the location of this file is important as it gets referenced by the manage-indexing-jobs.py script
 # and depends on the relative path to this file when uvicorn is run
 
 apiVersion: batch/v1
@@ -10,7 +10,7 @@ metadata:
   name: PLACEHOLDER
 spec:
   ttlSecondsAfterFinished: 30
-  backoffLimit: 6
+  backoffLimit: 3
   template:
     metadata:
       labels:
@@ -24,10 +24,10 @@ spec:
         imagePullPolicy: Always
         resources:
           requests:
-            cpu: "4"
+            cpu: "6"
             memory: "24Gi"
           limits:
-            cpu: "8"
+            cpu: "10"
             memory: "32Gi"
         envFrom:
         - configMapRef:

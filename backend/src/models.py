@@ -171,9 +171,11 @@ class PipelineJob:
         assert human_readable_storage_name is not None, "storage_name cannot be None."
         assert len(human_readable_storage_name) > 0, "storage_name cannot be empty."
 
-        instance = cls.__new__(cls, id, human_readable_index_name, human_readable_storage_name, **kwargs)
+        instance = cls.__new__(
+            cls, id, human_readable_index_name, human_readable_storage_name, **kwargs
+        )
         instance._id = id
-        instance._epoch_request_time=int(time())
+        instance._epoch_request_time = int(time())
         instance._human_readable_index_name = human_readable_index_name
         instance._sanitized_index_name = sanitize_name(human_readable_index_name)
         instance._human_readable_storage_name = human_readable_storage_name
@@ -219,7 +221,9 @@ class PipelineJob:
         instance._index_name = db_item.get("index_name")
         instance._human_readable_index_name = db_item.get("human_readable_index_name")
         instance._sanitized_index_name = db_item.get("sanitized_index_name")
-        instance._human_readable_storage_name = db_item.get("human_readable_storage_name")
+        instance._human_readable_storage_name = db_item.get(
+            "human_readable_storage_name"
+        )
         instance._sanitized_storage_name = db_item.get("sanitized_storage_name")
         instance._entity_extraction_prompt = db_item.get("entity_extraction_prompt")
         instance._community_report_prompt = db_item.get("community_report_prompt")
@@ -331,7 +335,7 @@ class PipelineJob:
     def human_readable_storage_name(self, human_readable_storage_name: str) -> None:
         self._human_readable_storage_name = human_readable_storage_name
         self.update_db()
-        
+
     @property
     def sanitized_storage_name(self) -> str:
         return self._sanitized_storage_name
