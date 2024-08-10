@@ -289,6 +289,24 @@ getAksCredentials () {
     printf "Done\n"
 }
 
+checkForApimSoftDelete () {
+    printf "Checking if APIM was soft-deleted... "
+    # This is an optional step to check if an APIM instance previously existed in the
+    # resource group and is in a soft-deleted state. If so, we will purge it before
+    # deploying a new APIM instance to reduce the overall deployment time.
+    local apimName=$1
+    # the next check returns the name of the APIM instance if it exists in a soft-deleted
+    # state, otherwise return an empty string
+    local RESULTS=$(az apim deletedservice list -o json --query "[?contains(serviceId, 'resourceGroups/$RESOURCE_GROUP/')].{name:name, location:location}")
+    local apimName=$(jq -r .[0].name <<< $RESULTS)
+    local location=$(jq -r .[0].location <<< $RESULTS)
+    if [ ! -z "$apimName" ] || [ ! -z "$location" ]; then
+        printf "\nAPIM instance found in soft-deleted state. Purging... "
+        az apim deletedservice purge -n $apimName --location "$location" > /dev/null
+    fi
+    printf "Done.\n"
+}
+
 deployAzureResources () {
     echo "Deploying Azure resources..."
     local SSH_PUBLICKEY=$(jq -r .publicKey <<< $SSHKEY_DETAILS)
@@ -606,6 +624,7 @@ createResourceGroupIfNotExists $LOCATION $RESOURCE_GROUP
 createSshkeyIfNotExists $RESOURCE_GROUP
 
 # Deploy Azure resources
+checkForApimSoftDelete
 deployAzureResources
 
 # Deploy the graphrag backend docker image to ACR

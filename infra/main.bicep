@@ -46,6 +46,9 @@ param aksSshRsaPublicKey string
 @description('Whether to enable private endpoints.')
 param enablePrivateEndpoints bool = true
 
+@description('Whether to restore the API Management instance.')
+param restoreAPIM bool = false
+
 param acrName string = ''
 param apimName string = ''
 param apimTier string = 'Developer'
@@ -264,6 +267,7 @@ module apim 'core/apim/apim.bicep' = {
   name: 'apim'
   params: {
     apiManagementName: !empty(apimName) ? apimName : '${abbrs.apiManagementService}${resourceBaseNameFinal}'
+    restoreAPIM: restoreAPIM
     appInsightsName: '${abbrs.insightsComponents}${resourceBaseNameFinal}'
     appInsightsPublicNetworkAccessForIngestion: enablePrivateEndpoints ? 'Disabled' : 'Enabled'
     publicIpName: '${abbrs.networkPublicIPAddresses}${resourceBaseNameFinal}'
