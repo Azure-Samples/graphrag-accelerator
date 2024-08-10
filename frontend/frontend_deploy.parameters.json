@@ -1,0 +1,8 @@
+{
+  "SUBSCRIPTION_ID": "<your_subscription_id>",
+  "RESOURCE_GROUP": "<your_resource_group>",
+  "LOCATION": "<your_location>",
+  "AAD_CLIENT_ID": "<your_aad_client_id>",
+  "AAD_OBJECT_ID": "<your_aad_object_id>",
+  "AAD_TENANT_ID": "<your_aad_tenant_id>"
+}
