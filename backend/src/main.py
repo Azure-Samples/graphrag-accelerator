@@ -47,7 +47,7 @@ async def catch_all_exceptions_middleware(request: Request, call_next):
 # deploy a cronjob to manage indexing jobs
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # This function gets called when the application first starts up.
+    # This function is called when the FastAPI application first starts up.
     # To manage multiple graphrag indexing jobs, we deploy a k8s cronjob.
     # This cronjob will act as a job manager that creates/manages the execution of graphrag indexing jobs as they are requested.
     try:
