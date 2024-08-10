@@ -294,14 +294,17 @@ checkForApimSoftDelete () {
     # This is an optional step to check if an APIM instance previously existed in the
     # resource group and is in a soft-deleted state. If so, purge it before deploying
     # a new APIM instance to prevent conflicts with the new deployment.
-    local apimName=$1
-    # the next check returns the name of the APIM instance if it exists in a soft-deleted
-    # state, otherwise return an empty string
     local RESULTS=$(az apim deletedservice list -o json --query "[?contains(serviceId, 'resourceGroups/$RESOURCE_GROUP/')].{name:name, location:location}")
+    exitIfCommandFailed $? "Error checking for soft-deleted APIM instances, exiting..."
     local apimName=$(jq -r .[0].name <<< $RESULTS)
     local location=$(jq -r .[0].location <<< $RESULTS)
-    if [ ! -z "$apimName" ] || [ ! -z "$location" ]; then
-        printf "\nAPIM instance found in soft-deleted state. Purging... "
+    # jq returns "null" if a value is not found
+    if [ -z "$apimName" ] || [[ "$apimName" == "null" ]] || [ -z "$location" ] || [[ "$location" == "null" ]]; then
+        printf "Done.\n"
+        return 0
+    fi
+    if [ ! -z "$apimName" ] && [ ! -z "$location" ]; then
+        printf "\nAPIM instance found in soft-deleted state. Purging...\n"
         az apim deletedservice purge -n $apimName --location "$location" > /dev/null
     fi
     printf "Done.\n"
