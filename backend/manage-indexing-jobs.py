@@ -90,7 +90,9 @@ def main():
     for item in job_container_store_client.read_all_items():
         # exit if a job is running
         if item["status"] == PipelineJobState.RUNNING.value:
-            print(f"Indexing job for '{item['human_readable_index_name']}' already running. Will not schedule another. Exiting...")
+            print(
+                f"Indexing job for '{item['human_readable_index_name']}' already running. Will not schedule another. Exiting..."
+            )
             exit()
         if item["status"] == PipelineJobState.SCHEDULED.value:
             job_metadata.append(
