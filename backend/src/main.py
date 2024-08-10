@@ -3,7 +3,9 @@
 
 import os
 import traceback
+from contextlib import asynccontextmanager
 
+import yaml
 from fastapi import (
     Depends,
     FastAPI,
@@ -12,6 +14,10 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
+from kubernetes import (
+    client,
+    config,
+)
 
 from src.api.common import verify_subscription_key_exist
 from src.api.data import data_route
@@ -38,13 +44,55 @@ async def catch_all_exceptions_middleware(request: Request, call_next):
         return Response("Unexpected internal server error.", status_code=500)
 
 
-version = os.getenv("GRAPHRAG_VERSION", "undefined_version")
+# deploy a cronjob to manage indexing jobs
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # This function is called when the FastAPI application first starts up.
+    # To manage multiple graphrag indexing jobs, we deploy a k8s cronjob.
+    # This cronjob will act as a job manager that creates/manages the execution of graphrag indexing jobs as they are requested.
+    try:
+        # Check if the cronjob exists and create it if it does not exist
+        config.load_incluster_config()
+        # retrieve the running pod spec
+        core_v1 = client.CoreV1Api()
+        pod_name = os.environ["HOSTNAME"]
+        pod = core_v1.read_namespaced_pod(
+            name=pod_name, namespace=os.environ["AKS_NAMESPACE"]
+        )
+        # load the cronjob manifest template and update PLACEHOLDER values with correct values using the pod spec
+        with open("indexing-job-manager-template.yaml", "r") as f:
+            manifest = yaml.safe_load(f)
+        manifest["spec"]["jobTemplate"]["spec"]["template"]["spec"]["containers"][0][
+            "image"
+        ] = pod.spec.containers[0].image
+        manifest["spec"]["jobTemplate"]["spec"]["template"]["spec"][
+            "serviceAccountName"
+        ] = pod.spec.service_account_name
+        # retrieve list of existing cronjobs
+        batch_v1 = client.BatchV1Api()
+        namespace_cronjobs = batch_v1.list_namespaced_cron_job(namespace="graphrag")
+        cronjob_names = [cronjob.metadata.name for cronjob in namespace_cronjobs.items]
+        # create cronjob if it does not exist
+        if manifest["metadata"]["name"] not in cronjob_names:
+            batch_v1.create_namespaced_cron_job(namespace="graphrag", body=manifest)
+    except Exception as e:
+        print(f"Failed to create graphrag cronjob.\n{e}")
+        reporter = ReporterSingleton().get_instance()
+        reporter.on_error(
+            message="Failed to create graphrag cronjob",
+            cause=str(e),
+            stack=traceback.format_exc(),
+        )
+    yield  # This is where the application starts up.
+    # shutdown/garbage collection code goes here
+
 
 app = FastAPI(
     docs_url="/manpage/docs",
     openapi_url="/manpage/openapi.json",
     title="GraphRAG",
-    version=version,
+    version=os.getenv("GRAPHRAG_VERSION", "undefined_version"),
+    lifespan=lifespan,
 )
 app.middleware("http")(catch_all_exceptions_middleware)
 app.add_middleware(

@@ -46,7 +46,7 @@ resource cosmosDb 'Microsoft.DocumentDB/databaseAccounts@2022-11-15' = {
     databaseAccountOfferType: 'Standard'
     defaultIdentity: 'FirstPartyIdentity'
     networkAclBypass: 'None'
-    disableLocalAuth: false
+    disableLocalAuth: true
     enablePartitionMerge: false
     minimalTlsVersion: 'Tls12'
     consistencyPolicy: {

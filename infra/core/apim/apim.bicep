@@ -58,7 +58,7 @@ param dnsLabelPrefix string = toLower('${publicIpName}-${uniqueString(resourceGr
 @description('The workspace id of the Log Analytics resource.')
 param logAnalyticsWorkspaceId string
 
-// var subnetRef = resourceId('Microsoft.Network/virtualNetworks/subnets', virtualNetworkName, subnetName)
+param restoreAPIM bool = false
 param subnetId string
 
 resource publicIp 'Microsoft.Network/publicIPAddresses@2024-01-01' = {
@@ -85,6 +85,7 @@ resource apiManagementService 'Microsoft.ApiManagement/service@2023-09-01-previe
   }
   zones: ((length(availabilityZones) == 0) ? null : availabilityZones)
   properties: {
+    restore: restoreAPIM
     publisherEmail: publisherEmail
     publisherName: publisherName
     virtualNetworkType: 'External'

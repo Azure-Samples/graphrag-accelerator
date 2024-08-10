@@ -1,15 +1,16 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-# NOTE: the location of this file is important, as it is referenced by the api/index.py script and depends on the relative path to this file when uvicorn is run
-# To account for periods of time where an AOAI endpoint may have be getting hammered with too much work and rate-limiting will cause indexing jobs to fail, we set the backoffLimit to a high number (meaning the job will be retried 30 times before it is considered a failure) with exponential backoff
+# NOTE: the location of this file is important as it gets referenced by the manage-indexing-jobs.py script
+# and depends on the relative path to this file when uvicorn is run
+
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: PLACEHOLDER
 spec:
-  ttlSecondsAfterFinished: 0
-  backoffLimit: 6
+  ttlSecondsAfterFinished: 30
+  backoffLimit: 3
   template:
     metadata:
       labels:
@@ -23,10 +24,10 @@ spec:
         imagePullPolicy: Always
         resources:
           requests:
-            cpu: "4"
+            cpu: "6"
             memory: "24Gi"
           limits:
-            cpu: "8"
+            cpu: "10"
             memory: "32Gi"
         envFrom:
         - configMapRef:
