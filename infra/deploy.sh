@@ -292,8 +292,8 @@ getAksCredentials () {
 checkForApimSoftDelete () {
     printf "Checking if APIM was soft-deleted... "
     # This is an optional step to check if an APIM instance previously existed in the
-    # resource group and is in a soft-deleted state. If so, we will purge it before
-    # deploying a new APIM instance to reduce the overall deployment time.
+    # resource group and is in a soft-deleted state. If so, purge it before deploying
+    # a new APIM instance to prevent conflicts with the new deployment.
     local apimName=$1
     # the next check returns the name of the APIM instance if it exists in a soft-deleted
     # state, otherwise return an empty string
