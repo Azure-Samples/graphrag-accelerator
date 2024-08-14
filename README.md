@@ -4,7 +4,13 @@
 
 Welcome to the GraphRAG solution accelerator! This accelerator builds on top of the [graphrag](https://github.com/microsoft/graphrag) python package and exposes API endpoints hosted on Azure, which can be used to trigger indexing pipelines and enable querying of the graphrag knowledge graph.
 
-For FAQ, access instructions, and our roadmap, please visit `aka.ms/graphrag`
+This repository presents a methodology for running a hosted service using knowledge graph memory structures to enhance LLM outputs. Please note that the provided code serves as a demonstration and is not an officially supported Microsoft offering.
+
+⚠️ Warning: The GraphRAG Accelerator uses multiple Azure services and may incur substantial costs. It is meant to host a high-utilization API with auto-scaling and user access control. Please see the [deployment bicep](infra/main.bicep) for further detail on the services used.
+
+⚠️ Warning: GraphRAG indexing can be an expensive operation. Please read all documentation to understand the process and costs involved, and start with a small amount of data.
+
+For FAQ and our roadmap, please visit `aka.ms/graphrag`
 
 ![](docs/assets/graphrag-architecture-diagram.png)
 
