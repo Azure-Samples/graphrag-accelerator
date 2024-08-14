@@ -18,6 +18,8 @@ spec:
     spec:
       serviceAccountName: PLACEHOLDER
       restartPolicy: OnFailure
+      nodeSelector:
+        workload: graphrag-indexing
       containers:
       - name: graphrag
         image: PLACEHOLDER
@@ -25,10 +27,10 @@ spec:
         resources:
           requests:
             cpu: "6"
-            memory: "24Gi"
+            memory: "56Gi"
           limits:
-            cpu: "10"
-            memory: "32Gi"
+            cpu: "8"
+            memory: "64Gi"
         envFrom:
         - configMapRef:
             name: graphrag

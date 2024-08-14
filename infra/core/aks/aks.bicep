@@ -26,7 +26,7 @@ param systemOsDiskSizeGB int = 128
 
 @description('The number of nodes for the system node pool.')
 @minValue(1)
-@maxValue(50)
+@maxValue(20)
 param systemNodeCount int = 1
 
 @description('The size of the system Virtual Machine.')
@@ -37,8 +37,11 @@ param systemVMSize string = 'standard_d4s_v5'
 @maxValue(50)
 param graphragNodeCount int = 1
 
-@description('The size of the GraphRAG Virtual Machine.')
-param graphragVMSize string = 'standard_e16as_v5' // 16 vcpus, 128 GiB memory
+@description('The VM size of nodes running the GraphRAG API.')
+param graphragVMSize string = 'standard_d8s_v5' // 8 vcpu, 32 GB memory
+
+@description('The VM size of nodes running GraphRAG indexing jobs.')
+param graphragIndexingVMSize string = 'standard_e8s_v5' // 8 vcpus, 64 GB memory
 
 @description('User name for the Linux Virtual Machines.')
 param linuxAdminUsername string = 'azureuser'
@@ -154,6 +157,32 @@ resource aks 'Microsoft.ContainerService/managedClusters@2024-02-01' = {
       vnetSubnetID: subnetId
       nodeLabels: {
         workload: 'graphrag'
+      }
+      tags: {
+        workload: 'graphrag'
+      }
+      type: 'VirtualMachineScaleSets'
+    }
+  }
+
+  resource graphragIndexingNodePool 'agentPools@2024-02-01' = {
+    name: 'indexing'
+    properties: {
+      enableAutoScaling: true
+      upgradeSettings: {
+        maxSurge: '50%'
+      }
+      minCount: 0
+      maxCount: 10
+      osDiskSizeGB: systemOsDiskSizeGB
+      count: 0
+      vmSize: graphragIndexingVMSize
+      osType: 'Linux'
+      mode: 'User'
+      enableEncryptionAtHost: enableEncryptionAtHost
+      vnetSubnetID: subnetId
+      nodeLabels: {
+        workload: 'graphrag-indexing'
       }
       tags: {
         workload: 'graphrag'
