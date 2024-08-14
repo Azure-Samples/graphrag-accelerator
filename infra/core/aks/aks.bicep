@@ -26,7 +26,7 @@ param systemOsDiskSizeGB int = 128
 
 @description('The number of nodes for the system node pool.')
 @minValue(1)
-@maxValue(50)
+@maxValue(20)
 param systemNodeCount int = 1
 
 @description('The size of the system Virtual Machine.')
