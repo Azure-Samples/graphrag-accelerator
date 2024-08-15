@@ -3,6 +3,7 @@
 
 import inspect
 import os
+import traceback
 
 import pandas as pd
 import yaml
@@ -131,9 +132,13 @@ async def global_query(request: GraphRequest):
         ]
 
         return GraphResponse(result=result.response, context_data=result.context_data)
-    except Exception:
+    except Exception as e:
         reporter = ReporterSingleton().get_instance()
-        reporter.on_error("Could not perform global search.")
+        reporter.on_error(
+            message="Could not perform global search.",
+            cause=e,
+            stack=traceback.format_exc(),
+        )
         raise HTTPException(status_code=500, detail=None)
 
 
@@ -361,8 +366,6 @@ async def local_query(request: GraphRequest):
     result = await search_engine.asearch(request.query)
 
     # post-process the search results, mapping the index_name,index_id to allow for provenance tracking
-
-    # reformat context data
     result.context_data = _reformat_context_data(result.context_data)
 
     # map title into index_name, index_id and title for provenance tracking

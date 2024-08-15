@@ -14,20 +14,25 @@ resource dnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
   properties: {}
 }
 
-resource vnets 'Microsoft.Network/virtualNetworks@2023-06-01' existing = [for vnetName in vnetNames: {
-  name: vnetName
-}]
+resource vnets 'Microsoft.Network/virtualNetworks@2024-01-01' existing = [
+  for vnetName in vnetNames: {
+    name: vnetName
+  }
+]
 
-resource dnsZoneLinks 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = [for (vnetName, index) in vnetNames: {
-  name: vnetName
-  location: 'global'
-  parent: dnsZone
-  properties: {
-    registrationEnabled: false
-    virtualNetwork: {
-      id: vnets[index].id
+resource dnsZoneLinks 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = [
+  for (vnetName, index) in vnetNames: {
+    name: vnetName
+    location: 'global'
+    parent: dnsZone
+    properties: {
+      registrationEnabled: false
+      virtualNetwork: {
+        id: vnets[index].id
+      }
     }
   }
-}]
+]
 
-output dns_zone_name string = dnsZone.name
+output name string = dnsZone.name
+output id string = dnsZone.id

@@ -4,6 +4,8 @@
 import asyncio
 import inspect
 import os
+import traceback
+from time import time
 from typing import cast
 
 import yaml
@@ -24,7 +26,6 @@ from kubernetes import (
     client,
     config,
 )
-from kubernetes.client.rest import ApiException
 
 from src.api.azure_clients import (
     AzureStorageClientManager,
@@ -33,7 +34,6 @@ from src.api.azure_clients import (
 )
 from src.api.common import (
     delete_blob_container,
-    retrieve_original_blob_container_name,
     sanitize_name,
     validate_blob_container_name,
     verify_subscription_key_exist,
@@ -98,7 +98,7 @@ async def setup_indexing_pipeline(
     if not _blob_service_client.get_container_client(sanitized_storage_name).exists():
         raise HTTPException(
             status_code=500,
-            detail=f"Data container '{storage_name}' does not exist.",
+            detail=f"Storage blob container {storage_name} does not exist",
         )
 
     # check for prompts
@@ -128,7 +128,7 @@ async def setup_indexing_pipeline(
         ):
             raise HTTPException(
                 status_code=202,  # request has been accepted for processing but is not complete.
-                detail=f"an index with name {index_name} already exists and has not finished building.",
+                detail=f"Index '{index_name}' already exists and has not finished building.",
             )
         # if indexing job is in a failed state, delete the associated K8s job and pod to allow for a new job to be scheduled
         if PipelineJobState(existing_job.status) == PipelineJobState.FAILED:
@@ -145,25 +145,28 @@ async def setup_indexing_pipeline(
         existing_job._summarize_descriptions_prompt = (
             summarize_descriptions_prompt_content
         )
+        existing_job._epoch_request_time = int(time())
         existing_job.update_db()
     else:
         pipelinejob.create_item(
             id=sanitized_index_name,
-            index_name=sanitized_index_name,
-            storage_name=sanitized_storage_name,
+            human_readable_index_name=index_name,
+            human_readable_storage_name=storage_name,
             entity_extraction_prompt=entity_extraction_prompt_content,
             community_report_prompt=community_report_prompt_content,
             summarize_descriptions_prompt=summarize_descriptions_prompt_content,
             status=PipelineJobState.SCHEDULED,
         )
 
-    """
-    At this point, we know:
-    1) the index name is valid
-    2) the data container exists
-    3) there is no indexing job with this name currently running or a previous job has finished
-    """
+    return BaseResponse(status="Indexing job scheduled")
+
+
+async def _start_indexing_pipeline(index_name: str):
+    # get sanitized name
+    sanitized_index_name = sanitize_name(index_name)
+
     # update or create new item in container-store in cosmosDB
+    _blob_service_client = BlobServiceClientSingleton().get_instance()
     if not _blob_service_client.get_container_client(sanitized_index_name).exists():
         _blob_service_client.create_container(sanitized_index_name)
     container_store_client = get_database_container_client(
@@ -177,73 +180,14 @@ async def setup_indexing_pipeline(
         }
     )
 
-    # schedule AKS job
-    try:
-        config.load_incluster_config()
-        # get container image name
-        core_v1 = client.CoreV1Api()
-        pod_name = os.environ["HOSTNAME"]
-        pod = core_v1.read_namespaced_pod(
-            name=pod_name, namespace=os.environ["AKS_NAMESPACE"]
-        )
-        # retrieve job manifest template and replace necessary values
-        job_manifest = _generate_aks_job_manifest(
-            docker_image_name=pod.spec.containers[0].image,
-            index_name=index_name,
-            service_account_name=pod.spec.service_account_name,
-        )
-        try:
-            batch_v1 = client.BatchV1Api()
-            batch_v1.create_namespaced_job(
-                body=job_manifest, namespace=os.environ["AKS_NAMESPACE"]
-            )
-        except ApiException:
-            raise HTTPException(
-                status_code=500,
-                detail="exception when calling BatchV1Api->create_namespaced_job",
-            )
-        return BaseResponse(status="indexing operation has been scheduled.")
-    except Exception:
-        reporter = ReporterSingleton().get_instance()
-        job_details = {
-            "storage_name": storage_name,
-            "index_name": index_name,
-        }
-        reporter.on_error(
-            "Error creating a new index",
-            details={"job_details": job_details},
-        )
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error occurred during setup of indexing job for '{index_name}'.",
-        )
-
-
-async def _start_indexing_pipeline(index_name: str):
-    # get sanitized name
-    sanitized_index_name = sanitize_name(index_name)
-
     reporter = ReporterSingleton().get_instance()
     pipelinejob = PipelineJob()
     pipeline_job = pipelinejob.load_item(sanitized_index_name)
-    sanitized_storage_name = pipeline_job.storage_name
-    storage_name = retrieve_original_blob_container_name(sanitized_storage_name)
+    sanitized_storage_name = pipeline_job.sanitized_storage_name
+    storage_name = pipeline_job.human_readable_index_name
 
     # download nltk dependencies
     bootstrap()
-
-    # create new reporters/callbacks just for this job
-    reporters = []
-    reporter_names = os.getenv("REPORTERS", Reporters.CONSOLE.name.upper()).split(",")
-    for reporter_name in reporter_names:
-        try:
-            reporters.append(Reporters[reporter_name.upper()])
-        except KeyError:
-            raise ValueError(f"Found unknown reporter: {reporter_name}")
-
-    workflow_callbacks = load_pipeline_reporter(
-        reporting_dir=sanitized_index_name, reporters=reporters
-    )
 
     # load custom pipeline settings
     this_directory = os.path.dirname(
@@ -295,7 +239,22 @@ async def _start_indexing_pipeline(index_name: str):
     for workflow in pipeline_config.workflows:
         pipeline_job.all_workflows.append(workflow.name)
 
-    # add pipeline_job callback to the callback manager
+    # create new reporters/callbacks just for this job
+    reporters = []
+    reporter_names = os.getenv("REPORTERS", Reporters.CONSOLE.name.upper()).split(",")
+    for reporter_name in reporter_names:
+        try:
+            reporters.append(Reporters[reporter_name.upper()])
+        except KeyError:
+            raise ValueError(f"Unknown reporter type: {reporter_name}")
+    workflow_callbacks = load_pipeline_reporter(
+        index_name=index_name,
+        num_workflow_steps=len(pipeline_job.all_workflows),
+        reporting_dir=sanitized_index_name,
+        reporters=reporters,
+    )
+
+    # add pipeline job callback to the callback manager
     cast(WorkflowCallbacksManager, workflow_callbacks).register(
         PipelineJobWorkflowCallbacks(pipeline_job)
     )
@@ -312,6 +271,7 @@ async def _start_indexing_pipeline(index_name: str):
                 # if the workflow failed, record the failure
                 pipeline_job.failed_workflows.append(workflow_result.workflow)
                 pipeline_job.update_db()
+                # TODO: exit early if a workflow fails and add more detailed error logging
 
         # if job is done, check if any workflow steps failed
         if len(pipeline_job.failed_workflows) > 0:
@@ -327,62 +287,44 @@ async def _start_indexing_pipeline(index_name: str):
         )
 
         workflow_callbacks.on_log(
-            f"Index Name: {index_name}, Container Name: {storage_name}\n",
-            details={"status_message": "Indexing pipeline complete."},
+            message=f"Indexing pipeline complete for index'{index_name}'.",
+            details={
+                "index": index_name,
+                "storage_name": storage_name,
+                "status_message": "indexing pipeline complete",
+            },
         )
 
         del workflow_callbacks  # garbage collect
         if pipeline_job.status == PipelineJobState.FAILED:
             exit(1)  # signal to AKS that indexing job failed
 
-    except Exception:
+    except Exception as e:
         pipeline_job.status = PipelineJobState.FAILED
 
         # update failed state in cosmos db
         error_details = {
-            "error_message": "Indexing pipeline failed.",
+            "index": index_name,
+            "storage_name": storage_name,
         }
         # log error in local index directory logs
         workflow_callbacks.on_error(
-            message=f"Index Name: {index_name}, Container Name: {storage_name}\n",
-            cause=None,
-            stack=None,
+            message=f"Indexing pipeline failed for index '{index_name}'.",
+            cause=e,
+            stack=traceback.format_exc(),
             details=error_details,
         )
         # log error in global index directory logs
         reporter.on_error(
-            f"Index Name: {index_name}, Container Name: {storage_name}\n {str(e)} \n",
-            cause=str(e),
-            stack=None,
+            message=f"Indexing pipeline failed for index '{index_name}'.",
+            cause=e,
+            stack=traceback.format_exc(),
             details=error_details,
         )
         raise HTTPException(
             status_code=500,
-            detail=f"Error occurred during indexing job for index '{index_name}'.",
+            detail=f"Error encountered during indexing job for index '{index_name}'.",
         )
-
-
-def _generate_aks_job_manifest(
-    docker_image_name: str,
-    index_name: str,
-    service_account_name: str,
-) -> dict:
-    """Generate an AKS Jobs manifest file with the specified parameters.
-
-    The manifest file must be valid YAML with certain values replaced by the provided arguments.
-    """
-    # NOTE: the relative file locations are based on the WORKDIR set in Dockerfile-indexing
-    with open("src/aks-batch-job-template.yaml", "r") as f:
-        manifest = yaml.safe_load(f)
-    manifest["metadata"]["name"] = f"indexing-job-{sanitize_name(index_name)}"
-    manifest["spec"]["template"]["spec"]["serviceAccountName"] = service_account_name
-    manifest["spec"]["template"]["spec"]["containers"][0]["image"] = docker_image_name
-    manifest["spec"]["template"]["spec"]["containers"][0]["command"] = [
-        "python",
-        "run-indexing-job.py",
-        f"-i={index_name}",
-    ]
-    return manifest
 
 
 @index_route.get(
@@ -437,8 +379,8 @@ def _delete_k8s_job(job_name: str, namespace: str) -> None:
         batch_v1.delete_namespaced_job(name=job_name, namespace=namespace)
     except Exception:
         reporter.on_error(
-            f"Error deleting k8s job {job_name}.",
-            details={"Container": job_name},
+            message=f"Error deleting k8s job {job_name}.",
+            details={"container": job_name},
         )
         pass
     try:
@@ -448,8 +390,8 @@ def _delete_k8s_job(job_name: str, namespace: str) -> None:
             core_v1.delete_namespaced_pod(job_pod, namespace=namespace)
     except Exception:
         reporter.on_error(
-            f"Error deleting k8s pod for job {job_name}.",
-            details={"Container": job_name},
+            message=f"Error deleting k8s pod for job {job_name}.",
+            details={"container": job_name},
         )
         pass
 
@@ -465,7 +407,6 @@ async def delete_index(index_name: str):
     Delete a specified index.
     """
     sanitized_index_name = sanitize_name(index_name)
-    reporter = ReporterSingleton().get_instance()
     try:
         # kill indexing job if it is running
         if os.getenv("KUBERNETES_SERVICE_HOST"):  # only found if in AKS
@@ -509,6 +450,7 @@ async def delete_index(index_name: str):
             index_client.delete_index(ai_search_index_name)
 
     except Exception:
+        reporter = ReporterSingleton().get_instance()
         reporter.on_error(
             message=f"Error encountered while deleting all data for index {index_name}.",
             stack=None,
@@ -533,10 +475,8 @@ async def get_index_job_status(index_name: str):
         pipeline_job = pipelinejob.load_item(sanitized_index_name)
         return IndexStatusResponse(
             status_code=200,
-            index_name=retrieve_original_blob_container_name(pipeline_job.index_name),
-            storage_name=retrieve_original_blob_container_name(
-                pipeline_job.storage_name
-            ),
+            index_name=pipeline_job.human_readable_index_name,
+            storage_name=pipeline_job.human_readable_storage_name,
             status=pipeline_job.status.value,
             percent_complete=pipeline_job.percent_complete,
             progress=pipeline_job.progress,

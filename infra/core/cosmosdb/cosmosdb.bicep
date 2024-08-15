@@ -7,18 +7,18 @@ param cosmosDbName string
 @description('The location of the CosmosDB resource.')
 param location string = resourceGroup().location
 
-param principalId string
-
 @allowed([ 'Enabled', 'Disabled' ])
 param publicNetworkAccess string = 'Disabled'
 
-@description('Role definition id to assign to the principal.  Learn more: https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-setup-rbac')
+@description('Role definition id to assign to the principal. Learn more: https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-setup-rbac')
 @allowed([
-  '00000000-0000-0000-0000-000000000001' // Built-in role 'Azure Cosmos DB Built-in Data Reader'
-  '00000000-0000-0000-0000-000000000002' // Built-in role 'Azure Cosmos DB Built-in Data Contributor'
+  '00000000-0000-0000-0000-000000000001' // 'Cosmos DB Built-in Data Reader' role
+  '00000000-0000-0000-0000-000000000002' // 'Cosmos DB Built-in Data Contributor' role
 ])
 param roleDefinitionId string = '00000000-0000-0000-0000-000000000002'
-var roleAssignmentId = guid(roleDefinitionId, principalId, cosmosDb.id)
+
+param principalId string
+
 
 resource cosmosDb 'Microsoft.DocumentDB/databaseAccounts@2022-11-15' = {
   name: cosmosDbName
@@ -46,7 +46,7 @@ resource cosmosDb 'Microsoft.DocumentDB/databaseAccounts@2022-11-15' = {
     databaseAccountOfferType: 'Standard'
     defaultIdentity: 'FirstPartyIdentity'
     networkAclBypass: 'None'
-    disableLocalAuth: false
+    disableLocalAuth: true
     enablePartitionMerge: false
     minimalTlsVersion: 'Tls12'
     consistencyPolicy: {
@@ -89,43 +89,44 @@ resource graphragDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@20
   }
 }
 
-resource entitiesContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2022-11-15' = {
-  parent: graphragDatabase
-  name: 'entities'
-  properties: {
-    resource: {
-      id: 'entities'
-      indexingPolicy: {
-        indexingMode: 'consistent'
-        automatic: true
-        includedPaths: [
-          {
-            path: '/*'
-          }
-        ]
-        excludedPaths: [
-          {
-            path: '/"_etag"/?'
-          }
-        ]
-      }
-      partitionKey: {
-        paths: [
-          '/id'
-        ]
-        kind: 'Hash'
-        version: 2
-      }
-      uniqueKeyPolicy: {
-        uniqueKeys: []
-      }
-      conflictResolutionPolicy: {
-        mode: 'LastWriterWins'
-        conflictResolutionPath: '/_ts'
-      }
-    }
-  }
-}
+//// comment out entitiesContainer resource as the set of entity configuration API endpoints that use this have been disabled for now
+// resource entitiesContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2022-11-15' = {
+//   parent: graphragDatabase
+//   name: 'entities'
+//   properties: {
+//     resource: {
+//       id: 'entities'
+//       indexingPolicy: {
+//         indexingMode: 'consistent'
+//         automatic: true
+//         includedPaths: [
+//           {
+//             path: '/*'
+//           }
+//         ]
+//         excludedPaths: [
+//           {
+//             path: '/"_etag"/?'
+//           }
+//         ]
+//       }
+//       partitionKey: {
+//         paths: [
+//           '/id'
+//         ]
+//         kind: 'Hash'
+//         version: 2
+//       }
+//       uniqueKeyPolicy: {
+//         uniqueKeys: []
+//       }
+//       conflictResolutionPolicy: {
+//         mode: 'LastWriterWins'
+//         conflictResolutionPath: '/_ts'
+//       }
+//     }
+//   }
+// }
 
 resource jobsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2022-11-15' = {
   parent: graphragDatabase
@@ -203,9 +204,9 @@ resource containerStoreContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatab
   }
 }
 
-resource cosmosDbIdentityAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2023-11-15' = {
+resource sqlRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2023-11-15' = {
+  name: guid('${roleDefinitionId}-${principalId}-${cosmosDb.id}')
   parent: cosmosDb
-  name: roleAssignmentId
   properties: {
     roleDefinitionId: '/${subscription().id}/resourceGroups/${resourceGroup().name}/providers/Microsoft.DocumentDB/databaseAccounts/${cosmosDb.name}/sqlRoleDefinitions/${roleDefinitionId}'
     principalId: principalId
@@ -213,6 +214,6 @@ resource cosmosDbIdentityAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRo
   }
 }
 
-output id string = cosmosDb.id
 output name string = cosmosDb.name
+output id string = cosmosDb.id
 output endpoint string = cosmosDb.properties.documentEndpoint

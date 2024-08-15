@@ -16,15 +16,15 @@ class Reporters(Enum):
     BLOB = (1, "blob")
     CONSOLE = (2, "console")
     FILE = (3, "file")
-    APP_INSIGHTS = (4, "application_insights")
+    APP_INSIGHTS = (4, "app_insights")
 
 
 class PipelineAppInsightsReportingConfig(
-    PipelineReportingConfig[Literal["application_insights"]]
+    PipelineReportingConfig[Literal["app_insights"]]
 ):
     """Represents the ApplicationInsights reporting configuration for the pipeline."""
 
-    type: Literal["application_insights"] = Reporters.APP_INSIGHTS.name.lower()
+    type: Literal["app_insights"] = Reporters.APP_INSIGHTS.name.lower()
     """The type of reporting."""
 
     connection_string: str = pydantic_Field(

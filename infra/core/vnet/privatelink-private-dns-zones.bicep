@@ -1,18 +1,18 @@
-var aiSearchPrivateDnsZoneName = 'privatelink.search.windows.net'
-var blobStoragePrivateDnsZoneName = 'privatelink.blob.${environment().suffixes.storage}'
-var queueStoragePrivateDnsZoneName = 'privatelink.queue.${environment().suffixes.storage}'
-var cosmosDbPrivateDnsZoneName = 'privatelink.documents.azure.com'
-var storagePrivateDnsZoneNames = [blobStoragePrivateDnsZoneName, queueStoragePrivateDnsZoneName]
-
-var cloudName = toLower(environment().name)
-var privateDnsZoneData = loadJsonContent('private-dns-zone-groups.json')
-
-var azureMonitorPrivateDnsZones = privateDnsZoneData[cloudName].azureMonitor
-
-var privateDnsZones = union(azureMonitorPrivateDnsZones, storagePrivateDnsZoneNames, [cosmosDbPrivateDnsZoneName], [aiSearchPrivateDnsZoneName])
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
 
 @description('Virtual Network IDs to link to')
-param linkedVnetResourceIds array
+param linkedVnetIds array
+
+var aiSearchPrivateDnsZoneName = 'privatelink.search.windows.net'
+var blobStoragePrivateDnsZoneName = 'privatelink.blob.${environment().suffixes.storage}'
+var cosmosDbPrivateDnsZoneName = 'privatelink.documents.azure.com'
+var storagePrivateDnsZoneNames = [blobStoragePrivateDnsZoneName]
+var privateDnsZoneData = loadJsonContent('private-dns-zone-groups.json')
+var cloudName = toLower(environment().name)
+var azureMonitorPrivateDnsZones = privateDnsZoneData[cloudName].azureMonitor
+var privateDnsZones = union(azureMonitorPrivateDnsZones, storagePrivateDnsZoneNames, [cosmosDbPrivateDnsZoneName], [aiSearchPrivateDnsZoneName])
+
 
 resource privateDnsZoneResources 'Microsoft.Network/privateDnsZones@2020-06-01' = [
   for name in privateDnsZones: {
@@ -26,7 +26,7 @@ module dnsVnetLinks 'vnet-dns-link.bicep' = [
     name: replace(privateDnsZoneName, '.', '-')
     params: {
       privateDnsZoneName: privateDnsZoneResources[index].name
-      vnetResourceIds: linkedVnetResourceIds
+      vnetIds: linkedVnetIds
     }
   }
 ]
@@ -47,16 +47,6 @@ output blobStoragePrivateDnsZoneConfigs array = [
     properties: {
       #disable-next-line use-resource-id-functions
       privateDnsZoneId: privateDnsZoneResources[indexOf(privateDnsZones, blobStoragePrivateDnsZoneName)].id
-    }
-  }
-]
-
-output queueStoragePrivateDnsZoneConfigs array = [
-  {
-    name: queueStoragePrivateDnsZoneName
-    properties: {
-      #disable-next-line use-resource-id-functions
-      privateDnsZoneId: privateDnsZoneResources[indexOf(privateDnsZones, queueStoragePrivateDnsZoneName)].id
     }
   }
 ]

@@ -4,6 +4,7 @@
 import inspect
 import json
 import os
+import traceback
 from queue import Queue
 from threading import Thread
 
@@ -29,6 +30,7 @@ from src.api.common import (
 from src.api.query import _is_index_complete, _reformat_context_data
 from src.meta_agent.global_search.retrieve import GlobalSearchHelpers
 from src.models import GraphRequest
+from src.reporting import ReporterSingleton
 from src.utils import query as query_helper
 
 experimental_route = APIRouter(
@@ -188,6 +190,11 @@ async def global_search_streaming(request: GraphRequest):
             stream_response(report_df=report_df, query=request.query),
             media_type="application/json",
         )
-    except Exception:
-        # temporary logging of errors until reporters are in place
+    except Exception as e:
+        reporter = ReporterSingleton().get_instance()
+        reporter.on_error(
+            message="Error encountered while streaming global search response",
+            cause=e,
+            stack=traceback.format_exc(),
+        )
         raise HTTPException(status_code=500, detail=None)

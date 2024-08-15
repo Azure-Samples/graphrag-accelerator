@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 
 from dataclasses import dataclass, field
+from time import time
 from typing import (
     Any,
     List,
@@ -11,6 +12,7 @@ from azure.cosmos.exceptions import CosmosHttpResponseError
 from pydantic import BaseModel
 
 from src.api.azure_clients import AzureStorageClientManager
+from src.api.common import sanitize_name
 from src.typing import PipelineJobState
 
 
@@ -104,8 +106,12 @@ class TextUnitResponse(BaseModel):
 @dataclass
 class PipelineJob:
     _id: str = field(default=None, init=False)
+    _epoch_request_time: int = field(default=None, init=False)
     _index_name: str = field(default=None, init=False)
-    _storage_name: str = field(default=None, init=False)
+    _human_readable_index_name: str = field(default=None, init=False)
+    _sanitized_index_name: str = field(default=None, init=False)
+    _human_readable_storage_name: str = field(default=None, init=False)
+    _sanitized_storage_name: str = field(default=None, init=False)
     _entity_extraction_prompt: str = field(default=None, init=False)
     _community_report_prompt: str = field(default=None, init=False)
     _summarize_descriptions_prompt: str = field(default=None, init=False)
@@ -127,8 +133,8 @@ class PipelineJob:
     def create_item(
         cls,
         id: str,
-        index_name: str,
-        storage_name: str,
+        human_readable_index_name: str,
+        human_readable_storage_name: str,
         entity_extraction_prompt: str | None = None,
         community_report_prompt: str | None = None,
         summarize_descriptions_prompt: str | None = None,
@@ -160,15 +166,20 @@ class PipelineJob:
             )
 
         assert id is not None, "ID cannot be None."
-        assert index_name is not None, "index_name cannot be None."
-        assert len(index_name) > 0, "index_name cannot be empty."
-        assert storage_name is not None, "storage_name cannot be None."
-        assert len(storage_name) > 0, "storage_name cannot be empty."
+        assert human_readable_index_name is not None, "index_name cannot be None."
+        assert len(human_readable_index_name) > 0, "index_name cannot be empty."
+        assert human_readable_storage_name is not None, "storage_name cannot be None."
+        assert len(human_readable_storage_name) > 0, "storage_name cannot be empty."
 
-        instance = cls.__new__(cls, id, index_name, storage_name, **kwargs)
+        instance = cls.__new__(
+            cls, id, human_readable_index_name, human_readable_storage_name, **kwargs
+        )
         instance._id = id
-        instance._index_name = index_name
-        instance._storage_name = storage_name
+        instance._epoch_request_time = int(time())
+        instance._human_readable_index_name = human_readable_index_name
+        instance._sanitized_index_name = sanitize_name(human_readable_index_name)
+        instance._human_readable_storage_name = human_readable_storage_name
+        instance._sanitized_storage_name = sanitize_name(human_readable_storage_name)
         instance._entity_extraction_prompt = entity_extraction_prompt
         instance._community_report_prompt = community_report_prompt
         instance._summarize_descriptions_prompt = summarize_descriptions_prompt
@@ -206,8 +217,14 @@ class PipelineJob:
             )
         instance = cls.__new__(cls, **db_item)
         instance._id = db_item.get("id")
+        instance._epoch_request_time = db_item.get("epoch_request_time")
         instance._index_name = db_item.get("index_name")
-        instance._storage_name = db_item.get("storage_name")
+        instance._human_readable_index_name = db_item.get("human_readable_index_name")
+        instance._sanitized_index_name = db_item.get("sanitized_index_name")
+        instance._human_readable_storage_name = db_item.get(
+            "human_readable_storage_name"
+        )
+        instance._sanitized_storage_name = db_item.get("sanitized_storage_name")
         instance._entity_extraction_prompt = db_item.get("entity_extraction_prompt")
         instance._community_report_prompt = db_item.get("community_report_prompt")
         instance._summarize_descriptions_prompt = db_item.get(
@@ -245,8 +262,11 @@ class PipelineJob:
     def dump_model(self) -> dict:
         model = {
             "id": self._id,
-            "index_name": self._index_name,
-            "storage_name": self._storage_name,
+            "epoch_request_time": self._epoch_request_time,
+            "human_readable_index_name": self._human_readable_index_name,
+            "sanitized_index_name": self._sanitized_index_name,
+            "human_readable_storage_name": self._human_readable_storage_name,
+            "sanitized_storage_name": self._sanitized_storage_name,
             "all_workflows": self._all_workflows,
             "completed_workflows": self._completed_workflows,
             "failed_workflows": self._failed_workflows,
@@ -277,21 +297,52 @@ class PipelineJob:
             raise ValueError("ID cannot be changed once set.")
 
     @property
-    def index_name(self) -> str:
-        return self._index_name
+    def epoch_request_time(self) -> int:
+        return self._epoch_request_time
 
-    @index_name.setter
-    def index_name(self, index_name: str) -> None:
-        self._index_name = index_name
+    @epoch_request_time.setter
+    def epoch_request_time(self, epoch_request_time: int) -> None:
+        if self._epoch_request_time is not None:
+            self._epoch_request_time = epoch_request_time
+        else:
+            raise ValueError("ID cannot be changed once set.")
+
+    @property
+    def human_readable_index_name(self) -> str:
+        return self._human_readable_index_name
+
+    @human_readable_index_name.setter
+    def human_readable_index_name(self, human_readable_index_name: str) -> None:
+        self._human_readable_index_name = human_readable_index_name
         self.update_db()
 
     @property
-    def storage_name(self) -> str:
-        return self._storage_name
+    def sanitized_index_name(self) -> str:
+        return self._sanitized_index_name
 
-    @storage_name.setter
-    def storage_name(self, storage_name: str) -> None:
-        self._storage_name = storage_name
+    @sanitized_index_name.setter
+    def sanitized_index_name(self, sanitized_index_name: str) -> None:
+        self._sanitized_index_name = sanitized_index_name
+        self.update_db()
+        self._sanitized_storage_name = sanitized_storage_name
+        self.update_db()
+
+    @property
+    def human_readable_storage_name(self) -> str:
+        return self._human_readable_storage_name
+
+    @human_readable_storage_name.setter
+    def human_readable_storage_name(self, human_readable_storage_name: str) -> None:
+        self._human_readable_storage_name = human_readable_storage_name
+        self.update_db()
+
+    @property
+    def sanitized_storage_name(self) -> str:
+        return self._sanitized_storage_name
+
+    @sanitized_storage_name.setter
+    def sanitized_storage_name(self, sanitized_storage_name: str) -> None:
+        self._sanitized_storage_name = sanitized_storage_name
         self.update_db()
 
     @property
