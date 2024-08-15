@@ -18,6 +18,7 @@ serviceAccount:
 ingress:
   enabled: true
   className: nginx-internal
+  createIngressClass: true
   host: graphrag.graphrag.io
   tls: []
   annotations:
