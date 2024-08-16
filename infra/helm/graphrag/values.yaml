@@ -25,6 +25,7 @@ ingress:
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "900"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "900"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "900"
+    nginx.ingress.kubernetes.io/proxy-body-size: 500m
   loadBalancerAnnotations:
     service.beta.kubernetes.io/azure-load-balancer-internal: "true"
 
