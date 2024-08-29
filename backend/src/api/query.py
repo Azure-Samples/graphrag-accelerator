@@ -116,7 +116,7 @@ async def global_query(request: GraphRequest):
             for i in entities_df["human_readable_id"]:
                 links["entities"][i + max_vals["entities"] + 1] = {"index_name": index_name, "id": i}
             if max_vals["entities"] != -1:
-            entities_df["human_readable_id"] += max_vals["entities"] + 1
+                entities_df["human_readable_id"] += max_vals["entities"] + 1
             entities_df["name"] = entities_df["name"].apply(lambda x: x + f"-{index_name}")
             entities_df["text_unit_ids"] = entities_df["text_unit_ids"].apply(lambda x: [i + f"-{index_name}" for i in x])
             max_vals["entities"] = entities_df["human_readable_id"].max()
