@@ -74,3 +74,13 @@ def get_text_units(text_unit_table_path: str) -> pd.DataFrame:
         storage_options=storage_options,
     )
     return pd.DataFrame(read_indexer_text_units(text_unit_df))
+
+
+def get_df(
+    table_path: str,
+) -> pd.DataFrame:
+    df = pd.read_parquet(
+        table_path,
+        storage_options=storage_options,
+    )
+    return df

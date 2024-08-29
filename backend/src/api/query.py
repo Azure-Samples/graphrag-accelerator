@@ -13,6 +13,7 @@ from fastapi import (
     HTTPException,
 )
 from graphrag.config import create_graphrag_config
+from graphrag.query.api import global_search, local_search
 
 from src.api.azure_clients import BlobServiceClientSingleton
 from src.api.common import (
@@ -61,47 +62,70 @@ async def global_query(request: GraphRequest):
                 status_code=500,
                 detail=f"{index_name} not ready for querying.",
             )
-
-    ENTITY_TABLE = "output/create_final_nodes.parquet"
+    
     COMMUNITY_REPORT_TABLE = "output/create_final_community_reports.parquet"
-
+    ENTITY_TABLE = "output/create_final_entities.parquet"
+    NODES_TABLE = "output/create_final_nodes.parquet"
+    
     for index_name in sanitized_index_names:
         validate_index_file_exist(index_name, COMMUNITY_REPORT_TABLE)
         validate_index_file_exist(index_name, ENTITY_TABLE)
+        validate_index_file_exist(index_name, NODES_TABLE)
 
     # current investigations show that community level 1 is the most useful for global search
     COMMUNITY_LEVEL = 1
     try:
-        report_dfs = []
+        links = {"nodes": {}, "community": {}, "entities": {}, "text_units": {}, "relationships": {}, "covariates": {}}
+        max_vals = {"nodes": -1, "community": -1, "entities": -1, "text_units": -1, "relationships": -1, "covariates": -1}
+
+        community_dfs = []
+        entities_dfs = []
+        nodes_dfs = []
+
         for index_name in sanitized_index_names:
-            entity_table_path = f"abfs://{index_name}/{ENTITY_TABLE}"
             community_report_table_path = (
                 f"abfs://{index_name}/{COMMUNITY_REPORT_TABLE}"
             )
-            report_df = query_helper.get_reports(
-                entity_table_path, community_report_table_path, COMMUNITY_LEVEL
-            )
+            entity_table_path = f"abfs://{index_name}/{ENTITY_TABLE}"
+            node_table_path = f"abfs://{index_name}/{NODE_TABLE}"
 
-            report_dfs.append(report_df)
+            # Read the parquet file into a DataFrame and add provenance information
 
-        # overload title field to include index_name and index_id for provenance tracking
-        report_df = report_dfs[0]
-        max_id = 0
-        if len(report_df["community_id"]) > 0:
-            max_id = report_df["community_id"].astype(int).max()
-        report_df["title"] = [
-            sanitized_index_names[0] + "<sep>" + i + "<sep>" + t
-            for i, t in zip(report_df["community_id"], report_df["title"])
-        ]
-        for idx, df in enumerate(report_dfs[1:]):
-            df["title"] = [
-                sanitized_index_names[idx + 1] + "<sep>" + i + "<sep>" + t
-                for i, t in zip(df["community_id"], df["title"])
-            ]
-            df["community_id"] = [str(int(i) + max_id + 1) for i in df["community_id"]]
-            report_df = pd.concat([report_df, df], ignore_index=True, sort=False)
-            if len(report_df["community_id"]) > 0:
-                max_id = report_df["community_id"].astype(int).max()
+            #Note that nodes need to set before communities to that max community id makes sense
+            nodes_df = query_helper.get_df(nodes_file_path)
+            for i in nodes_df["human_readable_id"]:
+                links["nodes"][i + max_vals["nodes"] + 1] = {"index_name": index_name, "id": i}
+            if max_vals["nodes"] != -1:
+                nodes_df["human_readable_id"] += max_vals["nodes"] + 1
+            nodes_df["community"] = nodes_df["community"].apply(lambda x: str(int(x) + max_vals["community"] +1) if x else x)
+            nodes_df["title"] = nodes_df["title"].apply(lambda x: x + f"-{index_name}")
+            nodes_df["source_id"] = nodes_df["source_id"].apply(lambda x: ",".join([i + f"-{index_name}" for i in x.split(",")]))
+            max_vals["nodes"] = nodes_df["human_readable_id"].max() 
+            nodes_dfs.append(nodes_df)
+            
+            community_df = query_helper.get_df(community_report_table_path)
+            for i in community_df["community"].astype(int):
+                links["community"][i + max_vals["community"] + 1] = {"index_name": index_name, "id": str(i)}
+            if max_vals["community"] != -1:
+                col = community_df["community"].astype(int) + max_vals["community"] + 1
+                community_df["community"] = col.astype(str)
+            max_vals["community"] = community_df["community"].astype(int).max()
+            community_dfs.append(community_df)
+            
+            entities_df = query_helper.get_df(entities_table_path)
+            for i in entities_df["human_readable_id"]:
+                links["entities"][i + max_vals["entities"] + 1] = {"index_name": index_name, "id": i}
+            if max_vals["entities"] != -1:
+            entities_df["human_readable_id"] += max_vals["entities"] + 1
+            entities_df["name"] = entities_df["name"].apply(lambda x: x + f"-{index_name}")
+            entities_df["text_unit_ids"] = entities_df["text_unit_ids"].apply(lambda x: [i + f"-{index_name}" for i in x])
+            max_vals["entities"] = entities_df["human_readable_id"].max()
+            entities_dfs.append(entities_df)
+        
+        # merge the dataframes
+        nodes_combined = pd.concat(nodes_dfs, axis=0, ignore_index=True, sort=False)
+        community_combined = pd.concat(community_dfs, axis=0, ignore_index=True, sort=False)
+        entities_combined = pd.concat(entities_dfs, axis=0, ignore_index=True, sort=False)
 
         # load custom pipeline settings
         this_directory = os.path.dirname(
@@ -112,24 +136,21 @@ async def global_query(request: GraphRequest):
         parameters = create_graphrag_config(data, ".")
 
         # perform async search
-        global_search = GlobalSearchHelpers(config=parameters)
-        search_engine = global_search.get_search_engine(report_df=report_df)
-        result = await search_engine.asearch(query=request.query)
+        result = await global_search(
+            config = parameters,
+            nodes = nodes_combined,
+            entities = entities_combined,
+            community_reports = community_combined,
+            community_level = COMMUNITY_LEVEL,
+            response_type = "Multiple Paragraphs",
+            query = request.query,
+        )
+
+        # link index provenance to the context data
+        result.context_data = _update_context(result.context_data, links)
+
         # reformat context data to match azure ai search output format
         result.context_data = _reformat_context_data(result.context_data)
-
-        # map title into index_name, index_id and title for provenance tracking
-        result.context_data["reports"] = [
-            dict(
-                {k: entry[k] for k in entry},
-                **{
-                    "index_name": entry["title"].split("<sep>")[0],
-                    "index_id": entry["title"].split("<sep>")[1],
-                    "title": entry["title"].split("<sep>")[2],
-                },
-            )
-            for entry in result.context_data["reports"]
-        ]
 
         return GraphResponse(result=result.response, context_data=result.context_data)
     except Exception as e:
@@ -466,3 +487,61 @@ def _reformat_context_data(context_data: dict) -> dict:
         except Exception:
             raise
     return final_format
+
+#Update context data
+#context_keys = ['reports', 'entities', 'relationships', 'claims', 'sources']
+def _update_context(context, links):
+    updated_context = {}
+    for key in context:
+        updated_entry = []
+        if key == "reports":
+            updated_entry = [
+                dict(
+                    {k: entry[k] for k in entry},
+                    **{
+                        "index_name": links["community"][int(entry["id"])]["index_name"],
+                        "index_id": links["community"][int(entry["id"])]["id"],
+                    },
+                )
+                for entry in context[key]
+            ]
+        if key == "entities":
+            updated_entry = [
+                dict(
+                    {k: entry[k] for k in entry},
+                    **{
+                        "entity": entry["entity"].split("-")[0],
+                        "index_name": links["entities"][int(entry["id"])]["index_name"],
+                        "index_id": links["entities"][int(entry["id"])]["id"],
+                    },
+                )
+                for entry in context[key]
+            ]
+        if key == "relationships":
+            updated_entry = [
+                dict(
+                    {k: entry[k] for k in entry},
+                    **{
+                        "source": entry["source"].split("-")[0],
+                        "target": entry["target"].split("-")[0],
+                        "index_name": links["relationships"][int(entry["id"])]["index_name"],
+                        "index_id": links["relationships"][int(entry["id"])]["id"],
+                    },
+                )
+                for entry in context[key]
+            ]
+        if key == "claims":
+            updated_entry = [
+                dict(
+                    {k: entry[k] for k in entry},
+                    **{
+                        "index_name": links["claims"][int(entry["id"])]["index_name"],
+                        "index_id": links["claims"][int(entry["id"])]["id"],
+                    },
+                )
+                for entry in context[key]
+            ]
+        if key == "sources":
+            updated_entry = context[key]
+        updated_context[key] = updated_entry
+    return updated_context
