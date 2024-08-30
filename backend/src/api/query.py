@@ -64,12 +64,12 @@ async def global_query(request: GraphRequest):
             )
     
     COMMUNITY_REPORT_TABLE = "output/create_final_community_reports.parquet"
-    ENTITY_TABLE = "output/create_final_entities.parquet"
+    ENTITIES_TABLE = "output/create_final_entities.parquet"
     NODES_TABLE = "output/create_final_nodes.parquet"
     
     for index_name in sanitized_index_names:
         validate_index_file_exist(index_name, COMMUNITY_REPORT_TABLE)
-        validate_index_file_exist(index_name, ENTITY_TABLE)
+        validate_index_file_exist(index_name, ENTITIES_TABLE)
         validate_index_file_exist(index_name, NODES_TABLE)
 
     # current investigations show that community level 1 is the most useful for global search
@@ -86,13 +86,13 @@ async def global_query(request: GraphRequest):
             community_report_table_path = (
                 f"abfs://{index_name}/{COMMUNITY_REPORT_TABLE}"
             )
-            entity_table_path = f"abfs://{index_name}/{ENTITY_TABLE}"
-            node_table_path = f"abfs://{index_name}/{NODE_TABLE}"
+            entities_table_path = f"abfs://{index_name}/{ENTITIES_TABLE}"
+            nodes_table_path = f"abfs://{index_name}/{NODES_TABLE}"
 
             # Read the parquet file into a DataFrame and add provenance information
 
             #Note that nodes need to set before communities to that max community id makes sense
-            nodes_df = query_helper.get_df(nodes_file_path)
+            nodes_df = query_helper.get_df(nodes_table_path)
             for i in nodes_df["human_readable_id"]:
                 links["nodes"][i + max_vals["nodes"] + 1] = {"index_name": index_name, "id": i}
             if max_vals["nodes"] != -1:
@@ -147,12 +147,12 @@ async def global_query(request: GraphRequest):
         )
 
         # link index provenance to the context data
-        result.context_data = _update_context(result.context_data, links)
+        context_data = _update_context(result[1], links)
 
         # reformat context data to match azure ai search output format
-        result.context_data = _reformat_context_data(result.context_data)
+        context_data = _reformat_context_data(context_data)
 
-        return GraphResponse(result=result.response, context_data=result.context_data)
+        return GraphResponse(result=result[0], context_data=context_data)
     except Exception as e:
         reporter = ReporterSingleton().get_instance()
         reporter.on_error(
@@ -477,7 +477,7 @@ def _reformat_context_data(context_data: dict) -> dict:
     final_format = {"reports": [], "entities": [], "relationships": [], "claims": []}
     for key in context_data:
         try:
-            records = context_data[key].to_dict(orient="records")
+            records = context_data[key]
             if len(records) < 1:
                 continue
             # sort records by threat rating
