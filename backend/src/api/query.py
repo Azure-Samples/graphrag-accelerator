@@ -317,8 +317,12 @@ async def local_query(request: GraphRequest):
     
     # add index_names to vector_store args
     parameters.embeddings.vector_store["index_names"] = sanitized_index_names
+    #Internally write over the get_embedding_description_store 
+    #method to use the multi-index collection.
+    import graphrag.query.api
+    graphrag.query.api._get_embedding_description_store = _get_embedding_description_store
     # perform async search
-    result = await local_search1(
+    result = await local_search(
         root_dir = None,
         config = parameters,
         nodes = nodes_combined,
@@ -339,90 +343,6 @@ async def local_query(request: GraphRequest):
     context_data = _reformat_context_data(context_data)
 
     return GraphResponse(result=result[0], context_data=context_data)
-
-from graphrag.config.models.graph_rag_config import GraphRagConfig
-async def local_search1(
-    root_dir: str | None,
-    config: GraphRagConfig,
-    nodes: pd.DataFrame,
-    entities: pd.DataFrame,
-    community_reports: pd.DataFrame,
-    text_units: pd.DataFrame,
-    relationships: pd.DataFrame,
-    covariates: pd.DataFrame | None,
-    community_level: int,
-    response_type: str,
-    query: str,
-) -> tuple[
-    str | dict[str, Any] | list[dict[str, Any]],
-    str | list[pd.DataFrame] | dict[str, pd.DataFrame],
-]:
-    """Perform a local search and return the context data and response.
-
-    Parameters
-    ----------
-    - config (GraphRagConfig): A graphrag configuration (from settings.yaml)
-    - nodes (pd.DataFrame): A DataFrame containing the final nodes (from create_final_nodes.parquet)
-    - entities (pd.DataFrame): A DataFrame containing the final entities (from create_final_entities.parquet)
-    - community_reports (pd.DataFrame): A DataFrame containing the final community reports (from create_final_community_reports.parquet)
-    - text_units (pd.DataFrame): A DataFrame containing the final text units (from create_final_text_units.parquet)
-    - relationships (pd.DataFrame): A DataFrame containing the final relationships (from create_final_relationships.parquet)
-    - covariates (pd.DataFrame): A DataFrame containing the final covariates (from create_final_covariates.parquet)
-    - community_level (int): The community level to search at.
-    - response_type (str): The response type to return.
-    - query (str): The user query to search for.
-
-    Returns
-    -------
-    TODO: Document the search response type and format.
-
-    Raises
-    ------
-    TODO: Document any exceptions to expect.
-    """
-    vector_store_args = (
-        config.embeddings.vector_store if config.embeddings.vector_store else {}
-    )
-    reporter.info(f"Vector Store Args: {vector_store_args}")
-
-    from graphrag.vector_stores.typing import VectorStoreType
-    vector_store_type = vector_store_args.get("type", VectorStoreType.LanceDB)
-
-    from graphrag.query.indexer_adapters import read_indexer_entities, read_indexer_covariates, read_indexer_reports, read_indexer_text_units, read_indexer_relationships
-    _entities = read_indexer_entities(nodes, entities, community_level)
-
-    from graphrag.config import resolve_timestamp_path
-    from pathlib import Path
-    if vector_store_type == VectorStoreType.LanceDB:
-        base_dir = Path(str(root_dir)) / config.storage.base_dir
-        resolved_base_dir = resolve_timestamp_path(base_dir)
-        lancedb_dir = resolved_base_dir / "lancedb"
-        vector_store_args.update({"db_uri": str(lancedb_dir)})
-
-    description_embedding_store = _get_embedding_description_store(
-        entities=_entities,
-        vector_store_type=vector_store_type,
-        config_args=vector_store_args,
-    )
-    
-    _covariates = read_indexer_covariates(covariates) if covariates is not None else []
-    from graphrag.query.factories import get_local_search_engine
-    search_engine = get_local_search_engine(
-        config=config,
-        reports=read_indexer_reports(community_reports, nodes, community_level),
-        text_units=read_indexer_text_units(text_units),
-        entities=_entities,
-        relationships=read_indexer_relationships(relationships),
-        covariates={"claims": _covariates},
-        description_embedding_store=description_embedding_store,
-        response_type=response_type,
-    )
-
-    from graphrag.query.structured_search.base import SearchResult
-    result: SearchResult = await search_engine.asearch(query=query)
-    response = result.response
-    context_data = _reformat_context_data_internal(result.context_data)  # type: ignore
-    return response, context_data
 
 def _is_index_complete(index_name: str) -> bool:
     """
@@ -445,32 +365,6 @@ def _is_index_complete(index_name: str) -> bool:
             return True
     return False
 
-def _reformat_context_data_internal(context_data: dict) -> dict:
-    """
-    Reformats context_data for all query responses.
-
-    Reformats a dictionary of dataframes into a dictionary of lists.
-    One list entry for each record. Records are grouped by original
-    dictionary keys.
-
-    Note: depending on which query algorithm is used, the context_data may not
-          contain the same information (keys). In this case, the default behavior will be to
-          set these keys as empty lists to preserve a standard output format.
-    """
-    final_format = {
-        "reports": [],
-        "entities": [],
-        "relationships": [],
-        "claims": [],
-        "sources": [],
-    }
-    for key in context_data:
-        records = context_data[key].to_dict(orient="records")
-        if len(records) < 1:
-            continue
-        final_format[key] = records
-    return final_format
-
 def _reformat_context_data(context_data: dict) -> dict:
     """
     Reformats context_data for all query types. Reformats
@@ -478,7 +372,8 @@ def _reformat_context_data(context_data: dict) -> dict:
     One list entry for each record.  Records are grouped by
     original dictionary keys.
 
-    Note: depending on which query type is used, the context_data may not contain all keys. In this case, the default behavior will be to set these keys as empty lists in order to preserve a standard output format for end users.
+    Note: depending on which query type is used, the context_data may not contain all keys. 
+    In this case, the default behavior will be to set these keys as empty lists in order to preserve a standard output format for end users.
     """
     final_format = {"reports": [], "entities": [], "relationships": [], "claims": []}
     for key in context_data:
@@ -560,7 +455,6 @@ def _get_embedding_description_store(
     collection_names = [                
         f"{index_name}_description_embedding" for index_name in config_args.get("index_names", [])
     ]
-    print(collection_names)
     ai_search_url = os.environ["AI_SEARCH_URL"]
     description_embedding_store = MultiAzureAISearch(
         collection_name="multi",
@@ -569,7 +463,6 @@ def _get_embedding_description_store(
     )
     description_embedding_store.connect(url=ai_search_url)
     for collection_name in collection_names:
-        print(collection_name)
         description_embedding_store.add_collection(collection_name)
     return description_embedding_store
 
@@ -658,7 +551,6 @@ class MultiAzureAISearch(BaseVectorStore):
                 r["id"] = r.get("id", "") + add_on
                 mod_response += [r]
             docs += mod_response
-        print(docs)
         return [
             VectorStoreSearchResult(
                 document=VectorStoreDocument(
