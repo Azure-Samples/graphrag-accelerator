@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 
 import inspect
+import json
 import os
 import traceback
 
@@ -12,8 +13,20 @@ from fastapi import (
     Depends,
     HTTPException,
 )
+
+from azure.identity import DefaultAzureCredential
+from azure.search.documents import SearchClient
+from azure.search.documents.models import VectorizedQuery
+
 from graphrag.config import create_graphrag_config
+from graphrag.index.progress.types import PrintProgressReporter
+from graphrag.model.types import TextEmbedder
 from graphrag.query.api import global_search, local_search
+from graphrag.vector_stores.base import (
+    BaseVectorStore,
+    VectorStoreDocument,
+    VectorStoreSearchResult,
+)
 
 from src.api.azure_clients import BlobServiceClientSingleton
 from src.api.common import (
@@ -21,8 +34,6 @@ from src.api.common import (
     validate_index_file_exist,
     verify_subscription_key_exist,
 )
-from src.meta_agent.community.retrieve import CommunitySearchHelpers
-from src.meta_agent.global_search.retrieve import GlobalSearchHelpers
 from src.models import (
     GraphRequest,
     GraphResponse,
@@ -32,6 +43,8 @@ from src.reporting import ReporterSingleton
 from src.typing import PipelineJobState
 from src.utils import query as query_helper
 
+from typing import Any
+
 query_route = APIRouter(
     prefix="/query",
     tags=["Query Operations"],
@@ -40,6 +53,7 @@ query_route = APIRouter(
 if os.getenv("KUBERNETES_SERVICE_HOST"):
     query_route.dependencies.append(Depends(verify_subscription_key_exist))
 
+reporter = PrintProgressReporter("")
 
 @query_route.post(
     "/global",
@@ -89,7 +103,7 @@ async def global_query(request: GraphRequest):
             entities_table_path = f"abfs://{index_name}/{ENTITIES_TABLE}"
             nodes_table_path = f"abfs://{index_name}/{NODES_TABLE}"
 
-            # Read the parquet file into a DataFrame and add provenance information
+            # Read the parquet files into DataFrames and add provenance information
 
             #Note that nodes need to set before communities to that max community id makes sense
             nodes_df = query_helper.get_df(nodes_table_path)
@@ -185,182 +199,113 @@ async def local_query(request: GraphRequest):
             )
 
     blob_service_client = BlobServiceClientSingleton.get_instance()
-    report_dfs = []
-    entity_dfs = []
-    relationship_dfs = []
-    covariate_dfs = []
-    text_unit_dfs = []
-    for index_idx, index_name in enumerate(sanitized_index_names):
-        add_on = "-" + str(index_idx)
-        COMMUNITY_REPORT_TABLE = "output/create_final_community_reports.parquet"
-        ENTITY_TABLE = "output/create_final_nodes.parquet"
-        ENTITY_EMBEDDING_TABLE = "output/create_final_entities.parquet"
-        RELATIONSHIP_TABLE = "output/create_final_relationships.parquet"
-        COVARIATE_TABLE = "output/create_final_covariates.parquet"
-        TEXT_UNIT_TABLE = "output/create_final_text_units.parquet"
-        COMMUNITY_LEVEL = 2
+    
+    community_dfs =[]
+    covariates_dfs = []
+    entities_dfs = []
+    nodes_dfs =[]
+    relationships_dfs = []
+    text_units_dfs=[]
 
+    links = {"nodes": {}, "community": {}, "entities": {}, "text_units": {}, "relationships": {}, "covariates": {}}
+    max_vals = {"nodes": -1, "community": -1, "entities": -1, "text_units": -1, "relationships": -1, "covariates": -1}
+
+    COMMUNITY_REPORT_TABLE = "output/create_final_community_reports.parquet"
+    COVARIATES_TABLE = "output/create_final_covariates.parquet"
+    ENTITIES_TABLE = "output/create_final_entities.parquet"
+    NODES_TABLE = "output/create_final_nodes.parquet"
+    RELATIONSHIPS_TABLE = "output/create_final_relationships.parquet"
+    TEXT_UNITS_TABLE = "output/create_final_text_units.parquet"
+    
+    COMMUNITY_LEVEL = 2
+
+    for index_name in sanitized_index_names:
         # check for existence of files the query relies on to validate the index is complete
         validate_index_file_exist(index_name, COMMUNITY_REPORT_TABLE)
-        validate_index_file_exist(index_name, ENTITY_TABLE)
-        validate_index_file_exist(index_name, ENTITY_EMBEDDING_TABLE)
-        validate_index_file_exist(index_name, TEXT_UNIT_TABLE)
+        validate_index_file_exist(index_name, ENTITIES_TABLE)
+        validate_index_file_exist(index_name, NODES_TABLE)
+        validate_index_file_exist(index_name, RELATIONSHIPS_TABLE)
+        validate_index_file_exist(index_name, TEXT_UNITS_TABLE)
 
-        # get entities
-        entity_table_path = f"abfs://{index_name}/{ENTITY_TABLE}"
-        entity_embedding_table_path = f"abfs://{index_name}/{ENTITY_EMBEDDING_TABLE}"
-        entity_df = query_helper.get_entities(
-            entity_table_path=entity_table_path,
-            entity_embedding_table_path=entity_embedding_table_path,
-            community_level=COMMUNITY_LEVEL,
-        )
-        entity_df.id = entity_df.id.apply(lambda x: x + add_on)
-        entity_df.text_unit_ids = entity_df.text_unit_ids.apply(
-            lambda x: [i + add_on for i in x]
-        )
-        entity_dfs.append(entity_df)
+        community_report_table_path = (
+                f"abfs://{index_name}/{COMMUNITY_REPORT_TABLE}"
+            )
+        covariates_table_path = (
+                f"abfs://{index_name}/{COVARIATES_TABLE}"
+            )
+        entities_table_path = f"abfs://{index_name}/{ENTITIES_TABLE}"
+        nodes_table_path = f"abfs://{index_name}/{NODES_TABLE}"
+        relationships_table_path = f"abfs://{index_name}/{RELATIONSHIPS_TABLE}"
+        text_units_table_path = f"abfs://{index_name}/{TEXT_UNITS_TABLE}"
 
-        # get relationships (the graph edges)
-        relationship_df = query_helper.get_relationships(
-            f"abfs://{index_name}/{RELATIONSHIP_TABLE}"
-        )
-        relationship_df.id = relationship_df.id.apply(lambda x: x + add_on)
-        relationship_df.text_unit_ids = relationship_df.text_unit_ids.apply(
-            lambda x: [i + add_on for i in x]
-        )
-        relationship_dfs.append(relationship_df)
+        # Read the parquet files into DataFrames and add provenance information
 
-        # get covariates, ie, claims about the entities
-        # This step is not required, so only append if file exists
+        #Note that nodes need to set before communities to that max community id makes sense
+        nodes_df = query_helper.get_df(nodes_table_path)
+        for i in nodes_df["human_readable_id"]:
+            links["nodes"][i + max_vals["nodes"] + 1] = {"index_name": index_name, "id": i}
+        if max_vals["nodes"] != -1:
+           nodes_df["human_readable_id"] += max_vals["nodes"] + 1
+        nodes_df["community"] = nodes_df["community"].apply(lambda x: str(int(x) + max_vals["community"] +1) if x else x)
+        nodes_df["id"] = nodes_df["id"].apply(lambda x: x + f"-{index_name}")
+        nodes_df["title"] = nodes_df["title"].apply(lambda x: x + f"-{index_name}")
+        nodes_df["source_id"] = nodes_df["source_id"].apply(lambda x: ",".join([i + f"-{index_name}" for i in x.split(",")]))
+        max_vals["nodes"] = nodes_df["human_readable_id"].max() 
+        nodes_dfs.append(nodes_df)
+    
+        community_df = query_helper.get_df(community_report_table_path)
+        for i in community_df["community"].astype(int):
+            links["community"][i + max_vals["community"] + 1] = {"index_name": index_name, "id": str(i)}
+        if max_vals["community"] != -1:
+            col = community_df["community"].astype(int) + max_vals["community"] + 1
+            community_df["community"] = col.astype(str)
+        max_vals["community"] = community_df["community"].astype(int).max()
+        community_dfs.append(community_df)
+    
+        entities_df = query_helper.get_df(entities_table_path)
+        for i in entities_df["human_readable_id"]:
+            links["entities"][i + max_vals["entities"] + 1] = {"index_name": index_name, "id": i}
+        if max_vals["entities"] != -1:
+           entities_df["human_readable_id"] += max_vals["entities"] + 1
+        entities_df["id"] = entities_df["id"].apply(lambda x: x + f"-{index_name}")
+        entities_df["name"] = entities_df["name"].apply(lambda x: x + f"-{index_name}")
+        entities_df["text_unit_ids"] = entities_df["text_unit_ids"].apply(lambda x: [i + f"-{index_name}" for i in x])
+        max_vals["entities"] = entities_df["human_readable_id"].max()
+        entities_dfs.append(entities_df)
+    
+        relationships_df = query_helper.get_df(relationships_table_path)
+        for i in relationships_df["human_readable_id"].astype(int):
+            links["relationships"][i + max_vals["relationships"] + 1] = {"index_name": index_name, "id": i}
+        if max_vals["relationships"] != -1:
+            col = relationships_df["human_readable_id"].astype(int) + max_vals["relationships"] + 1
+            relationships_df["human_readable_id"] = col.astype(str)
+        relationships_df["source"] = relationships_df["source"].apply(lambda x: x + f"-{index_name}")
+        relationships_df["target"] = relationships_df["target"].apply(lambda x: x + f"-{index_name}")
+        relationships_df["text_unit_ids"] = relationships_df["text_unit_ids"].apply(lambda x: [i + f"-{index_name}" for i in x])
+        max_vals["relationships"] = relationships_df["human_readable_id"].astype(int).max()
+        relationships_dfs.append(relationships_df)
+    
+        text_units_df = query_helper.get_df(text_units_table_path)
+        text_units_df["id"] = text_units_df["id"].apply(lambda x: f"{x}-{index_name}")
+        text_units_dfs.append(text_units_df)
+
         index_container_client = blob_service_client.get_container_client(index_name)
-        if index_container_client.get_blob_client(COVARIATE_TABLE).exists():
-            covariate_df = query_helper.get_covariates(
-                f"abfs://{index_name}/{COVARIATE_TABLE}"
-            )
-            covariate_df.short_id = covariate_df.short_id.astype(float).astype(int)
-            covariate_df.id = covariate_df.id.apply(lambda x: x + add_on)
-            covariate_df.document_ids = covariate_df.document_ids.apply(
-                lambda x: [i + add_on for i in x]
-            )
-            covariate_dfs.append(covariate_df)
+        if index_container_client.get_blob_client(COVARIATES_TABLE).exists():
+            covariates_df = query_helper.get_df(covariates_table_path)
+            if i in covariates_df["human_readable_id"].astype(int):
+                links["covariates"][i + max_vals["covariates"] + 1] = {"index_name": index_name, "id": i}
+            if max_vals["covariates"] != -1:
+                col = covariates_df["human_readable_id"].astype(int) + max_vals["covariates"] + 1
+                covariates_df["human_readable_id"] = col.astype(str)
+            max_vals["covariates"] = covariates_df["human_readable_id"].astype(int).max()
+            covariates_dfs.append(covariates_df)
 
-        # get community reports
-        entity_table_path = f"abfs://{index_name}/{ENTITY_TABLE}"
-        community_report_table_path = f"abfs://{index_name}/{COMMUNITY_REPORT_TABLE}"
-        report_df = query_helper.get_reports(
-            entity_table_path, community_report_table_path, COMMUNITY_LEVEL
-        )
-        report_df.id = report_df.id.apply(lambda x: x + add_on)
-        report_dfs.append(report_df)
-
-        # get text units
-        text_unit_df = query_helper.get_text_units(
-            f"abfs://{index_name}/{TEXT_UNIT_TABLE}"
-        )
-        text_unit_df.id = text_unit_df.id.apply(lambda x: x + add_on)
-        text_unit_df.document_ids = text_unit_df.document_ids.apply(
-            lambda x: [i + add_on for i in x]
-        )
-        text_unit_df.entity_ids = text_unit_df.entity_ids.map(
-            lambda x: [i + add_on for i in x], na_action="ignore"
-        )
-        text_unit_df.relationship_ids = text_unit_df.relationship_ids.map(
-            lambda x: [i + add_on for i in x], na_action="ignore"
-        )
-        text_unit_dfs.append(text_unit_df)
-
-    # for each list of dataframes (report_dfs, entity_dfs, relationship_dfs, covariate_dfs, text_unit_dfs)
-    # merge the associated data frames into a single dataframe (keeping track of index) to pass to the search engine
-    report_df = report_dfs[0]
-    max_id = 0
-    if len(report_df["community_id"]) > 0:
-        max_id = report_df["community_id"].astype(float).astype(int).max()
-    report_df["title"] = [
-        sanitized_index_names[0] + "<sep>" + i + "<sep>" + str(t)
-        for i, t in zip(report_df["community_id"], report_df["title"])
-    ]
-    for idx, df in enumerate(report_dfs[1:]):
-        df["title"] = [
-            sanitized_index_names[idx + 1] + "<sep>" + str(i) + "<sep>" + str(t)
-            for i, t in zip(df["community_id"], df["title"])
-        ]
-        df["community_id"] = [str(int(i) + max_id + 1) for i in df["community_id"]]
-        report_df = pd.concat([report_df, df], ignore_index=True, sort=False)
-        if len(report_df["community_id"]) > 0:
-            max_id = report_df["community_id"].astype(float).astype(int).max()
-
-    entity_df = entity_dfs[0]
-    entity_df["description"] = [
-        sanitized_index_names[0] + "<sep>" + str(i) + "<sep>" + str(t)
-        for i, t in zip(entity_df["short_id"], entity_df["description"])
-    ]
-    max_id = 0
-    if len(entity_df["short_id"]) > 0:
-        max_id = entity_df["short_id"].astype(float).astype(int).max()
-    for idx, df in enumerate(entity_dfs[1:]):
-        df["description"] = [
-            sanitized_index_names[idx + 1] + "<sep>" + str(i) + "<sep>" + str(t)
-            for i, t in zip(df["short_id"], df["description"])
-        ]
-        df["short_id"] = [str(int(i) + max_id + 1) for i in range(len(df["short_id"]))]
-        entity_df = pd.concat([entity_df, df], ignore_index=True, sort=False)
-        if len(entity_df["short_id"]) > 0:
-            max_id = entity_df["short_id"].astype(float).astype(int).max()
-
-    relationship_df = relationship_dfs[0]
-    relationship_df["description"] = [
-        sanitized_index_names[0] + "<sep>" + str(i) + "<sep>" + str(t)
-        for i, t in zip(relationship_df["short_id"], relationship_df["description"])
-    ]
-    max_id = 0
-    if len(relationship_df["short_id"]) > 0:
-        max_id = relationship_df["short_id"].astype(float).astype(int).max()
-    for idx, df in enumerate(relationship_dfs[1:]):
-        df["description"] = [
-            sanitized_index_names[idx + 1] + "<sep>" + str(i) + "<sep>" + str(t)
-            for i, t in zip(df["short_id"], df["description"])
-        ]
-        df["short_id"] = [str(int(i) + max_id + 1) for i in range(len(df["short_id"]))]
-        relationship_df = pd.concat(
-            [relationship_df, df], ignore_index=True, sort=False
-        )
-        if len(relationship_df["short_id"]) > 0:
-            max_id = relationship_df["short_id"].astype(float).astype(int).max()
-
-    if len(covariate_dfs) > 0:
-        covariate_df = covariate_dfs[0]
-        covariate_df["subject_id"] = [
-            sanitized_index_names[0] + "<sep>" + str(i) + "<sep>" + str(t)
-            for i, t in zip(covariate_df["short_id"], covariate_df["subject_id"])
-        ]
-        max_id = 0
-        if len(covariate_df["short_id"]) > 0:
-            max_id = covariate_df["short_id"].astype(float).astype(int).max()
-        for idx, df in enumerate(covariate_dfs[1:]):
-            df["subject_id"] = [
-                sanitized_index_names[idx + 1] + "<sep>" + str(i) + "<sep>" + str(t)
-                for i, t in zip(df["short_id"], df["subject_id"])
-            ]
-            df["short_id"] = [
-                str(int(i) + max_id + 1) for i in range(len(df["short_id"]))
-            ]
-            covariate_df = pd.concat([covariate_df, df], ignore_index=True, sort=False)
-            if len(covariate_df["short_id"]) > 0:
-                max_id = covariate_df["short_id"].astype(float).astype(int).max()
-    else:
-        covariate_df = None
-
-    text_unit_df = text_unit_dfs[0]
-    text_unit_df["text"] = [
-        sanitized_index_names[0] + "<sep>" + str(i) + "<sep>" + str(t)
-        for i, t in zip(text_unit_df["id"], text_unit_df["text"])
-    ]
-    for idx, df in enumerate(text_unit_dfs[1:]):
-        df["text"] = [
-            sanitized_index_names[idx + 1] + "<sep>" + str(i) + "<sep>" + str(t)
-            for i, t in zip(df["id"], df["text"])
-        ]
-        text_unit_df = pd.concat([text_unit_df, df], ignore_index=True, sort=False)
+    nodes_combined = pd.concat(nodes_dfs, axis=0, ignore_index=True)
+    community_combined = pd.concat(community_dfs, axis=0, ignore_index=True)
+    entities_combined = pd.concat(entities_dfs, axis=0, ignore_index=True)
+    text_units_combined = pd.concat(text_units_dfs, axis=0, ignore_index=True)
+    relationships_combined = pd.concat(relationships_dfs, axis=0, ignore_index=True)
+    covariates_combined = pd.concat(covariates_dfs, axis=0, ignore_index=True) if covariates_dfs is not [] else None
 
     # load custom pipeline settings
     this_directory = os.path.dirname(
@@ -369,79 +314,115 @@ async def local_query(request: GraphRequest):
     data = yaml.safe_load(open(f"{this_directory}/pipeline-settings.yaml"))
     # layer the custom settings on top of the default configuration settings of graphrag
     parameters = create_graphrag_config(data, ".")
-
-    # convert all the pandas dataframe artifacts into community objects
-    local_search = CommunitySearchHelpers(
-        index_names=sanitized_index_names, config=parameters
+    
+    # add index_names to vector_store args
+    parameters.embeddings.vector_store["index_names"] = sanitized_index_names
+    # perform async search
+    result = await local_search1(
+        root_dir = None,
+        config = parameters,
+        nodes = nodes_combined,
+        entities = entities_combined,
+        community_reports = community_combined,
+        text_units = text_units_combined,
+        relationships = relationships_combined,
+        covariates = covariates_combined,
+        community_level = COMMUNITY_LEVEL,
+        response_type = "Multiple Paragraphs",
+        query = request.query
     )
-    community_data = local_search.read_community_info(
-        report_df=report_df,
-        entity_df=entity_df,
-        edges_df=relationship_df,
-        covariate_df=covariate_df,
-        text_unit_df=text_unit_df,
+
+    # link index provenance to the context data
+    context_data = _update_context(result[1], links)
+
+    # reformat context data to match azure ai search output format
+    context_data = _reformat_context_data(context_data)
+
+    return GraphResponse(result=result[0], context_data=context_data)
+
+from graphrag.config.models.graph_rag_config import GraphRagConfig
+async def local_search1(
+    root_dir: str | None,
+    config: GraphRagConfig,
+    nodes: pd.DataFrame,
+    entities: pd.DataFrame,
+    community_reports: pd.DataFrame,
+    text_units: pd.DataFrame,
+    relationships: pd.DataFrame,
+    covariates: pd.DataFrame | None,
+    community_level: int,
+    response_type: str,
+    query: str,
+) -> tuple[
+    str | dict[str, Any] | list[dict[str, Any]],
+    str | list[pd.DataFrame] | dict[str, pd.DataFrame],
+]:
+    """Perform a local search and return the context data and response.
+
+    Parameters
+    ----------
+    - config (GraphRagConfig): A graphrag configuration (from settings.yaml)
+    - nodes (pd.DataFrame): A DataFrame containing the final nodes (from create_final_nodes.parquet)
+    - entities (pd.DataFrame): A DataFrame containing the final entities (from create_final_entities.parquet)
+    - community_reports (pd.DataFrame): A DataFrame containing the final community reports (from create_final_community_reports.parquet)
+    - text_units (pd.DataFrame): A DataFrame containing the final text units (from create_final_text_units.parquet)
+    - relationships (pd.DataFrame): A DataFrame containing the final relationships (from create_final_relationships.parquet)
+    - covariates (pd.DataFrame): A DataFrame containing the final covariates (from create_final_covariates.parquet)
+    - community_level (int): The community level to search at.
+    - response_type (str): The response type to return.
+    - query (str): The user query to search for.
+
+    Returns
+    -------
+    TODO: Document the search response type and format.
+
+    Raises
+    ------
+    TODO: Document any exceptions to expect.
+    """
+    vector_store_args = (
+        config.embeddings.vector_store if config.embeddings.vector_store else {}
+    )
+    reporter.info(f"Vector Store Args: {vector_store_args}")
+
+    from graphrag.vector_stores.typing import VectorStoreType
+    vector_store_type = vector_store_args.get("type", VectorStoreType.LanceDB)
+
+    from graphrag.query.indexer_adapters import read_indexer_entities, read_indexer_covariates, read_indexer_reports, read_indexer_text_units, read_indexer_relationships
+    _entities = read_indexer_entities(nodes, entities, community_level)
+
+    from graphrag.config import resolve_timestamp_path
+    from pathlib import Path
+    if vector_store_type == VectorStoreType.LanceDB:
+        base_dir = Path(str(root_dir)) / config.storage.base_dir
+        resolved_base_dir = resolve_timestamp_path(base_dir)
+        lancedb_dir = resolved_base_dir / "lancedb"
+        vector_store_args.update({"db_uri": str(lancedb_dir)})
+
+    description_embedding_store = _get_embedding_description_store(
+        entities=_entities,
+        vector_store_type=vector_store_type,
+        config_args=vector_store_args,
+    )
+    
+    _covariates = read_indexer_covariates(covariates) if covariates is not None else []
+    from graphrag.query.factories import get_local_search_engine
+    search_engine = get_local_search_engine(
+        config=config,
+        reports=read_indexer_reports(community_reports, nodes, community_level),
+        text_units=read_indexer_text_units(text_units),
+        entities=_entities,
+        relationships=read_indexer_relationships(relationships),
+        covariates={"claims": _covariates},
+        description_embedding_store=description_embedding_store,
+        response_type=response_type,
     )
 
-    # load search engine
-    search_engine = local_search.get_search_engine(community_data)
-    result = await search_engine.asearch(request.query)
-
-    # post-process the search results, mapping the index_name,index_id to allow for provenance tracking
-    result.context_data = _reformat_context_data(result.context_data)
-
-    # map title into index_name, index_id and title for provenance tracking
-    result.context_data["reports"] = [
-        dict(
-            {k: entry[k] for k in entry},
-            **{
-                "index_name": entry["title"].split("<sep>")[0],
-                "index_id": entry["title"].split("<sep>")[1],
-                "title": entry["title"].split("<sep>")[2],
-            },
-        )
-        for entry in result.context_data["reports"]
-    ]
-
-    # map description into index_name, index_id and description for provenance tracking
-    result.context_data["entities"] = [
-        dict(
-            {k: entry[k] for k in entry},
-            **{
-                "index_name": entry["description"].split("<sep>")[0],
-                "index_id": entry["description"].split("<sep>")[1],
-                "description": entry["description"].split("<sep>")[2],
-            },
-        )
-        for entry in result.context_data["entities"]
-    ]
-
-    # map description into index_name, index_id and description for provenance tracking
-    result.context_data["relationships"] = [
-        dict(
-            {k: entry[k] for k in entry},
-            **{
-                "index_name": entry["description"].split("<sep>")[0],
-                "index_id": entry["description"].split("<sep>")[1],
-                "description": entry["description"].split("<sep>")[2],
-            },
-        )
-        for entry in result.context_data["relationships"]
-    ]
-
-    # map text into index_name, index_id and text for provenance tracking
-    result.context_data["sources"] = [
-        dict(
-            {k: entry[k] for k in entry},
-            **{
-                "index_name": entry["text"].split("<sep>")[0],
-                "index_id": entry["text"].split("<sep>")[1].split("-")[0],
-                "text": entry["text"].split("<sep>")[2],
-            },
-        )
-        for entry in result.context_data["sources"]
-    ]
-    return GraphResponse(result=result.response, context_data=result.context_data)
-
+    from graphrag.query.structured_search.base import SearchResult
+    result: SearchResult = await search_engine.asearch(query=query)
+    response = result.response
+    context_data = _reformat_context_data_internal(result.context_data)  # type: ignore
+    return response, context_data
 
 def _is_index_complete(index_name: str) -> bool:
     """
@@ -464,6 +445,31 @@ def _is_index_complete(index_name: str) -> bool:
             return True
     return False
 
+def _reformat_context_data_internal(context_data: dict) -> dict:
+    """
+    Reformats context_data for all query responses.
+
+    Reformats a dictionary of dataframes into a dictionary of lists.
+    One list entry for each record. Records are grouped by original
+    dictionary keys.
+
+    Note: depending on which query algorithm is used, the context_data may not
+          contain the same information (keys). In this case, the default behavior will be to
+          set these keys as empty lists to preserve a standard output format.
+    """
+    final_format = {
+        "reports": [],
+        "entities": [],
+        "relationships": [],
+        "claims": [],
+        "sources": [],
+    }
+    for key in context_data:
+        records = context_data[key].to_dict(orient="records")
+        if len(records) < 1:
+            continue
+        final_format[key] = records
+    return final_format
 
 def _reformat_context_data(context_data: dict) -> dict:
     """
@@ -545,3 +551,135 @@ def _update_context(context, links):
             updated_entry = context[key]
         updated_context[key] = updated_entry
     return updated_context
+
+def _get_embedding_description_store(
+    entities: Any,
+    vector_store_type: str = Any,
+    config_args: dict | None = None,
+):  
+    collection_names = [                
+        f"{index_name}_description_embedding" for index_name in config_args.get("index_names", [])
+    ]
+    print(collection_names)
+    ai_search_url = os.environ["AI_SEARCH_URL"]
+    description_embedding_store = MultiAzureAISearch(
+        collection_name="multi",
+        document_collection=None,
+        db_connection=None,
+    )
+    description_embedding_store.connect(url=ai_search_url)
+    for collection_name in collection_names:
+        print(collection_name)
+        description_embedding_store.add_collection(collection_name)
+    return description_embedding_store
+
+class MultiAzureAISearch(BaseVectorStore):
+    """The Azure AI Search vector storage implementation."""
+
+    def __init__(
+        self,
+        collection_name: str,
+        db_connection: Any,
+        document_collection: Any,
+        query_filter: Any | None = None,
+        **kwargs: Any,
+    ):
+        self.collection_name = collection_name
+        self.db_connection = db_connection
+        self.document_collection = document_collection
+        self.query_filter = query_filter
+        self.kwargs = kwargs
+        self.collections = []
+
+    def add_collection(self, collection_name: str):
+        self.collections.append(collection_name)
+
+    def connect(self, **kwargs: Any) -> Any:
+        """Connect to the AzureAI vector store."""
+        self.url = kwargs.get("url", None)
+        self.vector_size = kwargs.get("vector_size", 1536)
+
+        self.vector_search_profile_name = kwargs.get(
+            "vector_search_profile_name", "vectorSearchProfile"
+        )
+
+        if self.url:
+            pass
+        else:
+            not_supported_error = (
+                "Azure AI Search client is not supported on local host."
+            )
+            raise ValueError(not_supported_error)
+
+    def load_documents(
+        self, documents: list[VectorStoreDocument], overwrite: bool = True
+    ) -> None:
+        raise NotImplementedError("load_documents() method not implemented")
+
+    def filter_by_id(self, include_ids: list[str] | list[int]) -> Any:
+        """Build a query filter to filter documents by a list of ids."""
+        if include_ids is None or len(include_ids) == 0:
+            self.query_filter = None
+            # returning to keep consistency with other methods, but not needed
+            return self.query_filter
+
+        # more info about odata filtering here: https://learn.microsoft.com/en-us/azure/search/search-query-odata-search-in-function
+        # search.in is faster that joined and/or conditions
+        id_filter = ",".join([f"{id!s}" for id in include_ids])
+        self.query_filter = f"search.in(id, '{id_filter}', ',')"
+
+        # returning to keep consistency with other methods, but not needed
+        # TODO: Refactor on a future PR
+        return self.query_filter
+
+    def similarity_search_by_vector(
+        self, query_embedding: list[float], k: int = 10, **kwargs: Any
+    ) -> list[VectorStoreSearchResult]:
+        """Perform a vector-based similarity search."""
+        vectorized_query = VectorizedQuery(
+            vector=query_embedding, k_nearest_neighbors=k, fields="vector"
+        )
+
+        docs = []
+        for collection_name in self.collections:
+            add_on = "-" + str(collection_name.split("_")[0])
+            audience = os.environ["AI_SEARCH_AUDIENCE"]
+            db_connection = SearchClient(
+                self.url,
+                collection_name,
+                DefaultAzureCredential(),
+                audience=audience,
+            )
+            response = db_connection.search(
+                vector_queries=[vectorized_query],
+            )
+            mod_response = []
+            for r in response:
+                r["id"] = r.get("id", "") + add_on
+                mod_response += [r]
+            docs += mod_response
+        print(docs)
+        return [
+            VectorStoreSearchResult(
+                document=VectorStoreDocument(
+                    id=doc.get("id", ""),
+                    text=doc.get("text", ""),
+                    vector=doc.get("vector", []),
+                    attributes=(json.loads(doc.get("attributes", "{}"))),
+                ),
+                score=abs(doc["@search.score"]),
+            )
+            for doc in docs
+        ]
+
+    def similarity_search_by_text(
+        self, text: str, text_embedder: TextEmbedder, k: int = 10, **kwargs: Any
+    ) -> list[VectorStoreSearchResult]:
+        """Perform a text-based similarity search."""
+        query_embedding = text_embedder(text)
+        if query_embedding:
+            return self.similarity_search_by_vector(
+                query_embedding=query_embedding, k=k
+            )
+        return []
+        

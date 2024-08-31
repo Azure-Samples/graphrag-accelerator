@@ -25,6 +25,7 @@ RUN python -m nltk.downloader punkt averaged_perceptron_tagger maxent_ne_chunker
 # TODO: remove this once PR has been merged and a new version released
 RUN sed -i '/self.credential = credential/a\ \ \ \ \ \ \ \ if kwargs.get("account_host"): self.account_host = kwargs.get("account_host")' /usr/local/lib/python3.10/site-packages/adlfs/spec.py
 RUN sed -i 's/from .cli import DocSelectionType/from .types import DocSelectionType/g' /usr/local/lib/python3.10/site-packages/graphrag/prompt_tune/api.py
+COPY create_pipeline_config.py /usr/local/lib/python3.10/site-packages/graphrag/index/create_pipeline_config.py
 
 WORKDIR /backend
 EXPOSE 80
