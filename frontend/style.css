@@ -5,10 +5,42 @@ Licensed under the MIT License.
 
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css');
 
+.header-container {
+  display: flex;
+  align-items: center;
+}
+.header-container img {
+  max-width: 50px;  /* Adjust the size of the logo */
+  margin-right: 10px;  /* Space between the logo and the text */
+}
+.header-container h1 {
+  font-family: "Segoe UI", sans-serif;  /* Font style for the title */
+  font-size: 40px;  /* Adjust the size of the title */
+  color: #454142;  /* Text color */
+}
+
 #root > div:nth-child(1) > div.withScreencast > div > div > div > section.main.st-emotion-cache-uf99v8.ea3mdgi8 > div.block-container.st-emotion-cache-z5fcl4.ea3mdgi5 > div > div > div > div.st-emotion-cache-ocqkz7.e1f1d6gn5 > div:nth-child(4) > div > div > div > div > div{
     margin-top: 1.6em;
 }
 
+div[data-baseweb="radio"] > div {
+  background-color: darkgray !important;  /* Change the radio button color */
+}
+
+div[data-baseweb="radio"] > div:focus-within {
+  border-color: darkgray !important;  /* Change the focus border for the radio button */
+}
+
+div[data-baseweb="select"] > div {
+  border-color: transparent !important;  /* Remove the initial red border */
+  /* box-shadow: 0 0 0 2px rgba(28, 28, 28, 0.5);   Optional: add shadow for better focus indication */
+}
+
+/* Change border color when the selectbox is focused (clicked) */
+div[data-baseweb="select"] > div:focus-within {
+  border-color: rgb(48, 48, 48) !important;  /* Set the border color to dark gray when focused */
+
+}
 
 [data-testid="stHeadingDivider"] {
     background-color: #3d9df3;  /* Set your desired color */
@@ -140,3 +172,39 @@ button[kind="primary"] {
   height: 500px;
   /*background-color: #a7b0a4;*/
 }
+
+
+ /* Change font, size, and color of tabs */
+ .stTabs [role="tab"] {
+  font-family: "Segoe UI", sans-serif;  /* Custom font */          
+  color: #454142;                       /* Default font color */
+}
+
+/* Change background and text color of highlighted tab */
+.stTabs [data-baseweb="tab-highlight"] {
+  background-color: #2585D6;  /* Highlighted tab background */
+  color:white;            /* Highlighted tab text color */
+  font-weight: bold;       /* Make highlighted tab bold */
+}
+
+/* Add underline to the highlighted tab */
+.stTabs [data-baseweb="tab-highlight"]::after {
+  content: "";
+  display: block;
+  margin: auto;
+  width: 100%;
+  padding-top: 2px;
+  border-bottom: 3px solid yellow;  /* Underline color */
+}
+
+/* Change hover effect for non-highlighted tabs */
+.stTabs [role="tab"]:hover {
+  color: #2585D6;  /* Change text color on hover */
+  cursor: pointer; /* Change to pointer cursor */
+}
+
+.stTabs [role="tab"]:focus {
+  color: #2585D6;  /* Change text color on hover */
+  cursor: pointer; /* Change to pointer cursor */
+}
+

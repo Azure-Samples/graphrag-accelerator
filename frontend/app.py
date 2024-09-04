@@ -17,7 +17,17 @@ st.session_state["initialized"] = True if initialized else False
 
 def graphrag_app(initialized: bool):
     # main entry point for app interface
-    st.title("Microsoft GraphRAG Copilot")
+    # st.title("Microsoft GraphRAG Copilot")
+    st.markdown(
+    f"""
+    <div class="header-container">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Microsoft_365_Copilot_Icon.svg" alt="Logo">
+        <h1>Microsoft GraphRAG Copilot</h1>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
     main_tab, prompt_gen_tab, prompt_edit_tab, index_tab, query_tab = st.tabs(
         [
             "**Intro**",

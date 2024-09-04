@@ -3,3 +3,6 @@
 
 [server]
 enableXsrfProtection = false
+
+[theme]
+primaryColor="#303030"
