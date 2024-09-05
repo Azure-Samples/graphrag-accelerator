@@ -69,6 +69,7 @@ async def global_query(request: GraphRequest):
     else:
         index_names = request.index_name
     sanitized_index_names = [sanitize_name(name) for name in index_names]
+    sanitized_index_names_link = {s: i for s, i in zip(sanitized_index_names, index_names)}
 
     for index_name in sanitized_index_names:
         if not _is_index_complete(index_name):
@@ -108,7 +109,7 @@ async def global_query(request: GraphRequest):
             #Note that nodes need to set before communities to that max community id makes sense
             nodes_df = query_helper.get_df(nodes_table_path)
             for i in nodes_df["human_readable_id"]:
-                links["nodes"][i + max_vals["nodes"] + 1] = {"index_name": index_name, "id": i}
+                links["nodes"][i + max_vals["nodes"] + 1] = {"index_name": sanitized_index_names_link[index_name], "id": i}
             if max_vals["nodes"] != -1:
                 nodes_df["human_readable_id"] += max_vals["nodes"] + 1
             nodes_df["community"] = nodes_df["community"].apply(lambda x: str(int(x) + max_vals["community"] +1) if x else x)
@@ -119,7 +120,7 @@ async def global_query(request: GraphRequest):
             
             community_df = query_helper.get_df(community_report_table_path)
             for i in community_df["community"].astype(int):
-                links["community"][i + max_vals["community"] + 1] = {"index_name": index_name, "id": str(i)}
+                links["community"][i + max_vals["community"] + 1] = {"index_name": sanitized_index_names_link[index_name], "id": str(i)}
             if max_vals["community"] != -1:
                 col = community_df["community"].astype(int) + max_vals["community"] + 1
                 community_df["community"] = col.astype(str)
@@ -128,7 +129,7 @@ async def global_query(request: GraphRequest):
             
             entities_df = query_helper.get_df(entities_table_path)
             for i in entities_df["human_readable_id"]:
-                links["entities"][i + max_vals["entities"] + 1] = {"index_name": index_name, "id": i}
+                links["entities"][i + max_vals["entities"] + 1] = {"index_name": sanitized_index_names_link[index_name], "id": i}
             if max_vals["entities"] != -1:
                 entities_df["human_readable_id"] += max_vals["entities"] + 1
             entities_df["name"] = entities_df["name"].apply(lambda x: x + f"-{index_name}")
@@ -163,9 +164,6 @@ async def global_query(request: GraphRequest):
         # link index provenance to the context data
         context_data = _update_context(result[1], links)
 
-        # reformat context data to match azure ai search output format
-        context_data = _reformat_context_data(context_data)
-
         return GraphResponse(result=result[0], context_data=context_data)
     except Exception as e:
         reporter = ReporterSingleton().get_instance()
@@ -190,6 +188,7 @@ async def local_query(request: GraphRequest):
     else:
         index_names = request.index_name
     sanitized_index_names = [sanitize_name(name) for name in index_names]
+    sanitized_index_names_link = {s: i for s, i in zip(sanitized_index_names, index_names)}
 
     for index_name in sanitized_index_names:
         if not _is_index_complete(index_name):
@@ -243,7 +242,7 @@ async def local_query(request: GraphRequest):
         #Note that nodes need to set before communities to that max community id makes sense
         nodes_df = query_helper.get_df(nodes_table_path)
         for i in nodes_df["human_readable_id"]:
-            links["nodes"][i + max_vals["nodes"] + 1] = {"index_name": index_name, "id": i}
+            links["nodes"][i + max_vals["nodes"] + 1] = {"index_name": sanitized_index_names_link[index_name], "id": i}
         if max_vals["nodes"] != -1:
            nodes_df["human_readable_id"] += max_vals["nodes"] + 1
         nodes_df["community"] = nodes_df["community"].apply(lambda x: str(int(x) + max_vals["community"] +1) if x else x)
@@ -255,7 +254,7 @@ async def local_query(request: GraphRequest):
     
         community_df = query_helper.get_df(community_report_table_path)
         for i in community_df["community"].astype(int):
-            links["community"][i + max_vals["community"] + 1] = {"index_name": index_name, "id": str(i)}
+            links["community"][i + max_vals["community"] + 1] = {"index_name": sanitized_index_names_link[index_name], "id": str(i)}
         if max_vals["community"] != -1:
             col = community_df["community"].astype(int) + max_vals["community"] + 1
             community_df["community"] = col.astype(str)
@@ -264,7 +263,7 @@ async def local_query(request: GraphRequest):
     
         entities_df = query_helper.get_df(entities_table_path)
         for i in entities_df["human_readable_id"]:
-            links["entities"][i + max_vals["entities"] + 1] = {"index_name": index_name, "id": i}
+            links["entities"][i + max_vals["entities"] + 1] = {"index_name": sanitized_index_names_link[index_name], "id": i}
         if max_vals["entities"] != -1:
            entities_df["human_readable_id"] += max_vals["entities"] + 1
         entities_df["id"] = entities_df["id"].apply(lambda x: x + f"-{index_name}")
@@ -275,7 +274,7 @@ async def local_query(request: GraphRequest):
     
         relationships_df = query_helper.get_df(relationships_table_path)
         for i in relationships_df["human_readable_id"].astype(int):
-            links["relationships"][i + max_vals["relationships"] + 1] = {"index_name": index_name, "id": i}
+            links["relationships"][i + max_vals["relationships"] + 1] = {"index_name": sanitized_index_names_link[index_name], "id": i}
         if max_vals["relationships"] != -1:
             col = relationships_df["human_readable_id"].astype(int) + max_vals["relationships"] + 1
             relationships_df["human_readable_id"] = col.astype(str)
@@ -293,7 +292,7 @@ async def local_query(request: GraphRequest):
         if index_container_client.get_blob_client(COVARIATES_TABLE).exists():
             covariates_df = query_helper.get_df(covariates_table_path)
             if i in covariates_df["human_readable_id"].astype(int):
-                links["covariates"][i + max_vals["covariates"] + 1] = {"index_name": index_name, "id": i}
+                links["covariates"][i + max_vals["covariates"] + 1] = {"index_name": sanitized_index_names_link[index_name], "id": i}
             if max_vals["covariates"] != -1:
                 col = covariates_df["human_readable_id"].astype(int) + max_vals["covariates"] + 1
                 covariates_df["human_readable_id"] = col.astype(str)
@@ -339,9 +338,6 @@ async def local_query(request: GraphRequest):
     # link index provenance to the context data
     context_data = _update_context(result[1], links)
 
-    # reformat context data to match azure ai search output format
-    context_data = _reformat_context_data(context_data)
-
     return GraphResponse(result=result[0], context_data=context_data)
 
 def _is_index_complete(index_name: str) -> bool:
@@ -364,30 +360,6 @@ def _is_index_complete(index_name: str) -> bool:
         if PipelineJobState(pipeline_job.status) == PipelineJobState.COMPLETE:
             return True
     return False
-
-def _reformat_context_data(context_data: dict) -> dict:
-    """
-    Reformats context_data for all query types. Reformats
-    a dictionary of dictionaries into a dictionary of lists.
-    One list entry for each record.  Records are grouped by
-    original dictionary keys.
-
-    Note: depending on which query type is used, the context_data may not contain all keys. 
-    In this case, the default behavior will be to set these keys as empty lists in order to preserve a standard output format for end users.
-    """
-    final_format = {"reports": [], "entities": [], "relationships": [], "claims": []}
-    for key in context_data:
-        try:
-            records = context_data[key]
-            if len(records) < 1:
-                continue
-            # sort records by threat rating
-            if "rating" in records[0]:
-                records = sorted(records, key=lambda x: x["rating"], reverse=True)
-            final_format[key] = records
-        except Exception:
-            raise
-    return final_format
 
 #Update context data
 #context_keys = ['reports', 'entities', 'relationships', 'claims', 'sources']
