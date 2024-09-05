@@ -21,7 +21,7 @@ from kubernetes import (
 
 from src.api.common import verify_subscription_key_exist
 from src.api.data import data_route
-from src.api.experimental import experimental_route
+from src.api.query_streaming import query_streaming_route
 from src.api.graph import graph_route
 from src.api.index import index_route
 from src.api.index_configuration import index_configuration_route
@@ -108,7 +108,7 @@ app.include_router(query_route)
 app.include_router(index_configuration_route)
 app.include_router(source_route)
 app.include_router(graph_route)
-app.include_router(experimental_route)
+app.include_router(query_streaming_route)
 
 
 # health check endpoint

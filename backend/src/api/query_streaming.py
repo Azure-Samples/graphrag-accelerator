@@ -31,17 +31,17 @@ from src.utils import query as query_helper
 
 from .query import _update_context, _get_embedding_description_store
 
-experimental_route = APIRouter(
-    prefix="/experimental",
-    tags=["Experimental Operations"],
+query_streaming_route = APIRouter(
+    prefix="/query/streaming",
+    tags=["Query Streaming Operations"],
 )
 if os.getenv("KUBERNETES_SERVICE_HOST"):
-    experimental_route.dependencies.append(Depends(verify_subscription_key_exist))
+    query_streaming_route.dependencies.append(Depends(verify_subscription_key_exist))
 
-@experimental_route.post(
-    "/query/global/streaming",
+@query_streaming_route.post(
+    "/query/streaming/global",
     summary="Stream a response back after performing a global search",
-    description="Note: this is an experimental endpoint for testing and gathering initial feedback of interest. There is no quarantee of future support. The global query method generates answers by searching over all AI-generated community reports in a map-reduce fashion. This is a resource-intensive method, but often gives good responses for questions that require an understanding of the dataset as a whole.",
+    description="The global query method generates answers by searching over all AI-generated community reports in a map-reduce fashion. This is a resource-intensive method, but often gives good responses for questions that require an understanding of the dataset as a whole.",
 )
 async def global_search_streaming(request: GraphRequest):
     # this is a slightly modified version of src.api.query.global_query() method
@@ -154,8 +154,8 @@ async def global_search_streaming(request: GraphRequest):
         )
         raise HTTPException(status_code=500, detail=None)
     
-@experimental_route.post(
-    "/query/local/streaming",
+@query_streaming_route.post(
+    "/query/streaming/local",
     summary="Stream a response back after performing a local search",
     description="The local query method generates answers by combining relevant data from the AI-extracted knowledge-graph with text chunks of the raw documents. This method is suitable for questions that require an understanding of specific entities mentioned in the documents (e.g. What are the healing properties of chamomile?).",
 )
