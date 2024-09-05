@@ -15,21 +15,23 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 from graphrag.config import create_graphrag_config
-from graphrag.query.api import global_search_streaming as global_search_streaming_internal
+from graphrag.query.api import (
+    global_search_streaming as global_search_streaming_internal,
+)
 from graphrag.query.api import local_search_streaming as local_search_streaming_internal
 
+from src.api.azure_clients import BlobServiceClientSingleton
 from src.api.common import (
     sanitize_name,
     validate_index_file_exist,
     verify_subscription_key_exist,
 )
-from src.api.azure_clients import BlobServiceClientSingleton
 from src.api.query import _is_index_complete
 from src.models import GraphRequest
 from src.reporting import ReporterSingleton
 from src.utils import query as query_helper
 
-from .query import _update_context, _get_embedding_description_store
+from .query import _get_embedding_description_store, _update_context
 
 query_streaming_route = APIRouter(
     prefix="/query/streaming",
@@ -282,7 +284,7 @@ async def local_search_streaming(request: GraphRequest):
         entities_combined = pd.concat(entities_dfs, axis=0, ignore_index=True)
         text_units_combined = pd.concat(text_units_dfs, axis=0, ignore_index=True)
         relationships_combined = pd.concat(relationships_dfs, axis=0, ignore_index=True)
-        covariates_combined = pd.concat(covariates_dfs, axis=0, ignore_index=True) if covariates_dfs is not [] else None
+        covariates_combined = pd.concat(covariates_dfs, axis=0, ignore_index=True) if covariates_dfs != [] else None
 
         # load custom pipeline settings
         this_directory = os.path.dirname(

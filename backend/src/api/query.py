@@ -5,19 +5,18 @@ import inspect
 import json
 import os
 import traceback
+from typing import Any
 
 import pandas as pd
 import yaml
+from azure.identity import DefaultAzureCredential
+from azure.search.documents import SearchClient
+from azure.search.documents.models import VectorizedQuery
 from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
 )
-
-from azure.identity import DefaultAzureCredential
-from azure.search.documents import SearchClient
-from azure.search.documents.models import VectorizedQuery
-
 from graphrag.config import create_graphrag_config
 from graphrag.index.progress.types import PrintProgressReporter
 from graphrag.model.types import TextEmbedder
@@ -42,8 +41,6 @@ from src.models import (
 from src.reporting import ReporterSingleton
 from src.typing import PipelineJobState
 from src.utils import query as query_helper
-
-from typing import Any
 
 query_route = APIRouter(
     prefix="/query",
@@ -304,7 +301,7 @@ async def local_query(request: GraphRequest):
     entities_combined = pd.concat(entities_dfs, axis=0, ignore_index=True)
     text_units_combined = pd.concat(text_units_dfs, axis=0, ignore_index=True)
     relationships_combined = pd.concat(relationships_dfs, axis=0, ignore_index=True)
-    covariates_combined = pd.concat(covariates_dfs, axis=0, ignore_index=True) if covariates_dfs is not [] else None
+    covariates_combined = pd.concat(covariates_dfs, axis=0, ignore_index=True) if covariates_dfs != [] else None
 
     # load custom pipeline settings
     this_directory = os.path.dirname(
