@@ -25,7 +25,8 @@ RUN python -m nltk.downloader punkt averaged_perceptron_tagger maxent_ne_chunker
 # TODO: remove this once PR has been merged and a new version released
 RUN sed -i '/self.credential = credential/a\ \ \ \ \ \ \ \ if kwargs.get("account_host"): self.account_host = kwargs.get("account_host")' /usr/local/lib/python3.10/site-packages/adlfs/spec.py
 
-#Cleaning up graphrag library until PRs merged
+# Note: we temporarily patch the graphrag library to get around various issues. No PR has been submitted yet.
+# TODO: remove this once a PR has been merged and a new version released
 RUN sed -i 's/from .cli import DocSelectionType/from .types import DocSelectionType/g' /usr/local/lib/python3.10/site-packages/graphrag/prompt_tune/api.py
 RUN sed -i 's/{\*\*vector_store_settings, \*\*(vector_store_params or {})}/{\*\*(vector_store_params or {}), \*\*vector_store_settings}/g' /usr/local/lib/python3.10/site-packages/graphrag/index/create_pipeline_config.py
 RUN sed -i 's/base_dir = Path(str(root_dir)) \/ config.storage.base_dir/ /g' /usr/local/lib/python3.10/site-packages/graphrag/query/api.py
