@@ -285,12 +285,13 @@ async def generate_prompts(storage_name: str, limit: int = 5):
     # generate prompts
     try:
         await generate_fine_tune_prompts(
-            root=temp_dir,
-            domain="",
-            select="random",
-            limit=limit,
-            skip_entity_types=True,
-            output="prompts",
+            config = f"{temp_dir}/settings.yaml",
+            root = temp_dir,
+            domain = "",
+            selection_method = "random",
+            limit = limit,
+            skip_entity_types = True,
+            output = "prompts",
         )
     except Exception:
         raise HTTPException(
