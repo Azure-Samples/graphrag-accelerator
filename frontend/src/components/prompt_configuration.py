@@ -50,7 +50,7 @@ def prompt_editor(prompt_values: list[str]):
 
     entity_ext_prompt, summ_prompt, comm_report_prompt = prompt_values
 
-    with st.container(border=True):
+    with st.container():#border=True):
         tab_labels = [
             "**Entity Extraction**",
             "**Summarize Descriptions**",
