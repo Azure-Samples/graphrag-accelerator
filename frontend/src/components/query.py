@@ -51,6 +51,8 @@ class GraphQuery:
                 match query_type:
                     case "Global Streaming":
                         _ = self.global_streaming_search(search_index, query)
+                    case "Local Streaming":
+                        _ = self.local_streaming_search(search_index, query)
                     case "Global":
                         _ = self.global_search(search_index, query)
                     case "Local":
@@ -109,7 +111,62 @@ class GraphQuery:
                             "Double-click on content to expand text", "red", False
                         )
                     )
-                    self._build_st_dataframe(context_list)
+                    self._build_st_dataframe(context_list[0])
+        else:
+            print(query_response.reason, query_response.content)
+            raise Exception("Received unexpected response from server")
+        
+    def local_streaming_search(
+        self, search_index: str | list[str], query: str
+    ) -> None:
+        """
+        Executes a global streaming query on the specified index.
+        Handles the response and displays the results in the Streamlit app.
+        """
+        query_response = self.client.local_streaming_query(search_index, query)
+        assistant_response = ""
+        context_list = []
+
+        if query_response.status_code == 200:
+            text_placeholder = st.empty()
+            for chunk in query_response.iter_lines(
+                # allow up to 256KB to avoid excessive many reads
+                chunk_size=256 * GraphQuery.KILOBYTE,
+                decode_unicode=True,
+            ):
+                try:
+                    payload = json.loads(chunk)
+                except json.JSONDecodeError as e:
+                    # In the event that a chunk is not a complete JSON object,
+                    # document it for further analysis.
+                    print(chunk)
+                    raise e
+
+                token = payload["token"]
+                context = payload["context"]
+                if (token != "<EOM>") and (context is None):
+                    assistant_response += token
+                    text_placeholder.write(assistant_response)
+                elif (token == "<EOM>") and (context is not None):
+                    context_list.append(context)
+
+            if not assistant_response:
+                st.write(
+                    self.format_md_text(
+                        "Not enough contextual data to support your query: No results found.\tTry another query.",
+                        "red",
+                        True,
+                    )
+                )
+                return
+            else:
+                with self._create_section_expander("Query Context"):
+                    st.write(
+                        self.format_md_text(
+                            "Double-click on content to expand text", "red", False
+                        )
+                    )
+                    self._build_st_dataframe(context_list[0])
         else:
             print(query_response.reason, query_response.content)
             raise Exception("Received unexpected response from server")
