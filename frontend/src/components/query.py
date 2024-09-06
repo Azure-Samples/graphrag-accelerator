@@ -20,7 +20,7 @@ class GraphQuery:
 
     def search(
         self,
-        query_type: Literal["Global Streaming", "Global", "Local"],
+        query_type: Literal["Global Streaming", "Local Streaming", "Global", "Local"],
         search_index: str | list[str],
         query: str,
     ) -> None:
