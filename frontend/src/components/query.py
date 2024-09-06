@@ -111,7 +111,7 @@ class GraphQuery:
                             "Double-click on content to expand text", "red", False
                         )
                     )
-                    self._build_st_dataframe(context_list[0])
+                    self._build_st_dataframe(context_list[0]["reports"], drop_columns=[])
         else:
             print(query_response.reason, query_response.content)
             raise Exception("Received unexpected response from server")
@@ -120,7 +120,7 @@ class GraphQuery:
         self, search_index: str | list[str], query: str
     ) -> None:
         """
-        Executes a global streaming query on the specified index.
+        Executes a local streaming query on the specified index.
         Handles the response and displays the results in the Streamlit app.
         """
         query_response = self.client.local_streaming_query(search_index, query)
@@ -166,7 +166,10 @@ class GraphQuery:
                             "Double-click on content to expand text", "red", False
                         )
                     )
-                    self._build_st_dataframe(context_list[0])
+                    self._build_st_dataframe(context_list[0]["reports"], drop_columns=[])
+                    self._build_st_dataframe(context_list[0]["entities"], drop_columns=[])
+                    self._build_st_dataframe(context_list[0]["relationships"], drop_columns=[])
+                    self._build_st_dataframe(context_list[0]["sources"], drop_columns=[])
         else:
             print(query_response.reason, query_response.content)
             raise Exception("Received unexpected response from server")
@@ -275,7 +278,7 @@ class GraphQuery:
         rel_df: bool = False,
     ) -> st.dataframe:
         df_context = (
-            data if isinstance(data, pd.DataFrame) else pd.DataFrame.from_records(data)
+            data if isinstance(data, pd.DataFrame) else pd.DataFrame(data) if isinstance(data, dict) else pd.DataFrame.from_records(data)
         )
         if any(drop_columns):
             for column in drop_columns:
@@ -307,11 +310,11 @@ class GraphQuery:
         return st.dataframe(
             df_context,
             use_container_width=True,
-            column_config={
-                "title": "Report Title",
-                "content": "Report Content",
-                "rank": "Rank",
-            },
+            #column_config={
+            #    "title": "Report Title",
+            #    "content": "Report Content",
+            #    "rank": "Rank",
+            #},
         )
 
     def format_md_text(self, text: str, color: str, bold: bool) -> str:
