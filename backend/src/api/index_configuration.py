@@ -291,7 +291,7 @@ async def generate_prompts(storage_name: str, limit: int = 5):
             selection_method = "random",
             limit = limit,
             skip_entity_types = True,
-            output = "prompts",
+            output = f"{temp_dir}/prompts",
         )
     except Exception:
         raise HTTPException(
