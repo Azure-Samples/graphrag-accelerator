@@ -69,8 +69,8 @@ def get_prompt_generation_tab(
     with col2:
         st.header(
             "Generate Prompts (optional)",
-            #divider=True,
-            #help="Generate fine-tuned prompts for graphrag tailored to your data and domain.",
+            divider=True,
+            help="Generate fine-tuned prompts for graphrag tailored to your data and domain.",
         )
 
         st.write(
@@ -161,8 +161,8 @@ def get_prompt_configuration_tab(
     """
     st.header(
         "Configure Prompts (optional)",
-        #divider=True,
-        #help="Generate fine tuned prompts for the LLM specific to your data and domain.",
+        divider=True,
+        help="Generate fine tuned prompts for the LLM specific to your data and domain.",
     )
     prompt_values = [st.session_state[k.value] for k in PromptKeys]
 
@@ -237,7 +237,7 @@ def get_query_tab(client: GraphragAPI) -> None:
     with col1:
         query_type = st.selectbox(
             "Query Type",
-            ["Global Streaming", "Local Streaming", "Global", "Local"],
+            ["Global Streaming", "Global", "Local"],
             help="Select the query type - Each yeilds different results of specificity. Global queries focus on the entire graph structure. Local queries focus on a set of communities (subgraphs) in the graph that are more connected to each other than they are to the rest of the graph structure and can focus on very specific entities in the graph. Global streaming is a global query that displays results as they appear live.",
         )
     with col2:

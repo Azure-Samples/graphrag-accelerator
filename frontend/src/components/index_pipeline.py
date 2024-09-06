@@ -27,8 +27,8 @@ class IndexPipeline:
         with col2:
             st.header(
                 "1. Data Storage",
-                #divider=True,
-                #help="Select a Data Storage Container to upload data to or select an existing container to use for indexing. The data will be processed by the LLM to create a Knowledge Graph.",
+                divider=True,
+                help="Select a Data Storage Container to upload data to or select an existing container to use for indexing. The data will be processed by the LLM to create a Knowledge Graph.",
             )
             select_storage_name = st.selectbox(
                 label="Select an existing Storage Container.",
@@ -62,8 +62,8 @@ class IndexPipeline:
         with col2:
             st.header(
                 "2. Build Index",
-                #divider=True,
-                #help="Building an index will process the data from step 1 and create a Knowledge Graph suitable for querying. The LLM will use either the default prompt configuration or the prompts that you generated previously. To track the status of an indexing job, use the check index status below.",
+                divider=True,
+                help="Building an index will process the data from step 1 and create a Knowledge Graph suitable for querying. The LLM will use either the default prompt configuration or the prompts that you generated previously. To track the status of an indexing job, use the check index status below.",
             )
             # use data from either the selected storage container or the uploaded data
             select_storage_name = st.session_state["index-storage"]
@@ -135,8 +135,8 @@ class IndexPipeline:
         with col2:
             st.header(
                 "3. Check Index Status",
-                #divider=True,
-                #help="Select an index to check the status of what stage indexing is in. Indexing must be complete in order to be able to execute queries.",
+                divider=True,
+                help="Select an index to check the status of what stage indexing is in. Indexing must be complete in order to be able to execute queries.",
             )
 
             options_indexes = self.client.get_index_names()

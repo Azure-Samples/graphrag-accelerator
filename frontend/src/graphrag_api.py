@@ -174,25 +174,7 @@ class GraphragAPI:
         """
         Returns a streaming response object for a global query.
         """
-        url = f"{self.api_url}/query/streaming/global"
-        try:
-            query_response = requests.post(
-                url,
-                json={"index_name": index_name, "query": query},
-                headers=self.headers,
-                stream=True,
-            )
-            return query_response
-        except Exception as e:
-            print(f"Error: {str(e)}")
-
-    def local_streaming_query(
-        self, index_name: str | list[str], query: str
-    ) -> Response | None:
-        """
-        Returns a streaming response object for a global query.
-        """
-        url = f"{self.api_url}/query/streaming/local"
+        url = f"{self.api_url}/experimental/query/global/streaming"
         try:
             query_response = requests.post(
                 url,

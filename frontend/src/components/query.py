@@ -20,7 +20,7 @@ class GraphQuery:
 
     def search(
         self,
-        query_type: Literal["Global Streaming", "Local Streaming", "Global", "Local"],
+        query_type: Literal["Global Streaming", "Global", "Local"],
         search_index: str | list[str],
         query: str,
     ) -> None:
@@ -51,8 +51,6 @@ class GraphQuery:
                 match query_type:
                     case "Global Streaming":
                         _ = self.global_streaming_search(search_index, query)
-                    case "Local Streaming":
-                        _ = self.local_streaming_search(search_index, query)
                     case "Global":
                         _ = self.global_search(search_index, query)
                     case "Local":
@@ -111,65 +109,7 @@ class GraphQuery:
                             "Double-click on content to expand text", "red", False
                         )
                     )
-                    self._build_st_dataframe(context_list[0]["reports"], drop_columns=[])
-        else:
-            print(query_response.reason, query_response.content)
-            raise Exception("Received unexpected response from server")
-        
-    def local_streaming_search(
-        self, search_index: str | list[str], query: str
-    ) -> None:
-        """
-        Executes a local streaming query on the specified index.
-        Handles the response and displays the results in the Streamlit app.
-        """
-        query_response = self.client.local_streaming_query(search_index, query)
-        assistant_response = ""
-        context_list = []
-
-        if query_response.status_code == 200:
-            text_placeholder = st.empty()
-            for chunk in query_response.iter_lines(
-                # allow up to 256KB to avoid excessive many reads
-                chunk_size=256 * GraphQuery.KILOBYTE,
-                decode_unicode=True,
-            ):
-                try:
-                    payload = json.loads(chunk)
-                except json.JSONDecodeError as e:
-                    # In the event that a chunk is not a complete JSON object,
-                    # document it for further analysis.
-                    print(chunk)
-                    raise e
-
-                token = payload["token"]
-                context = payload["context"]
-                if (token != "<EOM>") and (context is None):
-                    assistant_response += token
-                    text_placeholder.write(assistant_response)
-                elif (token == "<EOM>") and (context is not None):
-                    context_list.append(context)
-
-            if not assistant_response:
-                st.write(
-                    self.format_md_text(
-                        "Not enough contextual data to support your query: No results found.\tTry another query.",
-                        "red",
-                        True,
-                    )
-                )
-                return
-            else:
-                with self._create_section_expander("Query Context"):
-                    st.write(
-                        self.format_md_text(
-                            "Double-click on content to expand text", "red", False
-                        )
-                    )
-                    self._build_st_dataframe(context_list[0]["reports"], drop_columns=[])
-                    self._build_st_dataframe(context_list[0]["entities"], drop_columns=[])
-                    self._build_st_dataframe(context_list[0]["relationships"], drop_columns=[])
-                    self._build_st_dataframe(context_list[0]["sources"], drop_columns=[])
+                    self._build_st_dataframe(context_list)
         else:
             print(query_response.reason, query_response.content)
             raise Exception("Received unexpected response from server")
@@ -278,7 +218,7 @@ class GraphQuery:
         rel_df: bool = False,
     ) -> st.dataframe:
         df_context = (
-            data if isinstance(data, pd.DataFrame) else pd.DataFrame(data) if isinstance(data, dict) else pd.DataFrame.from_records(data)
+            data if isinstance(data, pd.DataFrame) else pd.DataFrame.from_records(data)
         )
         if any(drop_columns):
             for column in drop_columns:
@@ -310,11 +250,11 @@ class GraphQuery:
         return st.dataframe(
             df_context,
             use_container_width=True,
-            #column_config={
-            #    "title": "Report Title",
-            #    "content": "Report Content",
-            #    "rank": "Rank",
-            #},
+            column_config={
+                "title": "Report Title",
+                "content": "Report Content",
+                "rank": "Rank",
+            },
         )
 
     def format_md_text(self, text: str, color: str, bold: bool) -> str:

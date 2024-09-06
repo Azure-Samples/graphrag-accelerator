@@ -69,7 +69,6 @@ urllib3 = ">=2.2.2"
 [tool.poetry.group.frontend.dependencies]
 python-dotenv = ">=0.19.1"
 requests = "*"
-altair = "<5"
 streamlit = ">=0.88.0"
 streamlit-nested-layout = "==0.1.3"
 
