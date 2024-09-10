@@ -11,12 +11,11 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 ENV SETUPTOOLS_USE_DISTUTILS=stdlib
 ENV PYTHONPATH=/backend
 
-COPY poetry.lock pyproject.toml graphrag-0.3.2-py3-none-any.whl /
+COPY poetry.lock pyproject.toml /
 COPY backend /backend
 RUN pip install poetry \
     && poetry config virtualenvs.create false \
     && poetry install --without frontend
-RUN python -m pip install graphrag-0.3.2-py3-none-any.whl
 
 # download all nltk data that graphrag requires
 RUN python -m nltk.downloader punkt averaged_perceptron_tagger maxent_ne_chunker words wordnet
