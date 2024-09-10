@@ -319,7 +319,6 @@ async def local_query(request: GraphRequest):
     graphrag.query.api._get_embedding_description_store = _get_embedding_description_store
     # perform async search
     result = await local_search(
-        root_dir = None,
         config = parameters,
         nodes = nodes_combined,
         entities = entities_combined,

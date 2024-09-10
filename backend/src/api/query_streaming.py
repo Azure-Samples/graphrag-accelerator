@@ -305,7 +305,6 @@ async def local_search_streaming(request: GraphRequest):
         return StreamingResponse(
             _wrapper(
                 local_search_streaming_internal(
-                    root_dir = None,
                     config = parameters,
                     nodes = nodes_combined,
                     entities = entities_combined,
