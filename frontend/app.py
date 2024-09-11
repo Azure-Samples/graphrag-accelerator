@@ -9,10 +9,30 @@ from src.components.index_pipeline import IndexPipeline
 from src.enums import EnvVars
 from src.functions import initialize_app
 from src.graphrag_api import GraphragAPI
+import base64
+
 
 # Load environment variables
 initialized = initialize_app()
 st.session_state["initialized"] = True if initialized else False
+
+
+# def get_base64(bin_file):
+#     with open(bin_file, 'rb') as f:
+#         data = f.read()
+#     return base64.b64encode(data).decode()
+
+# def set_background(png_file):
+#     bin_str = get_base64(png_file)
+#     page_bg_img = '''
+#     <style>
+#     .stApp {
+#     background-image: url("data:image/png;base64,%s");
+#     background-size: cover;
+#     }
+#     </style>
+#     ''' % bin_str
+#     st.markdown(page_bg_img, unsafe_allow_html=True)
 
 
 def graphrag_app(initialized: bool):
@@ -27,6 +47,7 @@ def graphrag_app(initialized: bool):
     """,
     unsafe_allow_html=True
 )
+    # set_background('./src/images/background3.png')
 
     main_tab, prompt_gen_tab, prompt_edit_tab, index_tab, query_tab = st.tabs(
         [

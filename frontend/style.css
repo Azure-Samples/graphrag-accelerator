@@ -32,13 +32,14 @@ div[data-baseweb="radio"] > div:focus-within {
 }
 
 div[data-baseweb="select"] > div {
-  border-color: transparent !important;  /* Remove the initial red border */
+  border-color: rgb(48, 48, 48)!important;  /* Remove the initial red border */
   /* box-shadow: 0 0 0 2px rgba(28, 28, 28, 0.5);   Optional: add shadow for better focus indication */
 }
 
 /* Change border color when the selectbox is focused (clicked) */
 div[data-baseweb="select"] > div:focus-within {
-  border-color: rgb(48, 48, 48) !important;  /* Set the border color to dark gray when focused */
+  /* border-color: rgb(48, 48, 48) !important;  Set the border color to dark gray when focused */
+  background-color: white;
 
 }
 
@@ -208,3 +209,7 @@ button[kind="primary"] {
   cursor: pointer; /* Change to pointer cursor */
 }
 
+.footer {
+  background-color: transparent;
+  }
+  
