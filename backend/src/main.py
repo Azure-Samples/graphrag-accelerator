@@ -7,7 +7,6 @@ from contextlib import asynccontextmanager
 
 import yaml
 from fastapi import (
-    Depends,
     FastAPI,
     Request,
     status,
@@ -19,7 +18,6 @@ from kubernetes import (
     config,
 )
 
-from src.api.common import verify_subscription_key_exist
 from src.api.data import data_route
 from src.api.graph import graph_route
 from src.api.index import index_route
@@ -105,19 +103,16 @@ app.add_middleware(
 app.include_router(data_route)
 app.include_router(index_route)
 app.include_router(query_route)
+app.include_router(query_streaming_route)
 app.include_router(index_configuration_route)
 app.include_router(source_route)
 app.include_router(graph_route)
-app.include_router(query_streaming_route)
 
 
 # health check endpoint
 @app.get(
     "/health",
     summary="API health check",
-    dependencies=[Depends(verify_subscription_key_exist)]
-    if os.getenv("KUBERNETES_SERVICE_HOST")
-    else None,
 )
 def health_check():
     """Returns a 200 response to indicate the API is healthy."""

@@ -1,13 +1,11 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import os
 from io import BytesIO
 
 import networkx as nx
 from fastapi import (
     APIRouter,
-    Depends,
     HTTPException,
 )
 from fastapi.responses import StreamingResponse
@@ -16,7 +14,6 @@ from src.api.azure_clients import BlobServiceClientSingleton
 from src.api.common import (
     sanitize_name,
     validate_index_file_exist,
-    verify_subscription_key_exist,
 )
 from src.models import GraphDataResponse
 from src.reporting import ReporterSingleton
@@ -28,9 +25,6 @@ graph_route = APIRouter(
     prefix="/graph",
     tags=["Graph Operations"],
 )
-
-if os.getenv("KUBERNETES_SERVICE_HOST"):
-    graph_route.dependencies.append(Depends(verify_subscription_key_exist))
 
 
 @graph_route.get(

@@ -10,7 +10,6 @@ import pandas as pd
 import yaml
 from fastapi import (
     APIRouter,
-    Depends,
     HTTPException,
 )
 from fastapi.responses import StreamingResponse
@@ -24,7 +23,6 @@ from src.api.azure_clients import BlobServiceClientSingleton
 from src.api.common import (
     sanitize_name,
     validate_index_file_exist,
-    verify_subscription_key_exist,
 )
 from src.api.query import _is_index_complete
 from src.models import GraphRequest
@@ -37,9 +35,6 @@ query_streaming_route = APIRouter(
     prefix="/query/streaming",
     tags=["Query Streaming Operations"],
 )
-
-if os.getenv("KUBERNETES_SERVICE_HOST"):
-    query_streaming_route.dependencies.append(Depends(verify_subscription_key_exist))
 
 
 @query_streaming_route.post(

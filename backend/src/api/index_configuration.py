@@ -9,7 +9,6 @@ from typing import Union
 import yaml
 from fastapi import (
     APIRouter,
-    Depends,
     HTTPException,
 )
 from fastapi.responses import StreamingResponse
@@ -21,7 +20,6 @@ from src.api.azure_clients import (
 )
 from src.api.common import (
     sanitize_name,
-    verify_subscription_key_exist,
 )
 from src.models import (
     BaseResponse,
@@ -34,11 +32,6 @@ azure_storage_client_manager = AzureStorageClientManager()
 index_configuration_route = APIRouter(
     prefix="/index/config", tags=["Index Configuration"]
 )
-
-if os.getenv("KUBERNETES_SERVICE_HOST"):
-    index_configuration_route.dependencies.append(
-        Depends(verify_subscription_key_exist)
-    )
 
 # NOTE: currently disable all /entity endpoints - to be replaced by the auto-generation of prompts
 

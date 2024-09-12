@@ -14,7 +14,6 @@ from azure.search.documents import SearchClient
 from azure.search.documents.models import VectorizedQuery
 from fastapi import (
     APIRouter,
-    Depends,
     HTTPException,
 )
 from graphrag.config import create_graphrag_config
@@ -30,7 +29,6 @@ from src.api.azure_clients import BlobServiceClientSingleton
 from src.api.common import (
     sanitize_name,
     validate_index_file_exist,
-    verify_subscription_key_exist,
 )
 from src.models import (
     GraphRequest,
@@ -45,9 +43,6 @@ query_route = APIRouter(
     prefix="/query",
     tags=["Query Operations"],
 )
-
-if os.getenv("KUBERNETES_SERVICE_HOST"):
-    query_route.dependencies.append(Depends(verify_subscription_key_exist))
 
 
 @query_route.post(

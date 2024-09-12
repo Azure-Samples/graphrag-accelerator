@@ -2,7 +2,6 @@
 # Licensed under the MIT License.
 
 import asyncio
-import os
 import re
 from math import ceil
 from typing import List
@@ -10,7 +9,6 @@ from typing import List
 from azure.storage.blob import ContainerClient
 from fastapi import (
     APIRouter,
-    Depends,
     HTTPException,
     UploadFile,
 )
@@ -23,7 +21,6 @@ from src.api.common import (
     delete_blob_container,
     sanitize_name,
     validate_blob_container_name,
-    verify_subscription_key_exist,
 )
 from src.models import (
     BaseResponse,
@@ -37,9 +34,6 @@ data_route = APIRouter(
     prefix="/data",
     tags=["Data Management"],
 )
-
-if os.getenv("KUBERNETES_SERVICE_HOST"):
-    data_route.dependencies.append(Depends(verify_subscription_key_exist))
 
 
 @data_route.get(

@@ -14,7 +14,6 @@ from azure.search.documents.indexes import SearchIndexClient
 from datashaper import WorkflowCallbacksManager
 from fastapi import (
     APIRouter,
-    Depends,
     HTTPException,
     UploadFile,
 )
@@ -36,7 +35,6 @@ from src.api.common import (
     delete_blob_container,
     sanitize_name,
     validate_blob_container_name,
-    verify_subscription_key_exist,
 )
 from src.models import (
     BaseResponse,
@@ -62,9 +60,6 @@ index_route = APIRouter(
     prefix="/index",
     tags=["Index Operations"],
 )
-
-if os.getenv("KUBERNETES_SERVICE_HOST"):
-    index_route.dependencies.append(Depends(verify_subscription_key_exist))
 
 
 @index_route.post(
