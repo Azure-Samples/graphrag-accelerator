@@ -5,12 +5,11 @@ import os
 
 import pandas as pd
 from azure.identity import DefaultAzureCredential
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 
 from src.api.common import (
     sanitize_name,
     validate_index_file_exist,
-    verify_subscription_key_exist,
 )
 from src.models import (
     ClaimResponse,
@@ -26,8 +25,6 @@ source_route = APIRouter(
     tags=["Sources"],
 )
 
-if os.getenv("KUBERNETES_SERVICE_HOST"):
-    source_route.dependencies.append(Depends(verify_subscription_key_exist))
 
 COMMUNITY_REPORT_TABLE = "output/create_final_community_reports.parquet"
 COVARIATES_TABLE = "output/create_final_covariates.parquet"

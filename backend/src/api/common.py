@@ -3,12 +3,8 @@
 
 import hashlib
 import re
-from typing import Annotated
 
-from fastapi import (
-    Header,
-    HTTPException,
-)
+from fastapi import HTTPException
 
 from src.api.azure_clients import (
     AzureStorageClientManager,
@@ -188,14 +184,3 @@ def retrieve_original_entity_config_name(sanitized_name: str) -> str | None:
             status_code=500, detail="Error retrieving original entity config name."
         )
     return None
-
-
-async def verify_subscription_key_exist(
-    Ocp_Apim_Subscription_Key: Annotated[str, Header()],
-):
-    # a function that will be injected as a dependency to API routes - it will be called to verify the Ocp_Apim_Subscription_Key is present
-    if not Ocp_Apim_Subscription_Key:
-        raise HTTPException(
-            status_code=400, detail="Ocp-Apim-Subscription-Key required"
-        )
-    return Ocp_Apim_Subscription_Key

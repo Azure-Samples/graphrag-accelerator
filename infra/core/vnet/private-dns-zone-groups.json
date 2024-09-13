@@ -1,18 +1,18 @@
 {
   "azureCloud": {
     "azureMonitor": [
-    "privatelink.monitor.azure.com",
-    "privatelink.oms.opinsights.azure.com",
-    "privatelink.agentsvc.azure-automation.net",
-    "privatelink.ods.opinsights.azure.com"
+      "privatelink.monitor.azure.com",
+      "privatelink.oms.opinsights.azure.com",
+      "privatelink.agentsvc.azure-automation.net",
+      "privatelink.ods.opinsights.azure.com"
     ]
   },
   "azureusgovernment": {
     "azureMonitor": [
-    "privatelink.monitor.azure.us",
-    "privatelink.oms.opinsights.azure.us",
-    "privatelink.agentsvc.azure-automation.us",
-    "privatelink.ods.opinsights.azure.us"
+      "privatelink.monitor.azure.us",
+      "privatelink.oms.opinsights.azure.us",
+      "privatelink.agentsvc.azure-automation.us",
+      "privatelink.ods.opinsights.azure.us"
     ]
   }
 }

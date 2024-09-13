@@ -78,15 +78,13 @@ class BlobWorkflowCallbacks(NoopWorkflowCallbacks):
         details: dict | None = None,
     ):
         """Report an error."""
-        self._write_log(
-            {
-                "type": "error",
-                "data": message,
-                "cause": str(cause),
-                "stack": stack,
-                "details": details,
-            }
-        )
+        self._write_log({
+            "type": "error",
+            "data": message,
+            "cause": str(cause),
+            "stack": stack,
+            "details": details,
+        })
 
     def on_workflow_start(self, name: str, instance: object) -> None:
         """Execute this callback when a workflow starts."""
@@ -105,9 +103,11 @@ class BlobWorkflowCallbacks(NoopWorkflowCallbacks):
         }
         if self._index_name:
             details["index_name"] = self._index_name
-        self._write_log(
-            {"type": "on_workflow_start", "data": message, "details": details}
-        )
+        self._write_log({
+            "type": "on_workflow_start",
+            "data": message,
+            "details": details,
+        })
 
     def on_workflow_end(self, name: str, instance: object) -> None:
         """Execute this callback when a workflow ends."""
@@ -124,9 +124,11 @@ class BlobWorkflowCallbacks(NoopWorkflowCallbacks):
         }
         if self._index_name:
             details["index_name"] = self._index_name
-        self._write_log(
-            {"type": "on_workflow_end", "data": message, "details": details}
-        )
+        self._write_log({
+            "type": "on_workflow_end",
+            "data": message,
+            "details": details,
+        })
 
     def on_warning(self, message: str, details: dict | None = None):
         """Report a warning."""

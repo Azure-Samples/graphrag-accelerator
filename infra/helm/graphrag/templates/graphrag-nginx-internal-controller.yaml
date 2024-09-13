@@ -9,5 +9,5 @@ spec:
   {{- with .Values.ingress.loadBalancerAnnotations }}
   loadBalancerAnnotations:
     {{- toYaml . | nindent 4 }}
-  {{- end }} 
+  {{- end }}
 {{- end }}

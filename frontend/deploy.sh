@@ -165,7 +165,7 @@ function configure_auth_settings() {
 
     authSettings=$(az rest --method GET --url "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Web/sites/$WEB_APP/config/authsettingsV2/list?api-version=2020-12-01" --output json)
     echo $authSettings > auth.json
-    jq '.properties.identityProviders.azureActiveDirectory.registration.clientSecretSettingName = "OVERRIDE_USE_MI_FIC_ASSERTION_CLIENTID"' auth.json > tmp.json && mv tmp.json auth.json
+    jq '.properties.identityProviders.azureActiveDirectory.registration.clientSecretSettingName = "OVERRIDE_USE_MI_FIC_ASSERTION_CLIENTID"' auth.json > tmp.json && mv tmp.json auth.json # pragma: allowlist secret
     az rest --method PUT \
         --url "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Web/sites/$WEB_APP/config/authsettingsV2?api-version=2020-12-01" \
         --body @auth.json \

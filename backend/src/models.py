@@ -31,26 +31,10 @@ class ClaimResponse(BaseModel):
     document_ids: List[str]
 
 
-class EntityNameList(BaseModel):
-    entity_configuration_name: List[str]
-
-
 class EntityResponse(BaseModel):
     name: str
     description: str
     text_units: list[str]
-
-
-class EntityTypeExample(BaseModel):
-    entity_types: str
-    text: str
-    output: str
-
-
-class EntityConfiguration(BaseModel):
-    entity_configuration_name: str
-    entity_types: List[str]
-    entity_examples: List[EntityTypeExample]
 
 
 class GraphRequest(BaseModel):
