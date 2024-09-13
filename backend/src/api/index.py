@@ -167,13 +167,11 @@ async def _start_indexing_pipeline(index_name: str):
     container_store_client = get_database_container_client(
         database_name="graphrag", container_name="container-store"
     )
-    container_store_client.upsert_item(
-        {
-            "id": sanitized_index_name,
-            "human_readable_name": index_name,
-            "type": "index",
-        }
-    )
+    container_store_client.upsert_item({
+        "id": sanitized_index_name,
+        "human_readable_name": index_name,
+        "type": "index",
+    })
 
     reporter = ReporterSingleton().get_instance()
     pipelinejob = PipelineJob()

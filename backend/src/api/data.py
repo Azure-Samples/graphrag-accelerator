@@ -159,7 +159,6 @@ async def upload_files(
         batches = ceil(len(files) / batch_size)
         for i in range(batches):
             batch_files = files[i * batch_size : (i + 1) * batch_size]
-            print(f"Uploading batch {i+1} of {batches}...")
             tasks = [
                 upload_file_async(file, container_client, overwrite)
                 for file in batch_files
@@ -171,13 +170,11 @@ async def upload_files(
                 database_name="graphrag", container_name="container-store"
             )
         )
-        container_store_client.upsert_item(
-            {
-                "id": sanitized_storage_name,
-                "human_readable_name": storage_name,
-                "type": "data",
-            }
-        )
+        container_store_client.upsert_item({
+            "id": sanitized_storage_name,
+            "human_readable_name": storage_name,
+            "type": "data",
+        })
         return BaseResponse(status="File upload successful.")
     except Exception:
         reporter.on_error("Error uploading files.", details={"files": files})

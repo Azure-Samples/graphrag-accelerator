@@ -74,7 +74,7 @@ async def lifespan(app: FastAPI):
         if manifest["metadata"]["name"] not in cronjob_names:
             batch_v1.create_namespaced_cron_job(namespace="graphrag", body=manifest)
     except Exception as e:
-        print(f"Failed to create graphrag cronjob.\n{e}")
+        print("Failed to create graphrag cronjob.")
         reporter = ReporterSingleton().get_instance()
         reporter.on_error(
             message="Failed to create graphrag cronjob",
