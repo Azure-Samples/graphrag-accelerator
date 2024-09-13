@@ -95,14 +95,12 @@ def main():
             )
             exit()
         if item["status"] == PipelineJobState.SCHEDULED.value:
-            job_metadata.append(
-                {
-                    "human_readable_index_name": item["human_readable_index_name"],
-                    "epoch_request_time": item["epoch_request_time"],
-                    "status": item["status"],
-                    "percent_complete": item["percent_complete"],
-                }
-            )
+            job_metadata.append({
+                "human_readable_index_name": item["human_readable_index_name"],
+                "epoch_request_time": item["epoch_request_time"],
+                "status": item["status"],
+                "percent_complete": item["percent_complete"],
+            })
     # exit if no jobs found
     if not job_metadata:
         print("No jobs found")
