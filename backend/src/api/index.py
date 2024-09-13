@@ -127,7 +127,7 @@ async def setup_indexing_pipeline(
             )
         # if indexing job is in a failed state, delete the associated K8s job and pod to allow for a new job to be scheduled
         if PipelineJobState(existing_job.status) == PipelineJobState.FAILED:
-            _delete_k8s_job(f"indexing-job-{sanitized_index_name}", "graphrag")
+            _delete_k8s_job(f"indexing-job-{sanitized_index_name}", os.environ["AKS_NAMESPACE"])
         # reset the pipeline job details
         existing_job._status = PipelineJobState.SCHEDULED
         existing_job._percent_complete = 0
