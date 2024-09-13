@@ -58,19 +58,19 @@ printf "\n"
 successBanner () {
 # https://patorjk.com/software/taag
 cat << "EOF"
-   _____                             __       _             
-  / ____|                           / _|     | |            
- | (___  _   _  ___ ___ ___ ___ ___| |_ _   _| |            
-  \___ \| | | |/ __/ __/ _ / __/ __|  _| | | | |            
-  ____) | |_| | (_| (_|  __\__ \__ | | | |_| | |            
- |_____/ \__,_|\___\___\___|___|___|_|  \__,_|_|      _   _ 
+   _____                             __       _
+  / ____|                           / _|     | |
+ | (___  _   _  ___ ___ ___ ___ ___| |_ _   _| |
+  \___ \| | | |/ __/ __/ _ / __/ __|  _| | | | |
+  ____) | |_| | (_| (_|  __\__ \__ | | | |_| | |
+ |_____/ \__,_|\___\___\___|___|___|_|  \__,_|_|      _   _
      | |          | |                                | | | |
    __| | ___ _ __ | | ___  _   _ _ __ ___   ___ _ __ | |_| |
   / _` |/ _ | '_ \| |/ _ \| | | | '_ ` _ \ / _ | '_ \| __| |
  | (_| |  __| |_) | | (_) | |_| | | | | | |  __| | | | |_|_|
   \__,_|\___| .__/|_|\___/ \__, |_| |_| |_|\___|_| |_|\__(_)
-            | |             __/ |                           
-            |_|            |___/                            
+            | |             __/ |
+            |_|            |___/
 EOF
 printf "\n\n"
 }
@@ -78,17 +78,17 @@ printf "\n\n"
 startBanner () {
 # https://patorjk.com/software/taag
 cat << "EOF"
-   _____                 _     _____           _____  
-  / ____|               | |   |  __ \    /\   / ____| 
- | |  __ _ __ __ _ _ __ | |__ | |__) |  /  \ | |  __  
- | | |_ | '__/ _` | '_ \| '_ \|  _  /  / /\ \| | |_ | 
- | |__| | | | (_| | |_) | | | | | \ \ / ____ | |__| | 
-  \_____|_|  \__,_| .__/|_| |_|_|  \_/_/_   \_\_____| 
-     /\           | | | |              | |            
-    /  \   ___ ___|_|_| | ___ _ __ __ _| |_ ___  _ __ 
+   _____                 _     _____           _____
+  / ____|               | |   |  __ \    /\   / ____|
+ | |  __ _ __ __ _ _ __ | |__ | |__) |  /  \ | |  __
+ | | |_ | '__/ _` | '_ \| '_ \|  _  /  / /\ \| | |_ |
+ | |__| | | | (_| | |_) | | | | | \ \ / ____ | |__| |
+  \_____|_|  \__,_| .__/|_| |_|_|  \_/_/_   \_\_____|
+     /\           | | | |              | |
+    /  \   ___ ___|_|_| | ___ _ __ __ _| |_ ___  _ __
    / /\ \ / __/ __/ _ | |/ _ | '__/ _` | __/ _ \| '__|
-  / ____ | (_| (_|  __| |  __| | | (_| | || (_) | |   
- /_/    \_\___\___\___|_|\___|_|  \__,_|\__\___/|_|   
+  / ____ | (_| (_|  __| |  __| | | (_| | || (_) | |
+ /_/    \_\___\___\___|_|\___|_|  \__,_|\__\___/|_|
 EOF
 printf "\n\n"
 }
@@ -161,7 +161,7 @@ checkRequiredTools () {
     local major minor patch
     IFS='.' read -r major minor patch <<< "$JQ_VERSION"
     if [ -z $patch ]; then
-        # NOTE: older acceptable versions of jq report a version 
+        # NOTE: older acceptable versions of jq report a version
         # number without the patch number. if patch version is
         # not present, set it to 0
         patch=0
@@ -376,7 +376,7 @@ installGraphRAGHelmChart () {
     exitIfValueEmpty "$storageAccountBlobUrl" "Unable to parse storage account blob url from deployment outputs, exiting..."
 
     local containerRegistryName=$(jq -r .azure_acr_login_server.value <<< $AZURE_OUTPUTS)
-    exitIfValueEmpty "$containerRegistryName" "Unable to parse container registry url from deployment outputs, exiting..." 
+    exitIfValueEmpty "$containerRegistryName" "Unable to parse container registry url from deployment outputs, exiting..."
 
     local graphragImageName=$(sed -rn "s/([^:]+).*/\1/p" <<< "$GRAPHRAG_IMAGE")
     local graphragImageVersion=$(sed -rn "s/[^:]+:(.*)/\1/p" <<< "$GRAPHRAG_IMAGE")
