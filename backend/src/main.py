@@ -68,11 +68,11 @@ async def lifespan(app: FastAPI):
         ] = pod.spec.service_account_name
         # retrieve list of existing cronjobs
         batch_v1 = client.BatchV1Api()
-        namespace_cronjobs = batch_v1.list_namespaced_cron_job(namespace="graphrag")
+        namespace_cronjobs = batch_v1.list_namespaced_cron_job(namespace=os.environ["AKS_NAMESPACE"])
         cronjob_names = [cronjob.metadata.name for cronjob in namespace_cronjobs.items]
         # create cronjob if it does not exist
         if manifest["metadata"]["name"] not in cronjob_names:
-            batch_v1.create_namespaced_cron_job(namespace="graphrag", body=manifest)
+            batch_v1.create_namespaced_cron_job(namespace=os.environ["AKS_NAMESPACE"], body=manifest)
     except Exception as e:
         print("Failed to create graphrag cronjob.")
         reporter = ReporterSingleton().get_instance()
