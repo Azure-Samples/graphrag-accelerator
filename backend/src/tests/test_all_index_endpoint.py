@@ -70,7 +70,7 @@ def test_index_create(client, index_create):
 
 @pytest.fixture
 def run_indexing(client, index_create):
-    index_name, response_index = index_create
+    index_name, _ = index_create
     print(f"Testing the building of index: {index_name}")
     while True:
         response = client.get(

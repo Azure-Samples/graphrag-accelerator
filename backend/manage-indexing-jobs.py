@@ -2,8 +2,10 @@
 # Licensed under the MIT License.
 
 """
+Note: This script is intended to be executed as a cron job on kubernetes.
+
 A naive implementation of a job manager that leverages k8s CronJob and CosmosDB
-to schedule graphrag indexing jobs in a first-come-first-serve manner (based on epoch time).
+to schedule graphrag indexing jobs on a first-come-first-serve basis (based on epoch time).
 """
 
 import os
@@ -78,38 +80,70 @@ def _generate_aks_job_manifest(
     return manifest
 
 
+def list_k8s_jobs(namespace: str) -> list[str]:
+    """List all k8s jobs in a given namespace."""
+    config.load_incluster_config()
+    batch_v1 = client.BatchV1Api()
+    jobs = batch_v1.list_namespaced_job(namespace=namespace)
+    job_list = []
+    for job in jobs.items:
+        job_list.append(job.metadata.name)
+    return job_list
+
+
 def main():
+    """
+    There are two places to check to determine if an indexing job should be executed:
+        * Kubernetes: check if there are any active k8s jobs running in the cluster
+        * CosmosDB: check if there are any indexing jobs in a scheduled state
+
+    Ideally if an indexing job has finished or failed, the job status will be reflected in cosmosdb.
+    However, if an indexing job failed due to OOM, the job status will not have been updated in cosmosdb.
+
+    To avoid a catastrophic failure scenario where all indexing jobs are stuck in a scheduled state,
+    both checks are necessary.
+    """
+    kubernetes_jobs = list_k8s_jobs(os.environ["AKS_NAMESPACE"])
+
     azure_storage_client_manager = AzureStorageClientManager()
     job_container_store_client = (
         azure_storage_client_manager.get_cosmos_container_client(
             database_name="graphrag", container_name="jobs"
         )
     )
-    # retrieve status for all jobs that are either scheduled or running
+    # retrieve status of all index jobs that are scheduled or running
     job_metadata = []
     for item in job_container_store_client.read_all_items():
-        # exit if a job is running
         if item["status"] == PipelineJobState.RUNNING.value:
-            print(
-                f"Indexing job for '{item['human_readable_index_name']}' already running. Will not schedule another. Exiting..."
-            )
-            exit()
+            # if index job has running state but no associated k8s job, a catastrophic
+            # failure (OOM for example) occurred. Set job status to failed.
+            if len(kubernetes_jobs) == 0:
+                print(
+                    f"Indexing job for '{item['human_readable_index_name']}' in 'running' state but no associated k8s job found. Updating to failed state."
+                )
+                pipelinejob = PipelineJob()
+                pipeline_job = pipelinejob.load_item(item["sanitized_index_name"])
+                pipeline_job["status"] = PipelineJobState.FAILED.value
+            else:
+                print(
+                    f"Indexing job for '{item['human_readable_index_name']}' already running. Will not schedule another. Exiting..."
+                )
+                exit()
         if item["status"] == PipelineJobState.SCHEDULED.value:
-            job_metadata.append(
-                {
-                    "human_readable_index_name": item["human_readable_index_name"],
-                    "epoch_request_time": item["epoch_request_time"],
-                    "status": item["status"],
-                    "percent_complete": item["percent_complete"],
-                }
-            )
-    # exit if no jobs found
+            job_metadata.append({
+                "human_readable_index_name": item["human_readable_index_name"],
+                "epoch_request_time": item["epoch_request_time"],
+                "status": item["status"],
+                "percent_complete": item["percent_complete"],
+            })
+
+    # exit if no 'scheduled' jobs were found
     if not job_metadata:
         print("No jobs found")
         exit()
-    # convert to dataframe for easy processing
+    # convert to dataframe for easier processing
     df = pd.DataFrame(job_metadata)
-    # jobs are run in the order they were requested - sort by epoch_request_time
+    # jobs should be run in the order they were requested - sort by epoch_request_time
     df.sort_values(by="epoch_request_time", ascending=True, inplace=True)
     index_to_schedule = df.iloc[0]["human_readable_index_name"]
     print(f"Scheduling job for index: {index_to_schedule}")

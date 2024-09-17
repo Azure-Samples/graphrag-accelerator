@@ -14,7 +14,6 @@ from azure.search.documents.indexes import SearchIndexClient
 from datashaper import WorkflowCallbacksManager
 from fastapi import (
     APIRouter,
-    Depends,
     HTTPException,
     UploadFile,
 )
@@ -36,7 +35,6 @@ from src.api.common import (
     delete_blob_container,
     sanitize_name,
     validate_blob_container_name,
-    verify_subscription_key_exist,
 )
 from src.models import (
     BaseResponse,
@@ -62,9 +60,6 @@ index_route = APIRouter(
     prefix="/index",
     tags=["Index Operations"],
 )
-
-if os.getenv("KUBERNETES_SERVICE_HOST"):
-    index_route.dependencies.append(Depends(verify_subscription_key_exist))
 
 
 @index_route.post(
@@ -132,7 +127,7 @@ async def setup_indexing_pipeline(
             )
         # if indexing job is in a failed state, delete the associated K8s job and pod to allow for a new job to be scheduled
         if PipelineJobState(existing_job.status) == PipelineJobState.FAILED:
-            _delete_k8s_job(f"indexing-job-{sanitized_index_name}", "graphrag")
+            _delete_k8s_job(f"indexing-job-{sanitized_index_name}", os.environ["AKS_NAMESPACE"])
         # reset the pipeline job details
         existing_job._status = PipelineJobState.SCHEDULED
         existing_job._percent_complete = 0
@@ -172,13 +167,11 @@ async def _start_indexing_pipeline(index_name: str):
     container_store_client = get_database_container_client(
         database_name="graphrag", container_name="container-store"
     )
-    container_store_client.upsert_item(
-        {
-            "id": sanitized_index_name,
-            "human_readable_name": index_name,
-            "type": "index",
-        }
-    )
+    container_store_client.upsert_item({
+        "id": sanitized_index_name,
+        "human_readable_name": index_name,
+        "type": "index",
+    })
 
     reporter = ReporterSingleton().get_instance()
     pipelinejob = PipelineJob()
