@@ -9,7 +9,6 @@ authors = [
     "Gabriel Nieves <gnievesponce@microsoft.com>",
     "Douglas Orbaker <dorbaker@microsoft.com>",
     "Chris Sanchez <chrissanchez@microsoft.com>",
-    "Katy Smith <katysmith@microsoft.com>",
     "Shane Solomon <shane.solomon@microsoft.com>",
 ]
 readme = "README.md"
