@@ -63,14 +63,12 @@ def get_prompt_generation_tab(
     """
     Displays content of Prompt Generation Tab
     """
-    # hard set limit to 5 files to reduce overly long processing times and to reduce over sampling errors.
-    num_chunks = num_chunks if num_chunks <= 5 else 5
     _, col2, _ = st.columns(column_widths)
     with col2:
         st.header(
             "Generate Prompts (optional)",
-            #divider=True,
-            #help="Generate fine-tuned prompts for graphrag tailored to your data and domain.",
+            divider=True,
+            help="Generate fine-tuned prompts for graphrag tailored to your data and domain.",
         )
 
         st.write(
@@ -133,24 +131,10 @@ def get_prompt_generation_tab(
                             "Prompts generated successfully! Move on to the next tab to configure the prompts."
                         )
                     else:
-                        # assume limit parameter is too high
+                        # limit parameter was too high
                         st.warning(
                             "You do not have enough data to generate prompts. Retrying with a smaller sample size."
                         )
-                        while num_chunks > 1:
-                            num_chunks -= 1
-                            generated = generate_and_extract_prompts(
-                                client=client,
-                                storage_name=select_prompt_storage,
-                                limit=num_chunks,
-                            )
-                            if not isinstance(generated, Exception):
-                                st.success(
-                                    "Prompts generated successfully! Move on to the next tab to configure the prompts."
-                                )
-                                break
-                            else:
-                                st.warning(f"Retrying with sample size: {num_chunks}")
 
 
 def get_prompt_configuration_tab(
@@ -161,10 +145,10 @@ def get_prompt_configuration_tab(
     """
     st.header(
         "Configure Prompts (optional)",
-        #divider=True,
-        #help="Generate fine tuned prompts for the LLM specific to your data and domain.",
+        divider=True,
+        help="Generate fine tuned prompts for the LLM specific to your data and domain.",
     )
-    prompt_values = [st.session_state[k.value] for k in PromptKeys]
+    prompt_values = [st.session_state[k] for k in PromptKeys]
 
     if any(prompt_values):
         prompt_editor([prompt_values[0], prompt_values[1], prompt_values[2]])
@@ -253,7 +237,6 @@ def get_query_tab(client: GraphragAPI) -> None:
 
     disabled = True if not any(select_index_search) else False
     col3, col4 = st.columns([0.8, 0.2])
-
     with col3:
         search_bar = st.text_input("Query", key="search-query", disabled=disabled)
     with col4:

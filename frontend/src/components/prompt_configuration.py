@@ -18,20 +18,14 @@ def save_prompts(
     Save prompts in memory and on disk as a zip file
     """
     st.session_state[SAVED_PROMPT_VAR] = True
-    st.session_state[PromptKeys.ENTITY.value] = st.session_state[
-        PromptTextAreas.ENTITY.value
-    ]
-    st.session_state[PromptKeys.SUMMARY.value] = st.session_state[
-        PromptTextAreas.SUMMARY.value
-    ]
-    st.session_state[PromptKeys.COMMUNITY.value] = st.session_state[
-        PromptTextAreas.COMMUNITY.value
-    ]
+    st.session_state[PromptKeys.ENTITY] = st.session_state[PromptTextAreas.ENTITY]
+    st.session_state[PromptKeys.SUMMARY] = st.session_state[PromptTextAreas.SUMMARY]
+    st.session_state[PromptKeys.COMMUNITY] = st.session_state[PromptTextAreas.COMMUNITY]
     os.makedirs(local_dir, exist_ok=True)
     for key, filename in zip(PromptKeys, PromptFileNames):
-        outpath = os.path.join(local_dir, filename.value)
+        outpath = os.path.join(local_dir, filename)
         with open(outpath, "w", encoding="utf-8") as f:
-            f.write(st.session_state[key.value])
+            f.write(st.session_state[key])
     zip_directory(local_dir, zip_file_path)
 
 
@@ -50,7 +44,7 @@ def prompt_editor(prompt_values: list[str]):
 
     entity_ext_prompt, summ_prompt, comm_report_prompt = prompt_values
 
-    with st.container():#border=True):
+    with st.container(border=True):
         tab_labels = [
             "**Entity Extraction**",
             "**Summarize Descriptions**",

@@ -29,8 +29,8 @@ def login():
                 status_code = client.health_check()
                 if status_code == 200:
                     st.success("Login Successful")
-                    st.session_state[EnvVars.DEPLOYMENT_URL.value] = apim_url
-                    st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY.value] = apim_sub_key
+                    st.session_state[EnvVars.DEPLOYMENT_URL] = apim_url
+                    st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY] = apim_sub_key
                     st.session_state["initialized"] = True
                     st.rerun()
                 else:

@@ -131,17 +131,16 @@ class GraphragAPI:
         except Exception as e:
             print(f"Error: {str(e)}")
 
-    def health_check(self) -> int | Response:
+    def health_check_passed(self) -> bool:
         """
         Check the health of the APIM endpoint.
         """
         url = self.api_url + "/health"
         try:
             response = requests.get(url, headers=self.headers)
-            return response.status_code
-        except Exception as e:
-            print(f"Error: {str(e)}")
-            return e
+            return response.ok
+        except Exception:
+            return False
 
     def query_index(self, index_name: str | list[str], query_type: str, query: str):
         """

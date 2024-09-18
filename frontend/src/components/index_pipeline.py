@@ -27,8 +27,8 @@ class IndexPipeline:
         with col2:
             st.header(
                 "1. Data Storage",
-                #divider=True,
-                #help="Select a Data Storage Container to upload data to or select an existing container to use for indexing. The data will be processed by the LLM to create a Knowledge Graph.",
+                divider=True,
+                help="Select a Data Storage Container to upload data to or select an existing container to use for indexing. The data will be processed by the LLM to create a Knowledge Graph.",
             )
             select_storage_name = st.selectbox(
                 label="Select an existing Storage Container.",
@@ -50,7 +50,6 @@ class IndexPipeline:
                     key_prefix="index",
                     disable_other_input=disable_other_input,
                 )
-
                 if select_storage_name != "":
                     disable_other_input = True
 
@@ -62,8 +61,8 @@ class IndexPipeline:
         with col2:
             st.header(
                 "2. Build Index",
-                #divider=True,
-                #help="Building an index will process the data from step 1 and create a Knowledge Graph suitable for querying. The LLM will use either the default prompt configuration or the prompts that you generated previously. To track the status of an indexing job, use the check index status below.",
+                divider=True,
+                help="Building an index will process the data from step 1 and create a Knowledge Graph suitable for querying. The LLM will use either the default prompt configuration or the prompts that you generated previously. To track the status of an indexing job, use the check index status below.",
             )
             # use data from either the selected storage container or the uploaded data
             select_storage_name = st.session_state["index-storage"]
@@ -75,7 +74,7 @@ class IndexPipeline:
             storage_selection = select_storage_name or input_storage_name
 
             # Allow user to choose either default or custom prompts
-            custom_prompts = any([st.session_state[k.value] for k in PromptKeys])
+            custom_prompts = any([st.session_state[k] for k in PromptKeys])
             prompt_options = ["Default", "Custom"] if custom_prompts else ["Default"]
             prompt_choice = st.radio(
                 "Choose LLM Prompt Configuration",
@@ -95,17 +94,17 @@ class IndexPipeline:
                 disabled=not index_name or not storage_selection,
             ):
                 entity_prompt = (
-                    StringIO(st.session_state[PromptKeys.ENTITY.value])
+                    StringIO(st.session_state[PromptKeys.ENTITY])
                     if prompt_choice == "Custom"
                     else None
                 )
                 summarize_prompt = (
-                    StringIO(st.session_state[PromptKeys.SUMMARY.value])
+                    StringIO(st.session_state[PromptKeys.SUMMARY])
                     if prompt_choice == "Custom"
                     else None
                 )
                 community_prompt = (
-                    StringIO(st.session_state[PromptKeys.COMMUNITY.value])
+                    StringIO(st.session_state[PromptKeys.COMMUNITY])
                     if prompt_choice == "Custom"
                     else None
                 )
@@ -135,10 +134,9 @@ class IndexPipeline:
         with col2:
             st.header(
                 "3. Check Index Status",
-                #divider=True,
-                #help="Select an index to check the status of what stage indexing is in. Indexing must be complete in order to be able to execute queries.",
+                divider=True,
+                help="Select an index to check the status of what stage indexing is in. Indexing must be complete in order to be able to execute queries.",
             )
-
             options_indexes = self.client.get_index_names()
             # create logic for defaulting to running job index if one exists
             new_index_name = st.session_state["index-name-input"]

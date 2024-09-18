@@ -7,7 +7,6 @@ from typing import Optional
 from zipfile import ZipFile
 
 import streamlit as st
-from dotenv import find_dotenv, load_dotenv
 
 from src.enums import EnvVars, PromptKeys, StorageIndexVars
 from src.graphrag_api import GraphragAPI
@@ -17,7 +16,7 @@ This module contains functions that are used across the Streamlit app.
 """
 
 
-def initialize_app(env_file: str = ".env", css_file: str = "style.css") -> bool:
+def initialize_app(css_file: str = "style.css") -> bool:
     """
     Initialize the Streamlit app with the necessary configurations.
     """
@@ -31,31 +30,26 @@ def initialize_app(env_file: str = ".env", css_file: str = "style.css") -> bool:
     # initialize session state variables
     set_session_state_variables()
 
-    # load environment variables
-    _ = load_dotenv(find_dotenv(filename=env_file) or None, override=True)
-
-    # either load from .env file or from session state
-    st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY.value] = os.getenv(
-        EnvVars.APIM_SUBSCRIPTION_KEY.value,
-        st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY.value],
-    )
-    st.session_state[EnvVars.DEPLOYMENT_URL.value] = os.getenv(
-        EnvVars.DEPLOYMENT_URL.value, st.session_state[EnvVars.DEPLOYMENT_URL.value]
-    )
+    # load settings from environment variables
+    try:
+        st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY] = os.environ[
+            EnvVars.APIM_SUBSCRIPTION_KEY
+        ]
+        st.session_state[EnvVars.DEPLOYMENT_URL] = os.environ[EnvVars.DEPLOYMENT_URL]
+    except Exception:
+        return False
     if (
-        st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY.value]
-        and st.session_state[EnvVars.DEPLOYMENT_URL.value]
+        st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY]
+        and st.session_state[EnvVars.DEPLOYMENT_URL]
     ):
         st.session_state["headers"] = {
             "Ocp-Apim-Subscription-Key": st.session_state[
-                EnvVars.APIM_SUBSCRIPTION_KEY.value
+                EnvVars.APIM_SUBSCRIPTION_KEY
             ],
             "Content-Type": "application/json",
         }
         st.session_state["headers_upload"] = {
-            "Ocp-Apim-Subscription-Key": st.session_state[
-                EnvVars.APIM_SUBSCRIPTION_KEY.value
-            ]
+            "Ocp-Apim-Subscription-Key": st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY]
         }
         return True
     else:
@@ -67,15 +61,15 @@ def set_session_state_variables() -> None:
     Initalizes most session state variables for the app.
     """
     for key in PromptKeys:
-        value = key.value
+        value = key
         if value not in st.session_state:
             st.session_state[value] = ""
     for key in StorageIndexVars:
-        value = key.value
+        value = key
         if value not in st.session_state:
             st.session_state[value] = ""
     for key in EnvVars:
-        value = key.value
+        value = key
         if value not in st.session_state:
             st.session_state[value] = ""
     if "saved_prompts" not in st.session_state:
@@ -99,11 +93,11 @@ def update_session_state_prompt_vars(
     if initial_setting:
         entity_extract, summarize, community = get_prompts(prompt_dir)
     if entity_extract:
-        st.session_state[PromptKeys.ENTITY.value] = entity_extract
+        st.session_state[PromptKeys.ENTITY] = entity_extract
     if summarize:
-        st.session_state[PromptKeys.SUMMARY.value] = summarize
+        st.session_state[PromptKeys.SUMMARY] = summarize
     if community:
-        st.session_state[PromptKeys.COMMUNITY.value] = community
+        st.session_state[PromptKeys.COMMUNITY] = community
 
 
 def generate_and_extract_prompts(

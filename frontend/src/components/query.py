@@ -111,14 +111,14 @@ class GraphQuery:
                             "Double-click on content to expand text", "red", False
                         )
                     )
-                    self._build_st_dataframe(context_list[0]["reports"], drop_columns=[])
+                    self._build_st_dataframe(
+                        context_list[0]["reports"], drop_columns=[]
+                    )
         else:
             print(query_response.reason, query_response.content)
             raise Exception("Received unexpected response from server")
-        
-    def local_streaming_search(
-        self, search_index: str | list[str], query: str
-    ) -> None:
+
+    def local_streaming_search(self, search_index: str | list[str], query: str) -> None:
         """
         Executes a local streaming query on the specified index.
         Handles the response and displays the results in the Streamlit app.
@@ -166,10 +166,18 @@ class GraphQuery:
                             "Double-click on content to expand text", "red", False
                         )
                     )
-                    self._build_st_dataframe(context_list[0]["reports"], drop_columns=[])
-                    self._build_st_dataframe(context_list[0]["entities"], drop_columns=[])
-                    self._build_st_dataframe(context_list[0]["relationships"], drop_columns=[])
-                    self._build_st_dataframe(context_list[0]["sources"], drop_columns=[])
+                    self._build_st_dataframe(
+                        context_list[0]["reports"], drop_columns=[]
+                    )
+                    self._build_st_dataframe(
+                        context_list[0]["entities"], drop_columns=[]
+                    )
+                    self._build_st_dataframe(
+                        context_list[0]["relationships"], drop_columns=[]
+                    )
+                    self._build_st_dataframe(
+                        context_list[0]["sources"], drop_columns=[]
+                    )
         else:
             print(query_response.reason, query_response.content)
             raise Exception("Received unexpected response from server")
@@ -276,14 +284,19 @@ class GraphQuery:
         drop_columns: list[str] = ["id", "index_id", "index_name", "in_context"],
         entity_df: bool = False,
         rel_df: bool = False,
-    ) -> st.dataframe:
+    ) -> st.dataframe:  # type: ignore
         df_context = (
-            data if isinstance(data, pd.DataFrame) else pd.DataFrame(data) if isinstance(data, dict) else pd.DataFrame.from_records(data)
+            data
+            if isinstance(data, pd.DataFrame)
+            else pd.DataFrame(data)
+            if isinstance(data, dict)
+            else pd.DataFrame.from_records(data)
         )
         if any(drop_columns):
-            for column in drop_columns:
-                if column in df_context.columns:
-                    df_context = df_context.drop(column, axis=1)
+            df_context.drop(columns=drop_columns, inplace=True, axis=1, errors="ignore")
+            # for column in drop_columns:
+            #     if column in df_context.columns:
+            #         df_context = df_context.drop(column, axis=1)
         if entity_df:
             return st.dataframe(
                 df_context,
@@ -310,11 +323,11 @@ class GraphQuery:
         return st.dataframe(
             df_context,
             use_container_width=True,
-            #column_config={
-            #    "title": "Report Title",
-            #    "content": "Report Content",
-            #    "rank": "Rank",
-            #},
+            column_config={
+                "title": "Report Title",
+                "content": "Report Content",
+                "rank": "Rank",
+            },
         )
 
     def format_md_text(self, text: str, color: str, bold: bool) -> str:
@@ -327,7 +340,7 @@ class GraphQuery:
 
     def _create_section_expander(
         self, title: str, color: str = "blue", bold: bool = True, expanded: bool = False
-    ) -> st.expander:
+    ) -> st.expander:  # type: ignore
         """
         Creates an expander in the Streamlit app with the specified title and content.
         """
