@@ -50,7 +50,6 @@ class IndexPipeline:
                     key_prefix="index",
                     disable_other_input=disable_other_input,
                 )
-
                 if select_storage_name != "":
                     disable_other_input = True
 
@@ -138,7 +137,6 @@ class IndexPipeline:
                 divider=True,
                 help="Select an index to check the status of what stage indexing is in. Indexing must be complete in order to be able to execute queries.",
             )
-
             options_indexes = self.client.get_index_names()
             # create logic for defaulting to running job index if one exists
             new_index_name = st.session_state["index-name-input"]

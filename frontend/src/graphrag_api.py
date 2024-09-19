@@ -131,17 +131,16 @@ class GraphragAPI:
         except Exception as e:
             print(f"Error: {str(e)}")
 
-    def health_check(self) -> int | Response:
+    def health_check_passed(self) -> bool:
         """
         Check the health of the APIM endpoint.
         """
         url = self.api_url + "/health"
         try:
             response = requests.get(url, headers=self.headers)
-            return response.status_code
-        except Exception as e:
-            print(f"Error: {str(e)}")
-            return e
+            return response.ok
+        except Exception:
+            return False
 
     def query_index(self, index_name: str | list[str], query_type: str, query: str):
         """
@@ -174,7 +173,25 @@ class GraphragAPI:
         """
         Returns a streaming response object for a global query.
         """
-        url = f"{self.api_url}/experimental/query/global/streaming"
+        url = f"{self.api_url}/query/streaming/global"
+        try:
+            query_response = requests.post(
+                url,
+                json={"index_name": index_name, "query": query},
+                headers=self.headers,
+                stream=True,
+            )
+            return query_response
+        except Exception as e:
+            print(f"Error: {str(e)}")
+
+    def local_streaming_query(
+        self, index_name: str | list[str], query: str
+    ) -> Response | None:
+        """
+        Returns a streaming response object for a global query.
+        """
+        url = f"{self.api_url}/query/streaming/local"
         try:
             query_response = requests.post(
                 url,

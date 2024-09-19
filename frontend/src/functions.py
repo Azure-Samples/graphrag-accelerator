@@ -7,7 +7,6 @@ from typing import Optional
 from zipfile import ZipFile
 
 import streamlit as st
-from dotenv import find_dotenv, load_dotenv
 
 from src.enums import EnvVars, PromptKeys, StorageIndexVars
 from src.graphrag_api import GraphragAPI
@@ -17,7 +16,7 @@ This module contains functions that are used across the Streamlit app.
 """
 
 
-def initialize_app(env_file: str = ".env", css_file: str = "style.css") -> bool:
+def initialize_app(css_file: str = "style.css") -> bool:
     """
     Initialize the Streamlit app with the necessary configurations.
     """
@@ -31,10 +30,7 @@ def initialize_app(env_file: str = ".env", css_file: str = "style.css") -> bool:
     # initialize session state variables
     set_session_state_variables()
 
-    # load environment variables
-    _ = load_dotenv(find_dotenv(filename=env_file) or None, override=True)
-
-    # either load from .env file or from session state
+    # load settings from environment variables
     st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY.value] = os.getenv(
         EnvVars.APIM_SUBSCRIPTION_KEY.value,
         st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY.value],
