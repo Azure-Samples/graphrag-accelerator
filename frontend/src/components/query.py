@@ -290,9 +290,6 @@ class GraphQuery:
         )
         if any(drop_columns):
             df_context.drop(columns=drop_columns, inplace=True, axis=1, errors="ignore")
-            # for column in drop_columns:
-            #     if column in df_context.columns:
-            #         df_context = df_context.drop(column, axis=1)
         if entity_df:
             return st.dataframe(
                 df_context,
