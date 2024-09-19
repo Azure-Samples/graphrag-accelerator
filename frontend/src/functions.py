@@ -31,15 +31,13 @@ def initialize_app(css_file: str = "style.css") -> bool:
     set_session_state_variables()
 
     # load settings from environment variables
-    try:
-        st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY.value] = os.environ[
-            EnvVars.APIM_SUBSCRIPTION_KEY.value
-        ]
-        st.session_state[EnvVars.DEPLOYMENT_URL.value] = os.environ[
-            EnvVars.DEPLOYMENT_URL.value
-        ]
-    except Exception:
-        return False
+    st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY.value] = os.getenv(
+        EnvVars.APIM_SUBSCRIPTION_KEY.value,
+        st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY.value],
+    )
+    st.session_state[EnvVars.DEPLOYMENT_URL.value] = os.getenv(
+        EnvVars.DEPLOYMENT_URL.value, st.session_state[EnvVars.DEPLOYMENT_URL.value]
+    )
     if (
         st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY.value]
         and st.session_state[EnvVars.DEPLOYMENT_URL.value]
