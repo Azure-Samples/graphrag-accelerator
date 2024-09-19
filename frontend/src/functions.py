@@ -32,24 +32,28 @@ def initialize_app(css_file: str = "style.css") -> bool:
 
     # load settings from environment variables
     try:
-        st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY] = os.environ[
-            EnvVars.APIM_SUBSCRIPTION_KEY
+        st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY.value] = os.environ[
+            EnvVars.APIM_SUBSCRIPTION_KEY.value
         ]
-        st.session_state[EnvVars.DEPLOYMENT_URL] = os.environ[EnvVars.DEPLOYMENT_URL]
+        st.session_state[EnvVars.DEPLOYMENT_URL.value] = os.environ[
+            EnvVars.DEPLOYMENT_URL.value
+        ]
     except Exception:
         return False
     if (
-        st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY]
-        and st.session_state[EnvVars.DEPLOYMENT_URL]
+        st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY.value]
+        and st.session_state[EnvVars.DEPLOYMENT_URL.value]
     ):
         st.session_state["headers"] = {
             "Ocp-Apim-Subscription-Key": st.session_state[
-                EnvVars.APIM_SUBSCRIPTION_KEY
+                EnvVars.APIM_SUBSCRIPTION_KEY.value
             ],
             "Content-Type": "application/json",
         }
         st.session_state["headers_upload"] = {
-            "Ocp-Apim-Subscription-Key": st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY]
+            "Ocp-Apim-Subscription-Key": st.session_state[
+                EnvVars.APIM_SUBSCRIPTION_KEY.value
+            ]
         }
         return True
     else:
@@ -93,11 +97,11 @@ def update_session_state_prompt_vars(
     if initial_setting:
         entity_extract, summarize, community = get_prompts(prompt_dir)
     if entity_extract:
-        st.session_state[PromptKeys.ENTITY] = entity_extract
+        st.session_state[PromptKeys.ENTITY.value] = entity_extract
     if summarize:
-        st.session_state[PromptKeys.SUMMARY] = summarize
+        st.session_state[PromptKeys.SUMMARY.value] = summarize
     if community:
-        st.session_state[PromptKeys.COMMUNITY] = community
+        st.session_state[PromptKeys.COMMUNITY.value] = community
 
 
 def generate_and_extract_prompts(

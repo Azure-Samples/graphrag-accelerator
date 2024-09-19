@@ -31,8 +31,8 @@ def graphrag_app(initialized: bool):
     if initialized:
         # setup API request information
         COLUMN_WIDTHS = [0.275, 0.45, 0.275]
-        apim_url = st.session_state[EnvVars.DEPLOYMENT_URL]
-        apim_key = st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY]
+        apim_url = st.session_state[EnvVars.DEPLOYMENT_URL.value]
+        apim_key = st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY.value]
         # perform health check to verify connectivity
         client = GraphragAPI(apim_url, apim_key)
         if not client.health_check_passed():

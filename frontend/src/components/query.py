@@ -286,11 +286,7 @@ class GraphQuery:
         rel_df: bool = False,
     ) -> st.dataframe:  # type: ignore
         df_context = (
-            data
-            if isinstance(data, pd.DataFrame)
-            else pd.DataFrame(data)
-            if isinstance(data, dict)
-            else pd.DataFrame.from_records(data)
+            data if isinstance(data, pd.DataFrame) else pd.DataFrame.from_records(data)
         )
         if any(drop_columns):
             df_context.drop(columns=drop_columns, inplace=True, axis=1, errors="ignore")
