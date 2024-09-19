@@ -148,7 +148,7 @@ def get_prompt_configuration_tab(
         divider=True,
         help="Generate fine tuned prompts for the LLM specific to your data and domain.",
     )
-    prompt_values = [st.session_state[k] for k in PromptKeys]
+    prompt_values = [st.session_state[k.value] for k in PromptKeys]
 
     if any(prompt_values):
         prompt_editor([prompt_values[0], prompt_values[1], prompt_values[2]])

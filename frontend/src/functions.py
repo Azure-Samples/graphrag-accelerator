@@ -61,15 +61,15 @@ def set_session_state_variables() -> None:
     Initalizes most session state variables for the app.
     """
     for key in PromptKeys:
-        value = key
+        value = key.value
         if value not in st.session_state:
             st.session_state[value] = ""
     for key in StorageIndexVars:
-        value = key
+        value = key.value
         if value not in st.session_state:
             st.session_state[value] = ""
     for key in EnvVars:
-        value = key
+        value = key.value
         if value not in st.session_state:
             st.session_state[value] = ""
     if "saved_prompts" not in st.session_state:

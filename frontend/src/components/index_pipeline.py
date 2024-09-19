@@ -74,7 +74,7 @@ class IndexPipeline:
             storage_selection = select_storage_name or input_storage_name
 
             # Allow user to choose either default or custom prompts
-            custom_prompts = any([st.session_state[k] for k in PromptKeys])
+            custom_prompts = any([st.session_state[k.value] for k in PromptKeys])
             prompt_options = ["Default", "Custom"] if custom_prompts else ["Default"]
             prompt_choice = st.radio(
                 "Choose LLM Prompt Configuration",
@@ -94,17 +94,17 @@ class IndexPipeline:
                 disabled=not index_name or not storage_selection,
             ):
                 entity_prompt = (
-                    StringIO(st.session_state[PromptKeys.ENTITY])
+                    StringIO(st.session_state[PromptKeys.ENTITY.value])
                     if prompt_choice == "Custom"
                     else None
                 )
                 summarize_prompt = (
-                    StringIO(st.session_state[PromptKeys.SUMMARY])
+                    StringIO(st.session_state[PromptKeys.SUMMARY.value])
                     if prompt_choice == "Custom"
                     else None
                 )
                 community_prompt = (
-                    StringIO(st.session_state[PromptKeys.COMMUNITY])
+                    StringIO(st.session_state[PromptKeys.COMMUNITY.value])
                     if prompt_choice == "Custom"
                     else None
                 )
