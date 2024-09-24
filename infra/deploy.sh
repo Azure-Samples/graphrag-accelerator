@@ -349,11 +349,19 @@ deployAzureResources () {
     assignAOAIRoleToManagedIdentity
 }
 
+validateSKUs() {
+    # Run SKU validation functions unless skip flag is set
+    if [ $2 = true ]; then
+        checkSKUAvailability $1
+        checkSKUQuotas $1
+    fi
+}
+
 checkSKUAvailability() {
     # Function to validate that the required SKUs are not restricted for the given region
     printf "Checking Location for SKU Availability... "
     local location=$1
-    local sku_checklist=("standard_d4s_v5" "standard_e8s_v5")
+    local sku_checklist=("standard_d4s_v5" "standard_d8s_v5" "standard_e8s_v5")
     for sku in ${sku_checklist[@]}; do
         local sku_check_result=$(
             az vm list-skus --location $location --size $sku --output json
@@ -621,12 +629,13 @@ deployDockerImageToACR() {
 ################################################################################
 usage() {
    echo
-   echo "Usage: bash $0 [-h|d|g] -p <deploy.parameters.json>"
+   echo "Usage: bash $0 [-h|d|g|s] -p <deploy.parameters.json>"
    echo "Description: Deployment script for the GraphRAG Solution Accelerator."
    echo "options:"
    echo "  -h     Print this help menu."
    echo "  -d     Disable private endpoint usage."
    echo "  -g     Developer mode. Grants deployer of this script access to Azure Storage, AI Search, and CosmosDB. Will disable private endpoints (-d) and enable debug mode."
+   echo "  -s     Skip validation of SKU availability and quota for a faster deployment"
    echo "  -p     A JSON file containing the deployment parameters (deploy.parameters.json)."
    echo
 }
@@ -634,9 +643,10 @@ usage() {
 [ $# -eq 0 ] && usage && exit 0
 # parse arguments
 ENABLE_PRIVATE_ENDPOINTS=true
+VALIDATE_SKUS_FLAG=true
 GRANT_DEV_ACCESS=0 # false
 PARAMS_FILE=""
-while getopts ":dgp:h" option; do
+while getopts ":dgsp:h" option; do
     case "${option}" in
         d)
             ENABLE_PRIVATE_ENDPOINTS=false
@@ -644,6 +654,9 @@ while getopts ":dgp:h" option; do
         g)
             ENABLE_PRIVATE_ENDPOINTS=false
             GRANT_DEV_ACCESS=1 # true
+            ;;
+        s)
+            VALIDATE_SKUS_FLAG=false
             ;;
         p)
             PARAMS_FILE=${OPTARG}
@@ -677,8 +690,7 @@ createSshkeyIfNotExists $RESOURCE_GROUP
 
 # Deploy Azure resources
 checkForApimSoftDelete
-checkSKUAvailability $LOCATION
-checkSKUQuotas $LOCATION
+validateSKUs $LOCATION $VALIDATE_SKUS_FLAG
 deployAzureResources
 
 # Deploy the graphrag backend docker image to ACR
