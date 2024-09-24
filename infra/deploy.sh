@@ -114,6 +114,18 @@ exitIfValueEmpty () {
     fi
 }
 
+exitIfThresholdExceeded () {
+    local value=$1
+    local threshold=$2
+    local msg=$3
+    # throw an error if input value exceeds threshold
+    if [ $value -ge $threshold ]; then
+        errorBanner
+        printf "$msg\n"
+        exit 1
+    fi
+}
+
 versionCheck () {
     # assume the version is in the format major.minor.patch
     local TOOL=$1
@@ -335,6 +347,45 @@ deployAzureResources () {
     AZURE_OUTPUTS=$(jq -r .properties.outputs <<< $AZURE_DEPLOY_RESULTS)
     exitIfCommandFailed $? "Error parsing outputs from Azure resource deployment..."
     assignAOAIRoleToManagedIdentity
+}
+
+checkSKUAvailability() {
+    # Function to validate that the required SKUs are not restricted for the given region
+    printf "Checking Location for SKU Availability..."
+    local location=$1
+    local sku_checklist=("standard_d4s_v5" "standard_e8s_v5" "standard_d8s_v5")
+    for sku in ${sku_checklist[@]}; do
+        local sku_check_result=$(
+            az vm list-skus --location $location --size $sku --output json
+        )
+        local sku_validation_listing=$(jq -r .[0].name <<< $sku_check_result)
+        exitIfValueEmpty $sku_validation_listing "SKU $sku is restricted for location $location under the current subscription."
+    done
+    printf "Done.\n"
+}
+
+checkSKUQuotas() {
+    # Function to validation that the SKU quotas would not be exceeded during deployment
+    printf "Checking Location for SKU Quota Usage..."
+    local location=$1
+    local vm_usage_report=$(
+        az vm list-usage --location $location
+    )
+
+    # Check quota for Standard DSv5 Family vCPUs
+    local dsv5_usage_report=$(jq -c '.[] | select(.localName | contains("Standard DSv5 Family vCPUs"))' <<< $vm_usage_report)
+    local dsv5_limit=$(jq -r .limit <<< $dsv5_usage_report)
+    local dsv5_currVal=$(jq -r .currentValue <<< $dsv5_usage_report)
+    local dsv5_reqVal=$(expr $dsv5_currVal + 12)
+    exitIfThresholdExceeded $dsv5_reqVal $dsv5_limit "Quota for Standard DSv5 Family vCPUs exceeded."
+    
+    # Check quota for Standard ESv5 Family vCPUs
+    local esv5_usage_report=$(jq -c '.[] | select(.localName | contains("Standard ESv5 Family vCPUs"))' <<< $vm_usage_report)
+    local esv5_limit=$(jq -r .limit <<< $esv5_usage_report)
+    local esv5_currVal=$(jq -r .currentValue <<< $esv5_usage_report)
+    local esv5_reqVal=$(expr $esv5_currVal + 0)
+    exitIfThresholdExceeded $esv5_reqVal $esv5_limit "Quota for Standard ESv5 Family vCPUs exceeded."
+    printf "Done.\n"
 }
 
 assignAOAIRoleToManagedIdentity() {
@@ -626,6 +677,8 @@ createSshkeyIfNotExists $RESOURCE_GROUP
 
 # Deploy Azure resources
 checkForApimSoftDelete
+checkSKUAvailability $LOCATION
+checkSKUQuotas $LOCATION
 deployAzureResources
 
 # Deploy the graphrag backend docker image to ACR

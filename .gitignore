@@ -167,3 +167,6 @@ main.parameters.json
 **/Chart.lock
 
 .history
+
+# Deploy parameters
+infra/deploy.parameters.json
