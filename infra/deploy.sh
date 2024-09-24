@@ -351,9 +351,9 @@ deployAzureResources () {
 
 checkSKUAvailability() {
     # Function to validate that the required SKUs are not restricted for the given region
-    printf "Checking Location for SKU Availability..."
+    printf "Checking Location for SKU Availability... "
     local location=$1
-    local sku_checklist=("standard_d4s_v5" "standard_e8s_v5" "standard_d8s_v5")
+    local sku_checklist=("standard_d4s_v5" "standard_e8s_v5")
     for sku in ${sku_checklist[@]}; do
         local sku_check_result=$(
             az vm list-skus --location $location --size $sku --output json
@@ -366,7 +366,7 @@ checkSKUAvailability() {
 
 checkSKUQuotas() {
     # Function to validation that the SKU quotas would not be exceeded during deployment
-    printf "Checking Location for SKU Quota Usage..."
+    printf "Checking Location for SKU Quota Usage... "
     local location=$1
     local vm_usage_report=$(
         az vm list-usage --location $location
@@ -377,14 +377,14 @@ checkSKUQuotas() {
     local dsv5_limit=$(jq -r .limit <<< $dsv5_usage_report)
     local dsv5_currVal=$(jq -r .currentValue <<< $dsv5_usage_report)
     local dsv5_reqVal=$(expr $dsv5_currVal + 12)
-    exitIfThresholdExceeded $dsv5_reqVal $dsv5_limit "Quota for Standard DSv5 Family vCPUs exceeded."
+    exitIfThresholdExceeded $dsv5_reqVal $dsv5_limit "Not enough Standard DSv5 Family vCPU quota for deployment."
     
     # Check quota for Standard ESv5 Family vCPUs
     local esv5_usage_report=$(jq -c '.[] | select(.localName | contains("Standard ESv5 Family vCPUs"))' <<< $vm_usage_report)
     local esv5_limit=$(jq -r .limit <<< $esv5_usage_report)
     local esv5_currVal=$(jq -r .currentValue <<< $esv5_usage_report)
-    local esv5_reqVal=$(expr $esv5_currVal + 0)
-    exitIfThresholdExceeded $esv5_reqVal $esv5_limit "Quota for Standard ESv5 Family vCPUs exceeded."
+    local esv5_reqVal=$(expr $esv5_currVal + 8)
+    exitIfThresholdExceeded $esv5_reqVal $esv5_limit "Not enough Standard ESv5 Family vCPU quota for deployment."
     printf "Done.\n"
 }
 
