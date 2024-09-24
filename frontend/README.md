@@ -69,7 +69,7 @@ to the solution accelerator backend API, create and populate a `.env` file descr
 
 ### 3. Run the deploy script
 
-Prerequisite : Please install az-cli version >=2.61.0
+Prerequisite : Please install az-cli version >=2.64.0
 To deploy the frontend application:
 
 1. Open a terminal and navigate to the `<graphrag_repo>/frontend` directory.
