@@ -66,7 +66,7 @@ function create_acr() {
     az acr create --resource-group $RESOURCE_GROUP \
     --name $REGISTRY_NAME \
     --sku Basic \
-    --admin-enabled true > /dev/null
+    --admin-enabled false > /dev/null
     printf "Azure Container Registry created.\n"
 }
 
