@@ -46,6 +46,7 @@ class GraphRequest(BaseModel):
 class GraphResponse(BaseModel):
     result: Any
     context_data: Any
+    community_level: int
 
 
 class GraphDataResponse(BaseModel):

@@ -195,7 +195,7 @@ async def global_query(request: GraphRequest):
         # link index provenance to the context data
         context_data = _update_context(result[1], links)
 
-        return GraphResponse(result=result[0], context_data=context_data)
+        return GraphResponse(result=result[0], context_data=context_data, community_level=COMMUNITY_LEVEL)
     except Exception as e:
         reporter = ReporterSingleton().get_instance()
         reporter.on_error(
@@ -430,7 +430,7 @@ async def local_query(request: GraphRequest):
     # link index provenance to the context data
     context_data = _update_context(result[1], links)
 
-    return GraphResponse(result=result[0], context_data=context_data)
+    return GraphResponse(result=result[0], context_data=context_data, community_level=COMMUNITY_LEVEL)
 
 
 def _is_index_complete(index_name: str) -> bool:
