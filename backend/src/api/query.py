@@ -193,9 +193,9 @@ async def global_query(request: GraphRequest):
         )
 
         # link index provenance to the context data
-        context_data = _update_context(result[1], links, COMMUNITY_LEVEL)
+        context_data = _update_context(result[1], links)
 
-        return GraphResponse(result=result[0], context_data=context_data, community_level=COMMUNITY_LEVEL)
+        return GraphResponse(result=result[0], context_data=context_data)
     except Exception as e:
         reporter = ReporterSingleton().get_instance()
         reporter.on_error(
