@@ -193,7 +193,7 @@ async def global_query(request: GraphRequest):
         )
 
         # link index provenance to the context data
-        context_data = _update_context(result[1], links)
+        context_data = _update_context(result[1], links, COMMUNITY_LEVEL)
 
         return GraphResponse(result=result[0], context_data=context_data, community_level=COMMUNITY_LEVEL)
     except Exception as e:
@@ -430,7 +430,7 @@ async def local_query(request: GraphRequest):
     # link index provenance to the context data
     context_data = _update_context(result[1], links)
 
-    return GraphResponse(result=result[0], context_data=context_data, community_level=COMMUNITY_LEVEL)
+    return GraphResponse(result=result[0], context_data=context_data)
 
 
 def _is_index_complete(index_name: str) -> bool:
