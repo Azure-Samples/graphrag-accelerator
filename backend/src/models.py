@@ -40,12 +40,13 @@ class EntityResponse(BaseModel):
 class GraphRequest(BaseModel):
     index_name: str | List[str]
     query: str
+    community_level: int | None = None
 
 
 class GraphResponse(BaseModel):
     result: Any
     context_data: Any
-
+    
 
 class GraphDataResponse(BaseModel):
     nodes: int
