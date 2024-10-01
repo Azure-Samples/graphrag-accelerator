@@ -66,7 +66,7 @@ function create_acr() {
     az acr create --resource-group $RESOURCE_GROUP \
     --name $REGISTRY_NAME \
     --sku Basic \
-    --admin-enabled true > /dev/null
+    --admin-enabled false > /dev/null
     printf "Azure Container Registry created.\n"
 }
 
@@ -86,14 +86,6 @@ function create_app_service_plan() {
     printf "App service plan created.\n"
 }
 
-function create_web_app() {
-    printf "Creating web app...\n"
-    az webapp create --resource-group $RESOURCE_GROUP \
-        --plan $APP_SERVICE_PLAN \
-        --name $WEB_APP \
-        --deployment-container-image-name $REGISTRY_NAME.azurecr.io/$IMAGE_NAME > /dev/null
-    printf "Web app created.\n"
-}
 
 function create_web_app_identity() {
     printf "Creating web app identity...\n"
@@ -101,21 +93,29 @@ function create_web_app_identity() {
     WEBAPP_IDENTITY_ID=$(jq -r .id <<< $IDENTITY_RESULT)
     WEBAPP_IDENTITY_OBJECT_ID=$(jq -r .principalId <<< $IDENTITY_RESULT)
     WEBAPP_IDENTITY_CLIENT_ID=$(jq -r .clientId <<< $IDENTITY_RESULT)
-    az webapp identity assign --name $WEB_APP \
-        --resource-group $RESOURCE_GROUP \
-        --identities $WEBAPP_IDENTITY_ID > /dev/null
     printf "Web app identity created.\n"
 }
+
 function configure_registry_credentials() {
     printf "Configuring registry credentials...\n"
     ACR_ID=$(az acr show --name $REGISTRY_NAME --resource-group $RESOURCE_GROUP --query id --output tsv)
     az role assignment create --assignee $WEBAPP_IDENTITY_CLIENT_ID \
         --role AcrPull \
         --scope $ACR_ID > /dev/null
-    az webapp config container set --name $WEB_APP \
-        --resource-group $RESOURCE_GROUP \
-        --container-image-name $REGISTRY_NAME.azurecr.io/$IMAGE_NAME > /dev/null
     printf "Registry credentials configured.\n"
+}
+
+function create_web_app() {
+    printf "Creating web app...\n"
+    az webapp create --resource-group $RESOURCE_GROUP \
+        --plan $APP_SERVICE_PLAN \
+        --name $WEB_APP \
+        --assign-identity $WEBAPP_IDENTITY_ID \
+        --acr-use-identity \
+        --acr-identity $WEBAPP_IDENTITY_ID \
+        --https-only true \
+        --container-image-name $REGISTRY_NAME.azurecr.io/$IMAGE_NAME > /dev/null
+    printf "Web app created.\n"
 }
 
 function configure_app_settings() {
@@ -174,14 +174,6 @@ function configure_auth_settings() {
     printf "Auth settings configured.\n"
 }
 
-function enable_https() {
-    printf "Enabling HTTPS...\n"
-    az webapp update --name $WEB_APP \
-        --resource-group $RESOURCE_GROUP \
-        --set httpsOnly=true > /dev/null
-    printf "HTTPS enabled.\n"
-}
-
 function update_appreg_redirect_uris() {
     printf "Updating app registration redirect URIs...\n"
     WEB_APP_URL=$(az webapp show --name $WEB_APP --resource-group $RESOURCE_GROUP --query defaultHostName --output tsv)
@@ -237,13 +229,12 @@ function main() {
     create_acr
     build_and_push_image
     create_app_service_plan
-    create_web_app
     create_web_app_identity
     configure_registry_credentials
+    create_web_app
     configure_app_settings
     create_federated_identity_credentials
     configure_auth_settings
-    enable_https
     # add_vnet_integration
     update_appreg_redirect_uris
     restart_web_app
