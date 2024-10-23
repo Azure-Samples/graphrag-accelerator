@@ -364,7 +364,7 @@ validateSKUs() {
 
 checkSKUAvailability() {
     # Function to validate that the required SKUs are not restricted for the given region
-    printf "Checking Location for SKU Availability... "
+    printf "Checking cloud region for VM sku availability... "
     local location=$1
     local sku_checklist=("standard_d4s_v5" "standard_d8s_v5" "standard_e8s_v5")
     for sku in ${sku_checklist[@]}; do
