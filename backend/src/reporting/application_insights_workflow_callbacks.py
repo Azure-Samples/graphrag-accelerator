@@ -89,10 +89,12 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
                 exporter = AzureMonitorLogExporter.from_connection_string(
                     conn_str=connection_string
                 )
-                get_logger_provider().add_log_record_processor(BatchLogRecordProcessor(
-                    exporter=exporter,
-                    schedule_delay_millis=60000,
-                ))
+                get_logger_provider().add_log_record_processor(
+                    BatchLogRecordProcessor(
+                        exporter=exporter,
+                        schedule_delay_millis=60000,
+                    )
+                )
                 # instantiate new logger
                 self._logger = logging.getLogger(self._logger_name)
                 self._logger.propagate = False
@@ -100,9 +102,7 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
                 self._logger.handlers.clear()
                 # fetch handler from logger provider and attach to class
                 handler = LoggingHandler()
-                self._logger.addHandler(
-                    handler
-                )
+                self._logger.addHandler(handler)
                 # set logging level
                 self._logger.setLevel(logging.DEBUG)
 
