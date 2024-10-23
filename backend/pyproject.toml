@@ -10,6 +10,7 @@ authors = [
     "Douglas Orbaker <dorbaker@microsoft.com>",
     "Chris Sanchez <chrissanchez@microsoft.com>",
     "Shane Solomon <shane.solomon@microsoft.com>",
+    "Kenny Zhang <zhangken@microsoft.com>"
 ]
 readme = "README.md"
 license = "MIT"

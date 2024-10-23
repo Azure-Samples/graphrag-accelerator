@@ -84,13 +84,13 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
             self._logger_name = f"{self.__class__.__name__}-{unique_hash}"
             if self._logger_name not in logging.Logger.manager.loggerDict:
                 # attach azure monitor log exporter to logger provider
-                _logger_provider = LoggerProvider()
-                set_logger_provider(logger_provider=_logger_provider)
-                _exporter = AzureMonitorLogExporter.from_connection_string(
+                logger_provider = LoggerProvider()
+                set_logger_provider(logger_provider=logger_provider)
+                exporter = AzureMonitorLogExporter.from_connection_string(
                     conn_str=connection_string
                 )
                 get_logger_provider().add_log_record_processor(BatchLogRecordProcessor(
-                    exporter=_exporter,
+                    exporter=exporter,
                     schedule_delay_millis=60000,
                 ))
                 # instantiate new logger
@@ -98,10 +98,10 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
                 self._logger.propagate = False
                 # remove any existing handlers
                 self._logger.handlers.clear()
-                # attach azure monitor to handler
-                _handler = LoggingHandler()
+                # fetch handler from logger provider and attach to class
+                handler = LoggingHandler()
                 self._logger.addHandler(
-                    _handler
+                    handler
                 )
                 # set logging level
                 self._logger.setLevel(logging.DEBUG)
