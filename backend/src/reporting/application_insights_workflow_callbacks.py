@@ -101,8 +101,7 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
                 # remove any existing handlers
                 self._logger.handlers.clear()
                 # fetch handler from logger provider and attach to class
-                handler = LoggingHandler()
-                self._logger.addHandler(handler)
+                self._logger.addHandler(LoggingHandler())
                 # set logging level
                 self._logger.setLevel(logging.DEBUG)
 
@@ -111,8 +110,7 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
 
     def _format_details(self, details: Dict[str, Any] | None = None) -> Dict[str, Any]:
         """
-        Format the details dictionary to comply with the Application Insights structured.
-
+        Format the details dictionary to comply with the Application Insights structured
         logging Property column standard.
 
         Args:
