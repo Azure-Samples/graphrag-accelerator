@@ -85,10 +85,8 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
             if self._logger_name not in logging.Logger.manager.loggerDict:
                 # attach azure monitor log exporter to logger provider
                 logger_provider = LoggerProvider()
-                set_logger_provider(logger_provider=logger_provider)
-                exporter = AzureMonitorLogExporter.from_connection_string(
-                    conn_str=connection_string
-                )
+                set_logger_provider(logger_provider)
+                exporter = AzureMonitorLogExporter(connection_string=connection_string)
                 get_logger_provider().add_log_record_processor(
                     BatchLogRecordProcessor(
                         exporter=exporter,
