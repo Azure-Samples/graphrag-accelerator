@@ -377,7 +377,7 @@ checkSKUQuotas() {
     printf "Checking Location for SKU Quota Usage... "
     local location=$1
     local vm_usage_report=$(
-        az vm list-usage --location $location
+        az vm list-usage --location $location -o json
     )
 
     # Check quota for Standard DSv5 Family vCPUs
@@ -386,7 +386,7 @@ checkSKUQuotas() {
     local dsv5_currVal=$(jq -r .currentValue <<< $dsv5_usage_report)
     local dsv5_reqVal=$(expr $dsv5_currVal + 12)
     exitIfThresholdExceeded $dsv5_reqVal $dsv5_limit "Not enough Standard DSv5 Family vCPU quota for deployment."
-    
+
     # Check quota for Standard ESv5 Family vCPUs
     local esv5_usage_report=$(jq -c '.[] | select(.localName | contains("Standard ESv5 Family vCPUs"))' <<< $vm_usage_report)
     local esv5_limit=$(jq -r .limit <<< $esv5_usage_report)
