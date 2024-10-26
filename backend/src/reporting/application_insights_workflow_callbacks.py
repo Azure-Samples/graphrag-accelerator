@@ -12,8 +12,17 @@ from typing import (
     Optional,
 )
 
+from azure.monitor.opentelemetry.exporter import AzureMonitorLogExporter
 from datashaper.workflow.workflow_callbacks import NoopWorkflowCallbacks
-from opencensus.ext.azure.log_exporter import AzureLogHandler
+from opentelemetry._logs import (
+    get_logger_provider,
+    set_logger_provider,
+)
+from opentelemetry.sdk._logs import (
+    LoggerProvider,
+    LoggingHandler,
+)
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 
 
 class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
@@ -74,15 +83,23 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
             unique_hash = hashlib.sha256(current_time.encode()).hexdigest()
             self._logger_name = f"{self.__class__.__name__}-{unique_hash}"
             if self._logger_name not in logging.Logger.manager.loggerDict:
+                # attach azure monitor log exporter to logger provider
+                logger_provider = LoggerProvider()
+                set_logger_provider(logger_provider)
+                exporter = AzureMonitorLogExporter(connection_string=connection_string)
+                get_logger_provider().add_log_record_processor(
+                    BatchLogRecordProcessor(
+                        exporter=exporter,
+                        schedule_delay_millis=60000,
+                    )
+                )
                 # instantiate new logger
                 self._logger = logging.getLogger(self._logger_name)
                 self._logger.propagate = False
                 # remove any existing handlers
                 self._logger.handlers.clear()
-                # set up Azure Monitor
-                self._logger.addHandler(
-                    AzureLogHandler(connection_string=connection_string)
-                )
+                # fetch handler from logger provider and attach to class
+                self._logger.addHandler(LoggingHandler())
                 # set logging level
                 self._logger.setLevel(logging.DEBUG)
 
@@ -91,8 +108,7 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
 
     def _format_details(self, details: Dict[str, Any] | None = None) -> Dict[str, Any]:
         """
-        Format the details dictionary to comply with the Application Insights structured.
-
+        Format the details dictionary to comply with the Application Insights structured
         logging Property column standard.
 
         Args:

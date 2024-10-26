@@ -343,23 +343,28 @@ deployAzureResources () {
         --parameters "enablePrivateEndpoints=$ENABLE_PRIVATE_ENDPOINTS" \
         --parameters "acrName=$CONTAINER_REGISTRY_NAME" \
         --output json)
+    # errors in deployment may not be caught by exitIfCommandFailed function so we also check the output for errors
     exitIfCommandFailed $? "Error deploying Azure resources..."
+    exitIfValueEmpty "$AZURE_DEPLOY_RESULTS" "Error deploying Azure resources..."
     AZURE_OUTPUTS=$(jq -r .properties.outputs <<< $AZURE_DEPLOY_RESULTS)
-    exitIfCommandFailed $? "Error parsing outputs from Azure resource deployment..."
+    exitIfCommandFailed $? "Error parsing outputs from Azure deployment..."
+    exitIfValueEmpty "$AZURE_OUTPUTS" "Error parsing outputs from Azure deployment..."
     assignAOAIRoleToManagedIdentity
 }
 
 validateSKUs() {
     # Run SKU validation functions unless skip flag is set
-    if [ $2 = true ]; then
-        checkSKUAvailability $1
-        checkSKUQuotas $1
+    local location=$1
+    local validate_skus=$2
+    if [ $validate_skus = true ]; then
+        checkSKUAvailability $location
+        checkSKUQuotas $location
     fi
 }
 
 checkSKUAvailability() {
     # Function to validate that the required SKUs are not restricted for the given region
-    printf "Checking Location for SKU Availability... "
+    printf "Checking cloud region for VM sku availability... "
     local location=$1
     local sku_checklist=("standard_d4s_v5" "standard_d8s_v5" "standard_e8s_v5")
     for sku in ${sku_checklist[@]}; do
@@ -682,6 +687,9 @@ startBanner
 checkRequiredTools
 populateParams $PARAMS_FILE
 
+# Check SKU availability and quotas
+validateSKUs $LOCATION $VALIDATE_SKUS_FLAG
+
 # Create resource group
 createResourceGroupIfNotExists $LOCATION $RESOURCE_GROUP
 
@@ -690,7 +698,6 @@ createSshkeyIfNotExists $RESOURCE_GROUP
 
 # Deploy Azure resources
 checkForApimSoftDelete
-validateSKUs $LOCATION $VALIDATE_SKUS_FLAG
 deployAzureResources
 
 # Deploy the graphrag backend docker image to ACR
