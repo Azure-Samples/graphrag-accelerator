@@ -64,8 +64,12 @@ async def global_search_streaming(request: GraphRequest):
     ENTITIES_TABLE = "output/create_final_entities.parquet"
     NODES_TABLE = "output/create_final_nodes.parquet"
 
-    # current investigations show that community level 1 is the most useful for global search
-    COMMUNITY_LEVEL = 1
+    if isinstance(request.community_level, int):
+        COMMUNITY_LEVEL = request.community_level
+    else:
+        # Current investigations show that community level 1 is the most useful for global search. Set this as the default value
+        COMMUNITY_LEVEL = 1
+
     for index_name in sanitized_index_names:
         validate_index_file_exist(index_name, COMMUNITY_REPORT_TABLE)
         validate_index_file_exist(index_name, ENTITIES_TABLE)
@@ -245,7 +249,12 @@ async def local_search_streaming(request: GraphRequest):
     NODES_TABLE = "output/create_final_nodes.parquet"
     RELATIONSHIPS_TABLE = "output/create_final_relationships.parquet"
     TEXT_UNITS_TABLE = "output/create_final_text_units.parquet"
-    COMMUNITY_LEVEL = 2
+
+    if isinstance(request.community_level, int):
+        COMMUNITY_LEVEL = request.community_level
+    else:
+        # Current investigations show that community level 2 is the most useful for local search. Set this as the default value
+        COMMUNITY_LEVEL = 2
 
     try:
         for index_name in sanitized_index_names:
