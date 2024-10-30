@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 #!/usr/bin/env bash
 
-set -ux # uncomment this line to debug
+# set -ux # uncomment this line to debug
 
 aksNamespace="graphrag"
 
@@ -404,14 +404,14 @@ checkSKUQuotas() {
     local dsv5_limit=$(jq -r .limit <<< $dsv5_usage_report)
     local dsv5_currVal=$(jq -r .currentValue <<< $dsv5_usage_report)
     local dsv5_reqVal=$(expr $dsv5_currVal + 12)
-    exitIfThresholdExceeded $dsv5_reqVal $dsv5_limit "Not enough Standard DSv5 Family vCPU quota for deployment."
+    exitIfThresholdExceeded $dsv5_reqVal $dsv5_limit "Not enough Standard DSv5 Family vCPU quota for deployment. At least 12 vCPU is required."
 
     # Check quota for Standard ESv5 Family vCPUs
     local esv5_usage_report=$(jq -c '.[] | select(.localName | contains("Standard ESv5 Family vCPUs"))' <<< $vm_usage_report)
     local esv5_limit=$(jq -r .limit <<< $esv5_usage_report)
     local esv5_currVal=$(jq -r .currentValue <<< $esv5_usage_report)
     local esv5_reqVal=$(expr $esv5_currVal + 8)
-    exitIfThresholdExceeded $esv5_reqVal $esv5_limit "Not enough Standard ESv5 Family vCPU quota for deployment."
+    exitIfThresholdExceeded $esv5_reqVal $esv5_limit "Not enough Standard ESv5 Family vCPU quota for deployment. At least 8 vCPU is required."
     printf "Done.\n"
 }
 
