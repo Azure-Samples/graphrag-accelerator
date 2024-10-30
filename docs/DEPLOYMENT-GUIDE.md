@@ -78,16 +78,16 @@ In the `deploy.parameters.json` file, provide values for the following required 
 
 | Variable | Expected Value | Required | Description
 | :--- | :--- | --- | ---: |
-`RESOURCE_GROUP`                       | <my_resource_group>                       | Yes | The resource group that GraphRAG will be deployed in. Will get created automatically if the resource group does not exist.
-`LOCATION`                             | <my_location>                             | Yes | The azure cloud region to deploy GraphRAG resources in.
-`CONTAINER_REGISTRY_NAME`              | <my_container_registry_name>              | No  | Name of an Azure Container Registry where the `graphrag` backend docker image will be hosted. Leave off `.azurecr.io` from the name. If not provided, a unique name will be generated (recommended).
-`GRAPHRAG_IMAGE`                       | graphrag:backend                          | No  | The name and tag of the graphrag docker image in the container registry. Will default to `graphrag:backend` and be hosted at `my_container_registry_name>.azurecr.io/graphrag:backend`.
 `GRAPHRAG_API_BASE`                    | https://<my_openai_name>.openai.azure.com | Yes | Azure OpenAI service endpoint.
 `GRAPHRAG_API_VERSION`                 | 2023-03-15-preview                        | Yes | Azure OpenAI API version.
-`GRAPHRAG_LLM_MODEL`                   | gpt-4                                     | Yes | Name of the gpt-4 turbo model.
-`GRAPHRAG_LLM_DEPLOYMENT_NAME`         |                                           | Yes | Deployment name of the gpt-4 turbo model.
-`GRAPHRAG_EMBEDDING_MODEL`             | text-embedding-ada-002                    | Yes | Name of the Azure OpenAI embedding model.
 `GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME`   |                                           | Yes | Deployment name of the Azure OpenAI embedding model.
+`GRAPHRAG_EMBEDDING_MODEL`             | text-embedding-ada-002                    | Yes | Name of the Azure OpenAI embedding model.
+`GRAPHRAG_LLM_DEPLOYMENT_NAME`         |                                           | Yes | Deployment name of the gpt-4 turbo model.
+`GRAPHRAG_LLM_MODEL`                   | gpt-4                                     | Yes | Name of the gpt-4 turbo model.
+`LOCATION`                             | <my_location>                             | Yes | The azure cloud region to deploy GraphRAG resources to (can be different than the location of your AOAI instance). Please use the [compressed form](https://azuretracks.com/2021/04/current-azure-region-names-reference) of a cloud region name (i.e. `eastus2`).
+`RESOURCE_GROUP`                       | <my_resource_group>                       | Yes | The resource group that GraphRAG will be deployed in. Will get created automatically if the resource group does not exist.
+`GRAPHRAG_IMAGE`                       | graphrag:backend                          | No  | The name and tag of the graphrag docker image in the container registry. Will default to `graphrag:backend` and be hosted at `my_container_registry_name>.azurecr.io/graphrag:backend`.
+`CONTAINER_REGISTRY_NAME`              | <my_container_registry_name>              | No  | Name of an Azure Container Registry where the `graphrag` backend docker image will be hosted. Leave off `.azurecr.io` from the name. If not provided, a unique name will be generated (recommended).
 `GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT` |                                           | No  | Endpoint for cognitive services identity authorization. Will default to `https://cognitiveservices.azure.com/.default` for Azure Commercial cloud but should be defined for deployments in other Azure clouds.
 `APIM_NAME`                            |                                           | No  | Hostname of the API. Must be a globally unique name. The API will be accessible at `https://<APIM_NAME>.azure-api.net`. If not provided a unique name will be generated.
 `APIM_TIER`                            |                                           | No  | The [APIM tier](https://azure.microsoft.com/en-us/pricing/details/api-management) to use. Must be either `Developer` or `StandardV2`. Will default to `Developer` for cost savings.

@@ -297,6 +297,16 @@ getAksCredentials () {
     printf "Getting AKS credentials... "
     az aks get-credentials -g $rg -n $aks --overwrite-existing 2>&1
     exitIfCommandFailed $? "Error getting AKS credentials, exiting..."
+    kubelogin convert-kubeconfig -l azurecli
+    exitIfCommandFailed $? "Error logging into AKS, exiting..."
+    # get principal/object id of the signed in user
+    local principalId=$(az ad signed-in-user show --output json | jq -r .id)
+    exitIfValueEmpty $principalId "Principal ID of deployer not found"
+    # assign "Azure Kubernetes Service RBAC Admin" role to deployer
+    local scope=$(az aks show --resource-group $rg --name $aks --query "id" -o tsv)
+    exitIfValueEmpty "$scope" "Unable to get AKS scope, exiting..."
+    az role assignment create --role "Azure Kubernetes Service RBAC Cluster Admin" --assignee-object-id $principalId --scope $scope
+    exitIfCommandFailed $? "Error assigning 'Azure Kubernetes Service RBAC Cluster Admin' role to deployer, exiting..."
     kubectl config set-context $aks --namespace=$aksNamespace
     printf "Done\n"
 }
@@ -326,6 +336,9 @@ deployAzureResources () {
     echo "Deploying Azure resources..."
     local SSH_PUBLICKEY=$(jq -r .publicKey <<< $SSHKEY_DETAILS)
     exitIfValueEmpty "$SSH_PUBLICKEY" "Unable to read ssh publickey, exiting..."
+    # get principal/object id of the signed in user
+    local deployerPrincipalId=$(az ad signed-in-user show --output json | jq -r .id)
+    exitIfValueEmpty $deployerPrincipalId "Principal ID of deployer not found"
     local datetime="`date +%Y-%m-%d_%H-%M-%S`"
     local deployName="graphrag-deploy-$datetime"
     echo "Deployment name: $deployName"
@@ -342,6 +355,7 @@ deployAzureResources () {
         --parameters "publisherEmail=$PUBLISHER_EMAIL" \
         --parameters "enablePrivateEndpoints=$ENABLE_PRIVATE_ENDPOINTS" \
         --parameters "acrName=$CONTAINER_REGISTRY_NAME" \
+        --parameters "deployerPrincipalId=$deployerPrincipalId" \
         --output json)
     # errors in deployment may not be caught by exitIfCommandFailed function so we also check the output for errors
     exitIfCommandFailed $? "Error deploying Azure resources..."
@@ -390,14 +404,14 @@ checkSKUQuotas() {
     local dsv5_limit=$(jq -r .limit <<< $dsv5_usage_report)
     local dsv5_currVal=$(jq -r .currentValue <<< $dsv5_usage_report)
     local dsv5_reqVal=$(expr $dsv5_currVal + 12)
-    exitIfThresholdExceeded $dsv5_reqVal $dsv5_limit "Not enough Standard DSv5 Family vCPU quota for deployment."
+    exitIfThresholdExceeded $dsv5_reqVal $dsv5_limit "Not enough Standard DSv5 Family vCPU quota for deployment. At least 12 vCPU is required."
 
     # Check quota for Standard ESv5 Family vCPUs
     local esv5_usage_report=$(jq -c '.[] | select(.localName | contains("Standard ESv5 Family vCPUs"))' <<< $vm_usage_report)
     local esv5_limit=$(jq -r .limit <<< $esv5_usage_report)
     local esv5_currVal=$(jq -r .currentValue <<< $esv5_usage_report)
     local esv5_reqVal=$(expr $esv5_currVal + 8)
-    exitIfThresholdExceeded $esv5_reqVal $esv5_limit "Not enough Standard ESv5 Family vCPU quota for deployment."
+    exitIfThresholdExceeded $esv5_reqVal $esv5_limit "Not enough Standard ESv5 Family vCPU quota for deployment. At least 8 vCPU is required."
     printf "Done.\n"
 }
 
@@ -579,7 +593,7 @@ grantDevAccessToAzureResources() {
 
     # get principal/object id of the signed in user
     local principalId=$(az ad signed-in-user show --output json | jq -r .id)
-    exitIfValueEmpty $principalId "Principal ID not found"
+    exitIfValueEmpty $principalId "Principal ID of deployer not found"
 
     # assign storage account roles
     local storageAccountName=$(az storage account list --resource-group $RESOURCE_GROUP --output json | jq -r .[0].name)
