@@ -20,11 +20,6 @@ RUN cd backend \
 # download all nltk data that graphrag requires
 RUN python -m nltk.downloader punkt averaged_perceptron_tagger maxent_ne_chunker words wordnet
 
-# Note: we temporarily patch the adlfs library to enable use of managed identity. A PR has been submitted to the adlfs library.
-# See https://github.com/fsspec/adlfs/pull/480
-# TODO: remove this once PR has been merged and a new version released
-RUN sed -i '/self.credential = credential/a\ \ \ \ \ \ \ \ if kwargs.get("account_host"): self.account_host = kwargs.get("account_host")' /usr/local/lib/python3.10/site-packages/adlfs/spec.py
-
 WORKDIR /backend
 EXPOSE 80
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "80"]

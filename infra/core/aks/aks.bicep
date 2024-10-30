@@ -62,6 +62,8 @@ param ingressRoleAssignments array = []
 @description('Array of objects with fields principalType, roleDefinitionId')
 param systemRoleAssignments array = []
 
+@description('Array of object ids that will have admin role of the cluster')
+param clusterAdmins array = []
 
 resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' existing = {
   name: privateDnsZoneName
@@ -76,6 +78,11 @@ resource aks 'Microsoft.ContainerService/managedClusters@2024-02-01' = {
   properties: {
     enableRBAC: true
     dnsPrefix: !empty(dnsPrefix) ? dnsPrefix : toLower(clusterName)
+    aadProfile: {
+      managed: true
+      enableAzureRBAC: true
+      adminGroupObjectIDs: clusterAdmins
+    }
     addonProfiles: {
       omsagent: {
         enabled: true
