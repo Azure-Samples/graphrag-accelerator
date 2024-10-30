@@ -18,15 +18,13 @@ resource privateLinkScope 'microsoft.insights/privateLinkScopes@2021-07-01-previ
   }
 }
 
-resource scopedResources 'microsoft.insights/privateLinkScopes/scopedResources@2021-07-01-preview' = [
-  for id in privateLinkScopedResources: {
+resource scopedResources 'microsoft.insights/privateLinkScopes/scopedResources@2021-07-01-preview' = [for id in privateLinkScopedResources: {
     name: uniqueString(id)
     parent: privateLinkScope
     properties: {
       linkedResourceId: id
     }
-  }
-]
+  }]
 
 output name string = privateLinkScope.name
 output id string = privateLinkScope.id
