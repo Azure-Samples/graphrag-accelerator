@@ -4,7 +4,6 @@
 from dataclasses import dataclass, field
 from time import time
 from typing import (
-    Any,
     List,
 )
 
@@ -35,17 +34,6 @@ class EntityResponse(BaseModel):
     name: str
     description: str
     text_units: list[str]
-
-
-class GraphRequest(BaseModel):
-    index_name: str | List[str]
-    query: str
-    community_level: int | None = None
-
-
-class GraphResponse(BaseModel):
-    result: Any
-    context_data: Any
 
 
 class GraphDataResponse(BaseModel):
