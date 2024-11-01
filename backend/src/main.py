@@ -22,8 +22,6 @@ from src.api.data import data_route
 from src.api.graph import graph_route
 from src.api.index import index_route
 from src.api.index_configuration import index_configuration_route
-from src.api.query import query_route
-from src.api.query_streaming import query_streaming_route
 from src.api.source import source_route
 from src.reporting import ReporterSingleton
 
@@ -106,8 +104,6 @@ app.add_middleware(
 )
 app.include_router(data_route)
 app.include_router(index_route)
-app.include_router(query_route)
-app.include_router(query_streaming_route)
 app.include_router(index_configuration_route)
 app.include_router(source_route)
 app.include_router(graph_route)
