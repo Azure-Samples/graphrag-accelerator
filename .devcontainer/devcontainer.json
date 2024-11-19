@@ -12,15 +12,16 @@
 	],
 	"remoteUser": "vscode",
 	"remoteEnv": {
-        // We add the .venv to the beginning of the path env in the Dockerfile
-        // so that we use the proper python, however vscode rewrites/overwrites
-        // the PATH in the image and puts /usr/local/bin in front of our .venv
-        // path. This fixes that issue.
-        "PATH": "${containerEnv:PATH}",
-        // Add src folder to PYTHONPATH so that we can import modules that
-        // are in the source dir
-        "PYTHONPATH": "/graphrag-accelerator/backend/:$PATH"
-    },
+		// We add the .venv to the beginning of the path env in the Dockerfile
+		// so that we use the proper python, however vscode rewrites/overwrites
+		// the PATH in the image and puts /usr/local/bin in front of our .venv
+		// path. This fixes that issue.
+		"PATH": "${containerEnv:PATH}",
+		// Add src folder to PYTHONPATH so that we can import modules that
+		// are in the source dir
+		"PYTHONPATH": "/graphrag-accelerator/backend/:$PATH",
+		"AZURE_CLI_DISABLE_CONNECTION_VERIFICATION": "1"
+	},
 	"mounts": [
 		// NOTE: we reference both HOME and USERPROFILE environment variables to simultaneously support both Windows and Unix environments
 		//       in most default situations, only one variable will exist (Windows has USERPROFILE and unix has HOME) and a reference to the other variable will result in an empty string

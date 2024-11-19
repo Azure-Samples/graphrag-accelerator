@@ -30,6 +30,9 @@ ingress:
     service.beta.kubernetes.io/azure-load-balancer-internal: "true"
 
 graphragConfig:
+  AI_SEARCH_AUDIENCE: ""
+  AI_SEARCH_URL: ""
+  APP_INSIGHTS_CONNECTION_STRING: ""
   COSMOS_URI_ENDPOINT: ""
   GRAPHRAG_API_BASE: ""
   GRAPHRAG_API_VERSION: ""
@@ -40,7 +43,6 @@ graphragConfig:
   GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME: ""
   REPORTERS: "blob,console,app_insights"
   STORAGE_ACCOUNT_BLOB_URL: ""
-  AI_SEARCH_URL: ""
 
 master:
   name: "master"

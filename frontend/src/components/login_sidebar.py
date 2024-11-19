@@ -26,8 +26,7 @@ def login():
             form_submit = st.form_submit_button("Login")
             if form_submit:
                 client = GraphragAPI(apim_url, apim_sub_key)
-                status_code = client.health_check()
-                if status_code == 200:
+                if client.health_check_passed():
                     st.success("Login Successful")
                     st.session_state[EnvVars.DEPLOYMENT_URL.value] = apim_url
                     st.session_state[EnvVars.APIM_SUBSCRIPTION_KEY.value] = apim_sub_key
@@ -36,4 +35,3 @@ def login():
                 else:
                     st.error("Login Failed")
                     st.error("Please check the APIM Gateway URL and Subscription Key")
-                    return status_code

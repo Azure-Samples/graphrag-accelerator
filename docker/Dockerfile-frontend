@@ -7,11 +7,11 @@ ENV PIP_ROOT_USER_ACTION=ignore
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 ENV SETUPTOOLS_USE_DISTUTILS=stdlib
 
-COPY poetry.lock pyproject.toml /
 COPY frontend /frontend
-RUN pip install poetry \
+RUN cd frontend \
+    && pip install poetry \
     && poetry config virtualenvs.create false \
-    && poetry install --without backend
+    && poetry install
 
 WORKDIR /frontend
 EXPOSE 8080

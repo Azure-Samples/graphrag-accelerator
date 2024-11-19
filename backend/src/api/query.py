@@ -79,8 +79,12 @@ async def global_query(request: GraphRequest):
         validate_index_file_exist(index_name, ENTITIES_TABLE)
         validate_index_file_exist(index_name, NODES_TABLE)
 
-    # current investigations show that community level 1 is the most useful for global search
-    COMMUNITY_LEVEL = 1
+    if isinstance(request.community_level, int):
+        COMMUNITY_LEVEL = request.community_level
+    else:
+        # Current investigations show that community level 1 is the most useful for global search. Set this as the default value
+        COMMUNITY_LEVEL = 1
+
     try:
         links = {
             "nodes": {},
@@ -259,7 +263,11 @@ async def local_query(request: GraphRequest):
     RELATIONSHIPS_TABLE = "output/create_final_relationships.parquet"
     TEXT_UNITS_TABLE = "output/create_final_text_units.parquet"
 
-    COMMUNITY_LEVEL = 2
+    if isinstance(request.community_level, int):
+        COMMUNITY_LEVEL = request.community_level
+    else:
+        # Current investigations show that community level 2 is the most useful for local search. Set this as the default value
+        COMMUNITY_LEVEL = 2
 
     for index_name in sanitized_index_names:
         # check for existence of files the query relies on to validate the index is complete

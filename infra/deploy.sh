@@ -114,6 +114,18 @@ exitIfValueEmpty () {
     fi
 }
 
+exitIfThresholdExceeded () {
+    local value=$1
+    local threshold=$2
+    local msg=$3
+    # throw an error if input value exceeds threshold
+    if [ $value -ge $threshold ]; then
+        errorBanner
+        printf "$msg\n"
+        exit 1
+    fi
+}
+
 versionCheck () {
     # assume the version is in the format major.minor.patch
     local TOOL=$1
@@ -285,6 +297,16 @@ getAksCredentials () {
     printf "Getting AKS credentials... "
     az aks get-credentials -g $rg -n $aks --overwrite-existing 2>&1
     exitIfCommandFailed $? "Error getting AKS credentials, exiting..."
+    kubelogin convert-kubeconfig -l azurecli
+    exitIfCommandFailed $? "Error logging into AKS, exiting..."
+    # get principal/object id of the signed in user
+    local principalId=$(az ad signed-in-user show --output json | jq -r .id)
+    exitIfValueEmpty $principalId "Principal ID of deployer not found"
+    # assign "Azure Kubernetes Service RBAC Admin" role to deployer
+    local scope=$(az aks show --resource-group $rg --name $aks --query "id" -o tsv)
+    exitIfValueEmpty "$scope" "Unable to get AKS scope, exiting..."
+    az role assignment create --role "Azure Kubernetes Service RBAC Cluster Admin" --assignee-object-id $principalId --scope $scope
+    exitIfCommandFailed $? "Error assigning 'Azure Kubernetes Service RBAC Cluster Admin' role to deployer, exiting..."
     kubectl config set-context $aks --namespace=$aksNamespace
     printf "Done\n"
 }
@@ -314,8 +336,9 @@ deployAzureResources () {
     echo "Deploying Azure resources..."
     local SSH_PUBLICKEY=$(jq -r .publicKey <<< $SSHKEY_DETAILS)
     exitIfValueEmpty "$SSH_PUBLICKEY" "Unable to read ssh publickey, exiting..."
-    local aoaiName=$(az cognitiveservices account list --query "[?contains(properties.endpoint, '$GRAPHRAG_API_BASE')] | [0].name" -o tsv)
-    exitIfValueEmpty "$aoaiName" "Unable to retrieve AOAI name from GRAPHRAG_API_BASE, exiting..."
+    # get principal/object id of the signed in user
+    local deployerPrincipalId=$(az ad signed-in-user show --output json | jq -r .id)
+    exitIfValueEmpty $deployerPrincipalId "Principal ID of deployer not found"
     local datetime="`date +%Y-%m-%d_%H-%M-%S`"
     local deployName="graphrag-deploy-$datetime"
     echo "Deployment name: $deployName"
@@ -332,11 +355,64 @@ deployAzureResources () {
         --parameters "publisherEmail=$PUBLISHER_EMAIL" \
         --parameters "enablePrivateEndpoints=$ENABLE_PRIVATE_ENDPOINTS" \
         --parameters "acrName=$CONTAINER_REGISTRY_NAME" \
+        --parameters "deployerPrincipalId=$deployerPrincipalId" \
         --output json)
+    # errors in deployment may not be caught by exitIfCommandFailed function so we also check the output for errors
     exitIfCommandFailed $? "Error deploying Azure resources..."
+    exitIfValueEmpty "$AZURE_DEPLOY_RESULTS" "Error deploying Azure resources..."
     AZURE_OUTPUTS=$(jq -r .properties.outputs <<< $AZURE_DEPLOY_RESULTS)
-    exitIfCommandFailed $? "Error parsing outputs from Azure resource deployment..."
+    exitIfCommandFailed $? "Error parsing outputs from Azure deployment..."
+    exitIfValueEmpty "$AZURE_OUTPUTS" "Error parsing outputs from Azure deployment..."
     assignAOAIRoleToManagedIdentity
+}
+
+validateSKUs() {
+    # Run SKU validation functions unless skip flag is set
+    local location=$1
+    local validate_skus=$2
+    if [ $validate_skus = true ]; then
+        checkSKUAvailability $location
+        checkSKUQuotas $location
+    fi
+}
+
+checkSKUAvailability() {
+    # Function to validate that the required SKUs are not restricted for the given region
+    printf "Checking cloud region for VM sku availability... "
+    local location=$1
+    local sku_checklist=("standard_d4s_v5" "standard_d8s_v5" "standard_e8s_v5")
+    for sku in ${sku_checklist[@]}; do
+        local sku_check_result=$(
+            az vm list-skus --location $location --size $sku --output json
+        )
+        local sku_validation_listing=$(jq -r .[0].name <<< $sku_check_result)
+        exitIfValueEmpty $sku_validation_listing "SKU $sku is restricted for location $location under the current subscription."
+    done
+    printf "Done.\n"
+}
+
+checkSKUQuotas() {
+    # Function to validation that the SKU quotas would not be exceeded during deployment
+    printf "Checking Location for SKU Quota Usage... "
+    local location=$1
+    local vm_usage_report=$(
+        az vm list-usage --location $location -o json
+    )
+
+    # Check quota for Standard DSv5 Family vCPUs
+    local dsv5_usage_report=$(jq -c '.[] | select(.localName | contains("Standard DSv5 Family vCPUs"))' <<< $vm_usage_report)
+    local dsv5_limit=$(jq -r .limit <<< $dsv5_usage_report)
+    local dsv5_currVal=$(jq -r .currentValue <<< $dsv5_usage_report)
+    local dsv5_reqVal=$(expr $dsv5_currVal + 12)
+    exitIfThresholdExceeded $dsv5_reqVal $dsv5_limit "Not enough Standard DSv5 Family vCPU quota for deployment. At least 12 vCPU is required."
+
+    # Check quota for Standard ESv5 Family vCPUs
+    local esv5_usage_report=$(jq -c '.[] | select(.localName | contains("Standard ESv5 Family vCPUs"))' <<< $vm_usage_report)
+    local esv5_limit=$(jq -r .limit <<< $esv5_usage_report)
+    local esv5_currVal=$(jq -r .currentValue <<< $esv5_usage_report)
+    local esv5_reqVal=$(expr $esv5_currVal + 8)
+    exitIfThresholdExceeded $esv5_reqVal $esv5_limit "Not enough Standard ESv5 Family vCPU quota for deployment. At least 8 vCPU is required."
+    printf "Done.\n"
 }
 
 assignAOAIRoleToManagedIdentity() {
@@ -517,7 +593,7 @@ grantDevAccessToAzureResources() {
 
     # get principal/object id of the signed in user
     local principalId=$(az ad signed-in-user show --output json | jq -r .id)
-    exitIfValueEmpty $principalId "Principal ID not found"
+    exitIfValueEmpty $principalId "Principal ID of deployer not found"
 
     # assign storage account roles
     local storageAccountName=$(az storage account list --resource-group $RESOURCE_GROUP --output json | jq -r .[0].name)
@@ -572,12 +648,13 @@ deployDockerImageToACR() {
 ################################################################################
 usage() {
    echo
-   echo "Usage: bash $0 [-h|d|g] -p <deploy.parameters.json>"
+   echo "Usage: bash $0 [-h|d|g|s] -p <deploy.parameters.json>"
    echo "Description: Deployment script for the GraphRAG Solution Accelerator."
    echo "options:"
    echo "  -h     Print this help menu."
    echo "  -d     Disable private endpoint usage."
    echo "  -g     Developer mode. Grants deployer of this script access to Azure Storage, AI Search, and CosmosDB. Will disable private endpoints (-d) and enable debug mode."
+   echo "  -s     Skip validation of SKU availability and quota for a faster deployment"
    echo "  -p     A JSON file containing the deployment parameters (deploy.parameters.json)."
    echo
 }
@@ -585,9 +662,10 @@ usage() {
 [ $# -eq 0 ] && usage && exit 0
 # parse arguments
 ENABLE_PRIVATE_ENDPOINTS=true
+VALIDATE_SKUS_FLAG=true
 GRANT_DEV_ACCESS=0 # false
 PARAMS_FILE=""
-while getopts ":dgp:h" option; do
+while getopts ":dgsp:h" option; do
     case "${option}" in
         d)
             ENABLE_PRIVATE_ENDPOINTS=false
@@ -595,6 +673,9 @@ while getopts ":dgp:h" option; do
         g)
             ENABLE_PRIVATE_ENDPOINTS=false
             GRANT_DEV_ACCESS=1 # true
+            ;;
+        s)
+            VALIDATE_SKUS_FLAG=false
             ;;
         p)
             PARAMS_FILE=${OPTARG}
@@ -619,6 +700,9 @@ startBanner
 
 checkRequiredTools
 populateParams $PARAMS_FILE
+
+# Check SKU availability and quotas
+validateSKUs $LOCATION $VALIDATE_SKUS_FLAG
 
 # Create resource group
 createResourceGroupIfNotExists $LOCATION $RESOURCE_GROUP

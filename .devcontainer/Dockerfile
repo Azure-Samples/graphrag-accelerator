@@ -28,10 +28,8 @@ RUN apt-get update && apt-get install -y \
     software-properties-common
 # install Azure CLI
 RUN curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-RUN az bicep install
-# install kubectl
-RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" \
-    && install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+# install bicep and kubectl
+RUN az bicep install && az aks install-cli
 # install helm
 RUN curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 \
     && chmod 700 get_helm.sh \
