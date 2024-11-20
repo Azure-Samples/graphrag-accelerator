@@ -13,6 +13,7 @@ The deployment process requires the following tools to be installed:
 * [helm](https://helm.sh/docs/intro/install) - k8s package manager
 * [jq](https://jqlang.github.io/jq/download) >= v1.6
 * [kubectl](https://kubernetes.io/docs/tasks/tools) - k8s command line tool
+* [kubelogin](https://github.com/Azure/kubelogin) -  client-go credential (exec) plugin implementing azure authentication
 * [yq](https://github.com/mikefarah/yq?tab=readme-ov-file#install) >= v4.40.7 - yaml file parser
 
 TIP: If you open this repository inside a devcontainer (i.e. VSCode Dev Containers or Codespaces), all required tools for deployment will already be available. Opening a devcontainer using VS Code requires <a href="https://docs.docker.com/engine/install/" target="_blank" >Docker to be installed</a>.
