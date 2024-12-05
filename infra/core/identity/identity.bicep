@@ -16,13 +16,11 @@ resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' 
   location: location
 }
 
-resource federatedCredentialResources 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials@2023-01-31' = [
-  for federatedCredential in items(federatedCredentials): {
+resource federatedCredentialResources 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials@2023-01-31' = [for federatedCredential in items(federatedCredentials): {
     name: federatedCredential.key
     parent: identity
     properties: federatedCredential.value
-  }
-]
+  }]
 
 output name string = identity.name
 output clientId string = identity.properties.clientId

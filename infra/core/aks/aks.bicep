@@ -236,8 +236,7 @@ resource aksManagedNodeOSUpgradeSchedule 'Microsoft.ContainerService/managedClus
 }
 
 // role assignment to ingress identity
-resource webAppRoutingPrivateDnsContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
-  for role in ingressRoleAssignments: {
+resource webAppRoutingPrivateDnsContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for role in ingressRoleAssignments: {
     name: guid('${role.roleDefinitionId}-${privateDnsZone.id}')
     scope: privateDnsZone
     properties: {
@@ -245,12 +244,10 @@ resource webAppRoutingPrivateDnsContributor 'Microsoft.Authorization/roleAssignm
       principalType: role.principalType
       roleDefinitionId: role.roleDefinitionId
     }
-  }
-]
+  }]
 
 // role assignment to AKS system identity
-resource systemRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
-  for role in systemRoleAssignments: {
+resource systemRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for role in systemRoleAssignments: {
     name: guid('${role.roleDefinitionId}-${aks.id}')
     scope: resourceGroup()
     properties: {
@@ -258,8 +255,7 @@ resource systemRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-0
       principalType: role.principalType
       roleDefinitionId: role.roleDefinitionId
     }
-  }
-]
+  }]
 
 output name string = aks.name
 output id string = aks.id

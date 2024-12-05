@@ -9,8 +9,7 @@ resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' existing 
   name: privateDnsZoneName
 }
 
-resource dnsVnetLinks 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = [
-  for vnetId in vnetIds: {
+resource dnsVnetLinks 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = [for vnetId in vnetIds: {
     name: '${replace(privateDnsZoneName, '.', '-')}-${uniqueString(vnetId)}'
     parent: privateDnsZone
     location: 'global'
@@ -20,5 +19,4 @@ resource dnsVnetLinks 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@202
       }
       registrationEnabled: false
     }
-  }
-]
+  }]
