@@ -12,6 +12,7 @@ spec:
   schedule: "*/5 * * * *"
   jobTemplate:
     spec:
+      ttlSecondsAfterFinished: 30
       template:
         metadata:
           labels:
