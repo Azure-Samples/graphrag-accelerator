@@ -39,9 +39,10 @@ jobs:
         working-directory: backend
         run: |
           pip install poetry
-          poetry install
+          poetry install --with test
 
       - name: Run integration tests
         working-directory: backend
         run: |
+          pwd
           pytest src/tests/test_integration.py

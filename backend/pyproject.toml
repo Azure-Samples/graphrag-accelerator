@@ -28,6 +28,9 @@ jupyter = "*"
 pre-commit = ">=3.6.0"
 ruff = ">=0.1.13"
 
+[tool.poetry.group.test]
+optional = true
+
 [tool.poetry.group.test.dependencies]
 pytest = ">=8.2.1"
 wikipedia = ">=1.4.0"
