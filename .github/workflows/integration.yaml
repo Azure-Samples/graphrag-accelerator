@@ -1,0 +1,50 @@
+name: Integration Testing
+on:
+  workflow_dispatch: # triggered manually via the GitHub UI
+  pull_request:      # triggered when a PR is created or updated
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+    paths:             # only trigger on changes in specific directories
+      - '.github/**/*.yaml'
+      - 'backend/**'
+      - 'docker/**'
+      - 'backend/poetry.lock'
+      - 'backend/pyproject.toml'
+
+env:
+  POETRY_VERSION: 1.8.3
+  PYTHON_VERSION: 3.10
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: $PYTHON_VERSION
+
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v3.0.0
+        with:
+          poetry-version: $POETRY_VERSION
+
+      - name: Install Azurite
+        id: azuright
+        uses: potatoqualitee/azuright@v1.1
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          poetry install
+
+      - name: Run integration tests
+        working-directory: backend
+        run: |
+          pytests src/tests/test_integration.py
