@@ -30,8 +30,10 @@ jobs:
           python-version: $PYTHON_VERSION
 
       - name: Install Azurite
-        id: azuright
-        uses: potatoqualitee/azuright@v1.1
+        run: |
+          npm install -g azurite
+          mkdir azurite
+          azurite --silent --location azurite --debug azurite\debug.log &
 
       - name: Install dependencies
         working-directory: backend
