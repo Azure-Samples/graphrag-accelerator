@@ -23,21 +23,25 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
       - name: Setup python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
+
       - name: Install Azurite
         run: |
           npm install -g azurite
           mkdir azurite
           azurite --silent --location azurite --debug azurite\debug.log &
+
       - name: Install dependencies
         working-directory: backend
         run: |
           pip install poetry
           poetry install
+
       - name: Run integration tests
         working-directory: backend
         run: |
-          pytests src/tests/test_integration.py
+          pytest src/tests/test_integration.py
