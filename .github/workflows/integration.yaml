@@ -15,7 +15,6 @@ on:
       - 'backend/pyproject.toml'
 
 env:
-  POETRY_VERSION: 1.8.3
   PYTHON_VERSION: 3.10
 
 jobs:
@@ -30,11 +29,6 @@ jobs:
         with:
           python-version: $PYTHON_VERSION
 
-      - name: Install Poetry
-        uses: abatilo/actions-poetry@v3.0.0
-        with:
-          poetry-version: $POETRY_VERSION
-
       - name: Install Azurite
         id: azuright
         uses: potatoqualitee/azuright@v1.1
@@ -42,6 +36,7 @@ jobs:
       - name: Install dependencies
         working-directory: backend
         run: |
+          pip install poetry
           poetry install
 
       - name: Run integration tests
