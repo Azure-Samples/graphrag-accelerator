@@ -12,7 +12,6 @@ authors = [
     "Shane Solomon <shane.solomon@microsoft.com>",
     "Kenny Zhang <zhangken@microsoft.com>"
 ]
-readme = "README.md"
 license = "MIT"
 package-mode = false
 
