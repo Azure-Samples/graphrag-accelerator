@@ -39,6 +39,7 @@ jobs:
         working-directory: backend
         run: |
           pip install poetry
+          poetry config virtualenvs.create false
           poetry install --with test
 
       - name: Run integration tests
