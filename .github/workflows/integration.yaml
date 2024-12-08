@@ -19,7 +19,7 @@ env:
 
 jobs:
   integration-tests:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -34,6 +34,12 @@ jobs:
           npm install -g azurite
           mkdir azurite
           azurite --silent --location azurite --debug azurite\debug.log &
+
+      - name: Install Azure Cosmos DB emulator
+        run: |
+          Write-Host "Launching Cosmos DB Emulator"
+          Import-Module "$env:ProgramFiles\Azure Cosmos DB Emulator\PSModules\Microsoft.Azure.CosmosDB.Emulator"
+          Start-CosmosDbEmulator
 
       - name: Install dependencies
         working-directory: backend
