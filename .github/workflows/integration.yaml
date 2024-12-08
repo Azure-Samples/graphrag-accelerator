@@ -15,7 +15,7 @@ on:
       - 'backend/pyproject.toml'
 
 env:
-  PYTHON_VERSION: 3.10
+  PYTHON_VERSION: '3.10'
 
 jobs:
   integration-tests:
