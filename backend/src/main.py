@@ -13,6 +13,7 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
+from fastapi_offline import FastAPIOffline
 from kubernetes import (
     client,
     config,
@@ -89,9 +90,10 @@ async def lifespan(app: FastAPI):
     # shutdown/garbage collection code goes here
 
 
-app = FastAPI(
+app = FastAPIOffline(
     docs_url="/manpage/docs",
     openapi_url="/manpage/openapi.json",
+    root_path=os.getenv("API_ROOT_PATH", None),
     title="GraphRAG",
     version=os.getenv("GRAPHRAG_VERSION", "undefined_version"),
     lifespan=lifespan,
