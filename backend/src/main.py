@@ -93,7 +93,7 @@ async def lifespan(app: FastAPI):
 app = FastAPIOffline(
     docs_url="/manpage/docs",
     openapi_url="/manpage/openapi.json",
-    root_path=os.getenv("API_ROOT_PATH", None),
+    root_path=os.getenv("API_ROOT_PATH", ""),
     title="GraphRAG",
     version=os.getenv("GRAPHRAG_VERSION", "undefined_version"),
     lifespan=lifespan,
