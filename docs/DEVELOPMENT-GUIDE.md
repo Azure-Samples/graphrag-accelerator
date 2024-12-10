@@ -73,7 +73,16 @@ The GraphRAG service consist of two components - a `backend` application and a `
 
 ### Testing
 
-A small collection of pytests have been written to test functionality of the API. To run the tests, add the following envirionment variables to a `.env` file in the root of the repo directory.
+A small collection of pytests have been written to test functionality of the API.
+
+Some tests require the azurite emulator and cosmosdb emulator to be running locally (these are setup in the ci/cd automatically). Please start these services by running them in the background as docker containers
+
+```shell
+docker run -d -p 10000:10000 -p 10001:10001 -p 10002:10002 mcr.microsoft.com/azure-storage/azurite
+docker run -d -p 8081:8081 -p 1234:1234 mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-preview
+```
+
+To run the tests, add the following envirionment variables to a `.env` file in the root of the repo directory.
 
 ```shell
 APIM_SUBSCRIPTION_KEY
