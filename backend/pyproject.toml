@@ -12,7 +12,6 @@ authors = [
     "Shane Solomon <shane.solomon@microsoft.com>",
     "Kenny Zhang <zhangken@microsoft.com>"
 ]
-readme = "README.md"
 license = "MIT"
 package-mode = false
 
@@ -27,6 +26,9 @@ ipython = "*"
 jupyter = "*"
 pre-commit = ">=3.6.0"
 ruff = ">=0.1.13"
+
+[tool.poetry.group.test]
+optional = true
 
 [tool.poetry.group.test.dependencies]
 pytest = ">=8.2.1"
