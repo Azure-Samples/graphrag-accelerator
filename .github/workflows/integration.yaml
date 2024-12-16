@@ -51,6 +51,5 @@ jobs:
       - name: Run integration tests
         working-directory: backend
         run: |
-          pwd
-          pip list
-          pytest src/tests/test_integration.py
+          pytest --cov=src -s src/tests
+
