@@ -42,14 +42,14 @@ jobs:
           Start-CosmosDbEmulator
 
       - name: Install dependencies
-        working-directory: backend
+        working-directory: ${{ github.workspace }}/backend
         run: |
           pip install poetry
           poetry config virtualenvs.create false
           poetry install --with test
 
       - name: Run integration tests
-        working-directory: backend
+        working-directory: ${{ github.workspace }}/backend
         run: |
           pytest --cov=src -s src/tests
 
