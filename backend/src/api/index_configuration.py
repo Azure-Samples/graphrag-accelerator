@@ -15,7 +15,7 @@ from fastapi.responses import StreamingResponse
 from graphrag.prompt_tune.cli import prompt_tune as generate_fine_tune_prompts
 
 from src.api.azure_clients import (
-    AzureStorageClientManager,
+    AzureClientManager,
     BlobServiceClientSingleton,
 )
 from src.api.common import (
@@ -23,7 +23,7 @@ from src.api.common import (
 )
 from src.reporting import ReporterSingleton
 
-azure_storage_client_manager = AzureStorageClientManager()
+azure_storage_client_manager = AzureClientManager()
 index_configuration_route = APIRouter(
     prefix="/index/config", tags=["Index Configuration"]
 )

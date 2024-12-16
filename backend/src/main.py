@@ -48,6 +48,10 @@ async def lifespan(app: FastAPI):
     # This function is called when the FastAPI application first starts up.
     # To manage multiple graphrag indexing jobs, we deploy a k8s cronjob.
     # This cronjob will act as a job manager that creates/manages the execution of graphrag indexing jobs as they are requested.
+    if os.getenv("TESTING"):
+        yield
+        return
+
     try:
         # Check if the cronjob exists and create it if it does not exist
         config.load_incluster_config()

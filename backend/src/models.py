@@ -11,9 +11,9 @@ from typing import (
 from azure.cosmos.exceptions import CosmosHttpResponseError
 from pydantic import BaseModel
 
-from src.api.azure_clients import AzureStorageClientManager
+from src.api.azure_clients import AzureClientManager
 from src.api.common import sanitize_name
-from src.typing import PipelineJobState
+from src.typing.pipeline import PipelineJobState
 
 
 class BaseResponse(BaseModel):
@@ -109,7 +109,7 @@ class PipelineJob:
 
     @staticmethod
     def _jobs_container():
-        azure_storage_client = AzureStorageClientManager()
+        azure_storage_client = AzureClientManager()
         return azure_storage_client.get_cosmos_container_client(
             database_name="graphrag", container_name="jobs"
         )
@@ -308,8 +308,6 @@ class PipelineJob:
     @sanitized_index_name.setter
     def sanitized_index_name(self, sanitized_index_name: str) -> None:
         self._sanitized_index_name = sanitized_index_name
-        self.update_db()
-        self._sanitized_storage_name = sanitized_storage_name
         self.update_db()
 
     @property

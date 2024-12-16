@@ -14,7 +14,7 @@ from fastapi import (
 )
 
 from src.api.azure_clients import (
-    AzureStorageClientManager,
+    AzureClientManager,
     BlobServiceClientSingletonAsync,
 )
 from src.api.common import (
@@ -28,7 +28,7 @@ from src.models import (
 )
 from src.reporting import ReporterSingleton
 
-azure_storage_client_manager = AzureStorageClientManager()
+azure_storage_client_manager = AzureClientManager()
 
 data_route = APIRouter(
     prefix="/data",

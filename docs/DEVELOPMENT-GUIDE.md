@@ -73,7 +73,11 @@ The GraphRAG service consist of two components - a `backend` application and a `
 
 ### Testing
 
-A small collection of pytests have been written to test functionality of the API.
+A small collection of pytests have been written to test functionality of the API. Ensure that all test dependencies have been install
+
+```python
+poetry install --with test
+```
 
 Some tests require the azurite emulator and cosmosdb emulator to be running locally (these are setup in the ci/cd automatically). Please start these services by running them in the background as docker containers
 
@@ -82,18 +86,11 @@ docker run -d -p 10000:10000 -p 10001:10001 -p 10002:10002 mcr.microsoft.com/azu
 docker run -d -p 8081:8081 -p 1234:1234 mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-preview
 ```
 
-To run the tests, add the following envirionment variables to a `.env` file in the root of the repo directory.
+To run the tests,
 
 ```shell
-APIM_SUBSCRIPTION_KEY
-COSMOS_URI_ENDPOINT
-DEPLOYMENT_URL
-STORAGE_ACCOUNT_BLOB_URL
-```
-The tests assume the solution accelerator has been previously deployed and managed identity has been setup with RBAC access to CosmosDB and Azure Storage. To run the test locally:
-```
-# cd to root directory of the repo
-> pytest backend/src/tests/test_all_index_endpoint.py -s
+cd <graphrag-accelerator-repo>/backend
+pytest --cov=src -s tests/
 ```
 
 ### Deployment (CI/CD)

@@ -28,10 +28,14 @@ pre-commit = ">=3.6.0"
 ruff = ">=0.1.13"
 
 [tool.poetry.group.test]
-optional = true
+optional = false # change to true before committing changes to main
 
 [tool.poetry.group.test.dependencies]
 pytest = ">=8.2.1"
+pytest-asyncio = "^0.25.0"
+pytest-cov = "^6.0.0"
+pytest-env = "^1.1.5"
+pytest-xdist = "^3.6.1"
 wikipedia = ">=1.4.0"
 
 [tool.poetry.group.backend.dependencies]

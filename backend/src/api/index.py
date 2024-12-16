@@ -27,7 +27,7 @@ from kubernetes import (
 )
 
 from src.api.azure_clients import (
-    AzureStorageClientManager,
+    AzureClientManager,
     BlobServiceClientSingleton,
     get_database_container_client,
 )
@@ -46,15 +46,12 @@ from src.reporting import ReporterSingleton
 from src.reporting.load_reporter import load_pipeline_reporter
 from src.reporting.pipeline_job_workflow_callbacks import PipelineJobWorkflowCallbacks
 from src.reporting.typing import Reporters
-from src.typing import PipelineJobState
+from src.typing.pipeline import PipelineJobState
 
 blob_service_client = BlobServiceClientSingleton.get_instance()
 azure_storage_client_manager = (
-    AzureStorageClientManager()
-)  # TODO: update API to use the AzureStorageClientManager
-
-ai_search_url = os.environ["AI_SEARCH_URL"]
-ai_search_audience = os.environ["AI_SEARCH_AUDIENCE"]
+    AzureClientManager()
+)  # TODO: update API to use the AzureClientManager
 
 index_route = APIRouter(
     prefix="/index",
@@ -436,9 +433,9 @@ async def delete_index(index_name: str):
             pass
 
         index_client = SearchIndexClient(
-            endpoint=ai_search_url,
+            endpoint=os.environ["AI_SEARCH_URL"],
             credential=DefaultAzureCredential(),
-            audience=ai_search_audience,
+            audience=os.environ["AI_SEARCH_AUDIENCE"],
         )
         ai_search_index_name = f"{sanitized_index_name}_description_embedding"
         if ai_search_index_name in index_client.list_index_names():
