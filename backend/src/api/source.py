@@ -32,14 +32,20 @@ ENTITY_EMBEDDING_TABLE = "output/create_final_entities.parquet"
 RELATIONSHIPS_TABLE = "output/create_final_relationships.parquet"
 TEXT_UNITS_TABLE = "output/create_base_text_units.parquet"
 DOCUMENTS_TABLE = "output/create_base_documents.parquet"
-storage_account_blob_url = os.environ["STORAGE_ACCOUNT_BLOB_URL"]
-storage_account_name = storage_account_blob_url.split("//")[1].split(".")[0]
-storage_account_host = storage_account_blob_url.split("//")[1]
-storage_options = {
-    "account_name": storage_account_name,
-    "account_host": storage_account_host,
-    "credential": DefaultAzureCredential(),
-}
+
+storage_conn_string = os.getenv("STORAGE_CONNECTION_STRING")
+storage_account_blob_url = os.getenv("STORAGE_ACCOUNT_BLOB_URL")
+storage_options = {}
+if storage_conn_string:
+    storage_options["connection_string"] = storage_conn_string
+elif storage_account_blob_url:
+    storage_account_name = storage_account_blob_url.split("//")[1].split(".")[0]
+    storage_account_host = storage_account_blob_url.split("//")[1]
+    storage_options["account_name"] = storage_account_name
+    storage_options["account_host"] = storage_account_host
+    storage_options["credential"] = DefaultAzureCredential()
+else:
+    raise ValueError("No storage connection string or account blob url found.")
 
 
 @source_route.get(

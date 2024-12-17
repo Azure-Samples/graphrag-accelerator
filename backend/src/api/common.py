@@ -7,12 +7,12 @@ import re
 from fastapi import HTTPException
 
 from src.api.azure_clients import (
-    AzureStorageClientManager,
+    AzureClientManager,
     BlobServiceClientSingleton,
 )
 
 blob_service_client = BlobServiceClientSingleton.get_instance()
-azure_storage_client_manager = AzureStorageClientManager()
+azure_storage_client_manager = AzureClientManager()
 
 
 def delete_blob_container(container_name: str):

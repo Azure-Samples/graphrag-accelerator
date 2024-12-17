@@ -17,7 +17,7 @@ from kubernetes import (
     config,
 )
 
-from src.api.azure_clients import AzureStorageClientManager
+from src.api.azure_clients import AzureClientManager
 from src.api.common import sanitize_name
 from src.models import PipelineJob
 from src.reporting.reporter_singleton import ReporterSingleton
@@ -106,7 +106,7 @@ def main():
     """
     kubernetes_jobs = list_k8s_jobs(os.environ["AKS_NAMESPACE"])
 
-    azure_storage_client_manager = AzureStorageClientManager()
+    azure_storage_client_manager = AzureClientManager()
     job_container_store_client = (
         azure_storage_client_manager.get_cosmos_container_client(
             database_name="graphrag", container_name="jobs"
