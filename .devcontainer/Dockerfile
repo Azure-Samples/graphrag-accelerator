@@ -1,6 +1,8 @@
-FROM python:3.10
+# Fmore information about the base image visit:
+# https://mcr.microsoft.com/en-us/artifact/mar/devcontainers/python/about
+FROM mcr.microsoft.com/devcontainers/python:3.10-bookworm
 
-# avoid common warnings
+# disable common warning messages
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PIP_ROOT_USER_ACTION=ignore
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
@@ -8,8 +10,6 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 # configure environment
 ARG ENVNAME="GraphRAG"
 ARG USERNAME=vscode
-ARG USER_UID=1001
-ARG USER_GID=$USER_UID
 ARG WORKDIR=/${ENVNAME}
 
 # install python, pip, git, and other required tools
@@ -53,13 +53,11 @@ RUN rm -rf /var/lib/apt/lists/* \
 # set the location for the virtual environments to be outside the project directory
 ENV POETRY_VIRTUALENVS_IN_PROJECT=true
 
-# set up non-root user
-RUN useradd -ms /bin/bash -u ${USER_GID} ${USERNAME} \
-    && echo "${USERNAME}:${USERNAME}" | chpasswd \
-    # add user to sudo group and docker group
+# a non-root user (vscode) already exist in the base image. Add it to sudo group and docker group
+RUN echo "${USERNAME}:${USERNAME}" | chpasswd \
     && adduser ${USERNAME} sudo \
-    && echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers \
-    && usermod -aG docker ${USERNAME}
+    && adduser ${USERNAME} docker \
+    && echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 # switch to non-root user
 USER ${USERNAME}
@@ -73,13 +71,13 @@ ENV PATH="/home/${USERNAME}/.local/bin:${PATH}"
 ENV PATH=/graphrag-accelerator/.venv/bin:$PATH
 
 # copy the project files into the container and set ownership
-COPY --chown=${USERNAME}:${USER_GID} . ${WORKDIR}
+COPY --chown=${USERNAME}:${USERNAME} . ${WORKDIR}
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # Create directories for vscode server and extensions
-RUN mkdir -p /home/$USERNAME/.vscode-server/extensions \
-    && chown -R $USER_UID:$USER_GID /home/$USERNAME/.vscode-server
+RUN mkdir -p ~/.vscode-server/extensions \
+    && chown -R $USERNAME:$USERNAME ~/.vscode-server
 
 ENTRYPOINT [ "/usr/local/bin/entrypoint.sh" ]
 CMD ["bash"]
