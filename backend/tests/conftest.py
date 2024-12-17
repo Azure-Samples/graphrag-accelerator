@@ -8,12 +8,6 @@ from fastapi.testclient import TestClient
 from src.main import app
 
 
-@pytest.fixture(scope="function", autouse=True)
-def set_testing_env_var(monkeypatch):
-    """Set an environment variable that signals the app is running in a test environment."""
-    monkeypatch.setenv("TESTING", "1")
-
-
 @pytest.fixture(scope="session")
 def setup_cosmos():
     """ "Initializes the CosmosDB databases that graphrag expects at startup time."""

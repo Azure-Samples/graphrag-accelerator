@@ -11,8 +11,6 @@ from src.api.azure_clients import (
 
 
 def test_get_env_variables():
-    print(f"\nCOSMOS CONNECTION STRING: {os.getenv('COSMOS_CONNECTION_STRING')}")
-    print(f"STORAGE CONNECTION STRING: {os.getenv('STORAGE_CONNECTION_STRING')}")
     assert os.getenv("COSMOS_CONNECTION_STRING") is not None
     assert os.getenv("STORAGE_CONNECTION_STRING") is not None
 

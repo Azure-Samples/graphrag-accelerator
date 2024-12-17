@@ -87,15 +87,36 @@ class BlobServiceClientSingletonAsync:
     @classmethod
     def get_instance(cls) -> BlobServiceClientAsync:
         if cls._instance is None:
-            account_url = os.environ["STORAGE_ACCOUNT_BLOB_URL"]
-            credential = DefaultAzureCredential()
-            cls._instance = BlobServiceClientAsync(account_url, credential=credential)
+            conn_string = os.getenv("STORAGE_CONNECTION_STRING")
+            if conn_string:
+                cls._instance = BlobServiceClientAsync.from_connection_string(
+                    conn_string
+                )
+            else:
+                account_url = os.environ["STORAGE_ACCOUNT_BLOB_URL"]
+                credential = DefaultAzureCredential()
+                cls._instance = BlobServiceClientAsync(
+                    account_url, credential=credential
+                )
         return cls._instance
 
     @classmethod
     def get_storage_account_name(cls) -> str:
-        account_url = os.environ["STORAGE_ACCOUNT_BLOB_URL"]
-        return account_url.split("//")[1].split(".")[0]
+        conn_string = os.getenv("STORAGE_CONNECTION_STRING")
+        if conn_string:
+            # parse account name from the connection string
+            meta_info = {}
+            for meta_data in conn_string.split(";"):
+                if not meta_data:
+                    continue
+                m = meta_data.split("=", 1)
+                if len(m) != 2:
+                    continue
+                meta_info[m[0]] = m[1]
+            return meta_info["AccountName"]
+        else:
+            account_url = os.environ["STORAGE_ACCOUNT_BLOB_URL"]
+            return account_url.split("//")[1].split(".")[0]
 
 
 def get_database_client(database_name: str) -> DatabaseProxy:
