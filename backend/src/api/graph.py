@@ -1,9 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-from io import BytesIO
 
-import networkx as nx
 from fastapi import (
     APIRouter,
     HTTPException,
@@ -15,7 +13,6 @@ from src.api.common import (
     sanitize_name,
     validate_index_file_exist,
 )
-from src.models import GraphDataResponse
 from src.reporting import ReporterSingleton
 
 blob_service_client = BlobServiceClientSingleton.get_instance()
@@ -54,30 +51,4 @@ async def retrieve_graphml_file(index_name: str):
         raise HTTPException(
             status_code=500,
             detail=f"Could not retrieve graphml file for index '{index_name}'.",
-        )
-
-
-@graph_route.get(
-    "/stats/{index_name}",
-    summary="Retrieve basic graph statistics, number of nodes and edges",
-    response_model=GraphDataResponse,
-    responses={200: {"model": GraphDataResponse}},
-)
-async def retrieve_graph_stats(index_name: str):
-    # validate index_name and knowledge graph file existence
-    sanitized_index_name = sanitize_name(index_name)
-    graph_file = "output/summarized_graph.graphml"  # expected filename of the graph based on the indexing workflow
-    validate_index_file_exist(sanitized_index_name, graph_file)
-    try:
-        storage_client = blob_service_client.get_container_client(sanitized_index_name)
-        blob_data = storage_client.download_blob(graph_file).readall()
-        bytes_io = BytesIO(blob_data)
-        g = nx.read_graphml(bytes_io)
-        return GraphDataResponse(nodes=len(g.nodes), edges=len(g.edges))
-    except Exception:
-        reporter = ReporterSingleton().get_instance()
-        reporter.on_error("Could not retrieve graph data file")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Could not retrieve graph statistics for index '{index_name}'.",
         )

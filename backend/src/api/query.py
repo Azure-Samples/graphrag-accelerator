@@ -36,7 +36,7 @@ from src.models import (
     PipelineJob,
 )
 from src.reporting import ReporterSingleton
-from src.typing import PipelineJobState
+from src.typing.pipeline import PipelineJobState
 from src.utils import query as query_helper
 
 query_route = APIRouter(

@@ -73,18 +73,24 @@ The GraphRAG service consist of two components - a `backend` application and a `
 
 ### Testing
 
-A small collection of pytests have been written to test functionality of the API. To run the tests, add the following envirionment variables to a `.env` file in the root of the repo directory.
+A small collection of pytests have been written to test functionality of the API. Ensure that all test dependencies have been install
+
+```python
+poetry install --with test
+```
+
+Some tests require the [azurite emulator](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azurite?toc=%2Fazure%2Fstorage%2Fblobs%2Ftoc.json&bc=%2Fazure%2Fstorage%2Fblobs%2Fbreadcrumb%2Ftoc.json&tabs=docker-hub%2Cblob-storage) and [cosmosdb emulator](https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-develop-emulator?tabs=docker-linux%2Ccsharp&pivots=api-nosql) to be running locally (these are setup in the ci/cd automatically). Please start these services by running them in the background as docker containers.
 
 ```shell
-APIM_SUBSCRIPTION_KEY
-COSMOS_URI_ENDPOINT
-DEPLOYMENT_URL
-STORAGE_ACCOUNT_BLOB_URL
+docker run -d -p 10000:10000 -p 10001:10001 -p 10002:10002 mcr.microsoft.com/azure-storage/azurite:latest
+docker run -d -p 8081:8081 -p 10250-10255:10250-10255 mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
 ```
-The tests assume the solution accelerator has been previously deployed and managed identity has been setup with RBAC access to CosmosDB and Azure Storage. To run the test locally:
-```
-# cd to root directory of the repo
-> pytest backend/src/tests/test_all_index_endpoint.py -s
+
+To run the tests,
+
+```shell
+cd <graphrag-accelerator-repo>/backend
+pytest --cov=src -s tests/
 ```
 
 ### Deployment (CI/CD)

@@ -4,7 +4,7 @@
 from datashaper.workflow.workflow_callbacks import NoopWorkflowCallbacks
 
 from src.models import PipelineJob
-from src.typing import PipelineJobState
+from src.typing.pipeline import PipelineJobState
 
 
 class PipelineJobWorkflowCallbacks(NoopWorkflowCallbacks):
