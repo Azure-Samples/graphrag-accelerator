@@ -79,11 +79,11 @@ A small collection of pytests have been written to test functionality of the API
 poetry install --with test
 ```
 
-Some tests require the azurite emulator and cosmosdb emulator to be running locally (these are setup in the ci/cd automatically). Please start these services by running them in the background as docker containers
+Some tests require the [azurite emulator](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azurite?toc=%2Fazure%2Fstorage%2Fblobs%2Ftoc.json&bc=%2Fazure%2Fstorage%2Fblobs%2Fbreadcrumb%2Ftoc.json&tabs=docker-hub%2Cblob-storage) and [cosmosdb emulator](https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-develop-emulator?tabs=docker-linux%2Ccsharp&pivots=api-nosql) to be running locally (these are setup in the ci/cd automatically). Please start these services by running them in the background as docker containers.
 
 ```shell
-docker run -d -p 10000:10000 -p 10001:10001 -p 10002:10002 mcr.microsoft.com/azure-storage/azurite
-docker run -d -p 8081:8081 -p 1234:1234 mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-preview
+docker run -d -p 10000:10000 -p 10001:10001 -p 10002:10002 mcr.microsoft.com/azure-storage/azurite:latest
+docker run -d -p 8081:8081 -p 10250-10255:10250-10255 mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
 ```
 
 To run the tests,
