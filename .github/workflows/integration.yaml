@@ -46,6 +46,7 @@ jobs:
           Start-CosmosDbEmulator -Timeout 500
 
       - name: Install dependencies
+        working-directory: ${{ github.workspace }}/backend
         run: |
           pip install poetry
           poetry config virtualenvs.create false
@@ -55,4 +56,5 @@ jobs:
         run: |
           echo ${{ github.workspace }}/backend
           cd backend
+          pwd
           pytest --cov=src -s src/tests
