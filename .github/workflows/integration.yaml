@@ -53,8 +53,6 @@ jobs:
           poetry install --with test
 
       - name: Run integration tests
+        working-directory: ${{ github.workspace }}/backend
         run: |
-          echo ${{ github.workspace }}/backend
-          cd backend
-          pwd
-          pytest --cov=src -s src/tests
+          pytest -s --cov=src tests
