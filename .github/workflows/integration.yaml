@@ -35,21 +35,24 @@ jobs:
           mkdir azurite
           azurite --silent --location azurite --debug azurite\debug.log &
 
+      # For more information on installation/setup of Azure Cosmos DB Emulator
+      # https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-develop-emulator?tabs=docker-linux%2Cpython&pivots=api-nosql
+      # Note: the emulator is only available on Windows runners. It can take longer than the default to initially startup so we increase the default timeout.
+      # If a job fails due to timeout, restarting the cicd job usually resolves the problem.
       - name: Install Azure Cosmos DB emulator
         run: |
           Write-Host "Launching Cosmos DB Emulator"
           Import-Module "$env:ProgramFiles\Azure Cosmos DB Emulator\PSModules\Microsoft.Azure.CosmosDB.Emulator"
-          Start-CosmosDbEmulator
+          Start-CosmosDbEmulator -Timeout 500
 
       - name: Install dependencies
-        working-directory: ${{ github.workspace }}/backend
         run: |
           pip install poetry
           poetry config virtualenvs.create false
           poetry install --with test
 
       - name: Run integration tests
-        working-directory: ${{ github.workspace }}/backend
         run: |
+          echo ${{ github.workspace }}/backend
+          cd backend
           pytest --cov=src -s src/tests
-
