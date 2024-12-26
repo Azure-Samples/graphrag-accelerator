@@ -1,7 +1,9 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-FROM python:3.10
+# For more information about the base image visit:
+# https://mcr.microsoft.com/en-us/artifact/mar/devcontainers/python/about
+FROM mcr.microsoft.com/devcontainers/python:3.10-bookworm
 
 ENV PIP_ROOT_USER_ACTION=ignore
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1

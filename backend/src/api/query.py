@@ -25,17 +25,17 @@ from graphrag.vector_stores.base import (
     VectorStoreSearchResult,
 )
 
-from src.api.azure_clients import BlobServiceClientSingleton
+from src.api.azure_clients import AzureClientManager
 from src.api.common import (
     sanitize_name,
     validate_index_file_exist,
 )
+from src.logger import LoggerSingleton
 from src.models import (
     GraphRequest,
     GraphResponse,
     PipelineJob,
 )
-from src.reporting import ReporterSingleton
 from src.typing.pipeline import PipelineJobState
 from src.utils import query as query_helper
 
@@ -197,7 +197,7 @@ async def global_query(request: GraphRequest):
 
         return GraphResponse(result=result[0], context_data=context_data)
     except Exception as e:
-        reporter = ReporterSingleton().get_instance()
+        reporter = LoggerSingleton().get_instance()
         reporter.on_error(
             message="Could not perform global search.",
             cause=e,
@@ -230,7 +230,8 @@ async def local_query(request: GraphRequest):
                 detail=f"{index_name} not ready for querying.",
             )
 
-    blob_service_client = BlobServiceClientSingleton.get_instance()
+    azure_client_manager = AzureClientManager()
+    blob_service_client = azure_client_manager.get_blob_service_client()
 
     community_dfs = []
     covariates_dfs = []

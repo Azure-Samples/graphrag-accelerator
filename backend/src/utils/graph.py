@@ -16,7 +16,7 @@ from graphrag.index.emit import (
     create_table_emitters,
 )
 
-from src.reporting.console_workflow_callbacks import ConsoleWorkflowCallbacks
+from src.logger.console_workflow_callbacks import ConsoleWorkflowCallbacks
 
 workflows_to_concat = [
     "create_base_text_units",

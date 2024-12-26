@@ -1,16 +1,16 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import os
 
 import pandas as pd
-from azure.identity import DefaultAzureCredential
 from fastapi import APIRouter, HTTPException
 
 from src.api.common import (
+    get_pandas_storage_options,
     sanitize_name,
     validate_index_file_exist,
 )
+from src.logger import LoggerSingleton
 from src.models import (
     ClaimResponse,
     EntityResponse,
@@ -18,7 +18,6 @@ from src.models import (
     ReportResponse,
     TextUnitResponse,
 )
-from src.reporting import ReporterSingleton
 
 source_route = APIRouter(
     prefix="/source",
@@ -32,20 +31,6 @@ ENTITY_EMBEDDING_TABLE = "output/create_final_entities.parquet"
 RELATIONSHIPS_TABLE = "output/create_final_relationships.parquet"
 TEXT_UNITS_TABLE = "output/create_base_text_units.parquet"
 DOCUMENTS_TABLE = "output/create_base_documents.parquet"
-
-storage_conn_string = os.getenv("STORAGE_CONNECTION_STRING")
-storage_account_blob_url = os.getenv("STORAGE_ACCOUNT_BLOB_URL")
-storage_options = {}
-if storage_conn_string:
-    storage_options["connection_string"] = storage_conn_string
-elif storage_account_blob_url:
-    storage_account_name = storage_account_blob_url.split("//")[1].split(".")[0]
-    storage_account_host = storage_account_blob_url.split("//")[1]
-    storage_options["account_name"] = storage_account_name
-    storage_options["account_host"] = storage_account_host
-    storage_options["credential"] = DefaultAzureCredential()
-else:
-    raise ValueError("No storage connection string or account blob url found.")
 
 
 @source_route.get(
@@ -61,12 +46,16 @@ async def get_report_info(index_name: str, report_id: str):
     try:
         report_table = pd.read_parquet(
             f"abfs://{sanitized_index_name}/{COMMUNITY_REPORT_TABLE}",
-            storage_options=storage_options,
+            storage_options=get_pandas_storage_options(),
         )
-        row = report_table[report_table.community == report_id]
-        return ReportResponse(text=row["full_content"].values[0])
+        # row = report_table[report_table["community"] == report_id]
+        # return ReportResponse(text=row["full_content"].values[0])
+        report_content = report_table.loc[
+            report_table["community"] == report_id, "full_content"
+        ][0]
+        return ReportResponse(text=report_content)
     except Exception:
-        reporter = ReporterSingleton().get_instance()
+        reporter = LoggerSingleton().get_instance()
         reporter.on_error("Could not get report.")
         raise HTTPException(
             status_code=500,
@@ -88,11 +77,11 @@ async def get_chunk_info(index_name: str, text_unit_id: str):
     try:
         text_unit_table = pd.read_parquet(
             f"abfs://{sanitized_index_name}/{TEXT_UNITS_TABLE}",
-            storage_options=storage_options,
+            storage_options=get_pandas_storage_options(),
         )
         docs = pd.read_parquet(
             f"abfs://{sanitized_index_name}/{DOCUMENTS_TABLE}",
-            storage_options=storage_options,
+            storage_options=get_pandas_storage_options(),
         )
         links = {
             el["id"]: el["title"]
@@ -101,14 +90,14 @@ async def get_chunk_info(index_name: str, text_unit_id: str):
         text_unit_table["source_doc"] = text_unit_table["document_ids"].apply(
             lambda x: links[x[0]]
         )
-        row = text_unit_table[text_unit_table.chunk_id == text_unit_id][
-            ["chunk", "source_doc"]
+        row = text_unit_table.loc[
+            text_unit_table.chunk_id == text_unit_id, ["chunk", "source_doc"]
         ]
         return TextUnitResponse(
             text=row["chunk"].values[0], source_document=row["source_doc"].values[0]
         )
     except Exception:
-        reporter = ReporterSingleton().get_instance()
+        reporter = LoggerSingleton().get_instance()
         reporter.on_error("Could not get text chunk.")
         raise HTTPException(
             status_code=500,
@@ -129,7 +118,7 @@ async def get_entity_info(index_name: str, entity_id: int):
     try:
         entity_table = pd.read_parquet(
             f"abfs://{sanitized_index_name}/{ENTITY_EMBEDDING_TABLE}",
-            storage_options=storage_options,
+            storage_options=get_pandas_storage_options(),
         )
         row = entity_table[entity_table.human_readable_id == entity_id]
         return EntityResponse(
@@ -138,7 +127,7 @@ async def get_entity_info(index_name: str, entity_id: int):
             text_units=row["text_unit_ids"].values[0].tolist(),
         )
     except Exception:
-        reporter = ReporterSingleton().get_instance()
+        reporter = LoggerSingleton().get_instance()
         reporter.on_error("Could not get entity")
         raise HTTPException(
             status_code=500,
@@ -166,7 +155,7 @@ async def get_claim_info(index_name: str, claim_id: int):
     try:
         claims_table = pd.read_parquet(
             f"abfs://{sanitized_index_name}/{COVARIATES_TABLE}",
-            storage_options=storage_options,
+            storage_options=get_pandas_storage_options(),
         )
         claims_table.human_readable_id = claims_table.human_readable_id.astype(
             float
@@ -183,7 +172,7 @@ async def get_claim_info(index_name: str, claim_id: int):
             document_ids=row["document_ids"].values[0].tolist(),
         )
     except Exception:
-        reporter = ReporterSingleton().get_instance()
+        reporter = LoggerSingleton().get_instance()
         reporter.on_error("Could not get claim.")
         raise HTTPException(
             status_code=500,
@@ -205,11 +194,11 @@ async def get_relationship_info(index_name: str, relationship_id: int):
     try:
         relationship_table = pd.read_parquet(
             f"abfs://{sanitized_index_name}/{RELATIONSHIPS_TABLE}",
-            storage_options=storage_options,
+            storage_options=get_pandas_storage_options(),
         )
         entity_table = pd.read_parquet(
             f"abfs://{sanitized_index_name}/{ENTITY_EMBEDDING_TABLE}",
-            storage_options=storage_options,
+            storage_options=get_pandas_storage_options(),
         )
         row = relationship_table[
             relationship_table.human_readable_id == str(relationship_id)
@@ -229,7 +218,7 @@ async def get_relationship_info(index_name: str, relationship_id: int):
             ],  # extract text_unit_ids from a list of panda series
         )
     except Exception:
-        reporter = ReporterSingleton().get_instance()
+        reporter = LoggerSingleton().get_instance()
         reporter.on_error("Could not get relationship.")
         raise HTTPException(
             status_code=500,

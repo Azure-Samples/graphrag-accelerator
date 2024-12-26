@@ -1,4 +1,4 @@
-# Fmore information about the base image visit:
+# For more information about the base image visit:
 # https://mcr.microsoft.com/en-us/artifact/mar/devcontainers/python/about
 FROM mcr.microsoft.com/devcontainers/python:3.10-bookworm
 

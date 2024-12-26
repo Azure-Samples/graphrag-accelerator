@@ -1,22 +1,18 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-
 from fastapi import (
     APIRouter,
     HTTPException,
 )
 from fastapi.responses import StreamingResponse
 
-from src.api.azure_clients import BlobServiceClientSingleton
+from src.api.azure_clients import AzureClientManager
 from src.api.common import (
     sanitize_name,
     validate_index_file_exist,
 )
-from src.reporting import ReporterSingleton
-
-blob_service_client = BlobServiceClientSingleton.get_instance()
-
+from src.logger import LoggerSingleton
 
 graph_route = APIRouter(
     prefix="/graph",
@@ -29,14 +25,15 @@ graph_route = APIRouter(
     summary="Retrieve a GraphML file of the knowledge graph",
     response_description="GraphML file successfully downloaded",
 )
-async def retrieve_graphml_file(index_name: str):
+async def get_graphml_file(index_name: str):
     # validate index_name and graphml file existence
+    azure_client_manager = AzureClientManager()
     sanitized_index_name = sanitize_name(index_name)
     graphml_filename = "summarized_graph.graphml"
     blob_filepath = f"output/{graphml_filename}"  # expected file location of the graph based on the workflow
     validate_index_file_exist(sanitized_index_name, blob_filepath)
     try:
-        blob_client = blob_service_client.get_blob_client(
+        blob_client = azure_client_manager.get_blob_service_client().get_blob_client(
             container=sanitized_index_name, blob=blob_filepath
         )
         blob_stream = blob_client.download_blob().chunks()
@@ -46,7 +43,7 @@ async def retrieve_graphml_file(index_name: str):
             headers={"Content-Disposition": f"attachment; filename={graphml_filename}"},
         )
     except Exception:
-        reporter = ReporterSingleton().get_instance()
+        reporter = LoggerSingleton().get_instance()
         reporter.on_error("Could not retrieve graphml file")
         raise HTTPException(
             status_code=500,

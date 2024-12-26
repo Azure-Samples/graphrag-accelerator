@@ -1,0 +1,6 @@
+[run]
+omit =
+    **/__init__.py
+    src/api/query*
+    src/utils/query.py
+    src/models.py

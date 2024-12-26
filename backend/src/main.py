@@ -25,7 +25,7 @@ from src.api.index_configuration import index_configuration_route
 from src.api.query import query_route
 from src.api.query_streaming import query_streaming_route
 from src.api.source import source_route
-from src.reporting import ReporterSingleton
+from src.logger import LoggerSingleton
 
 
 async def catch_all_exceptions_middleware(request: Request, call_next):
@@ -33,11 +33,12 @@ async def catch_all_exceptions_middleware(request: Request, call_next):
     try:
         return await call_next(request)
     except Exception as e:
-        reporter = ReporterSingleton().get_instance()
+        reporter = LoggerSingleton().get_instance()
+        stack = traceback.format_exc()
         reporter.on_error(
             message="Unexpected internal server error",
             cause=e,
-            stack=traceback.format_exc(),
+            stack=stack,
         )
         return Response("Unexpected internal server error.", status_code=500)
 
@@ -85,7 +86,7 @@ async def lifespan(app: FastAPI):
             )
     except Exception as e:
         print("Failed to create graphrag cronjob.")
-        reporter = ReporterSingleton().get_instance()
+        reporter = LoggerSingleton().get_instance()
         reporter.on_error(
             message="Failed to create graphrag cronjob",
             cause=str(e),

@@ -13,22 +13,17 @@ from fastapi import (
     UploadFile,
 )
 
-from src.api.azure_clients import (
-    AzureClientManager,
-    BlobServiceClientSingletonAsync,
-)
+from src.api.azure_clients import AzureClientManager
 from src.api.common import (
     delete_blob_container,
     sanitize_name,
     validate_blob_container_name,
 )
+from src.logger import LoggerSingleton
 from src.models import (
     BaseResponse,
     StorageNameList,
 )
-from src.reporting import ReporterSingleton
-
-azure_storage_client_manager = AzureClientManager()
 
 data_route = APIRouter(
     prefix="/data",
@@ -46,18 +41,17 @@ async def get_all_data_storage_containers():
     """
     Retrieve a list of all data storage containers.
     """
+    azure_client_manager = AzureClientManager()
     items = []
     try:
-        container_store_client = (
-            azure_storage_client_manager.get_cosmos_container_client(
-                database_name="graphrag", container_name="container-store"
-            )
+        container_store_client = azure_client_manager.get_cosmos_container_client(
+            database_name="graphrag", container_name="container-store"
         )
         for item in container_store_client.read_all_items():
             if item["type"] == "data":
                 items.append(item["human_readable_name"])
     except Exception:
-        reporter = ReporterSingleton().get_instance()
+        reporter = LoggerSingleton().get_instance()
         reporter.on_error("Error getting list of blob containers.")
         raise HTTPException(
             status_code=500, detail="Error getting list of blob containers."
@@ -133,7 +127,7 @@ async def upload_files(
     Raises:
         HTTPException: If the container name is invalid or if any error occurs during the upload process.
     """
-    reporter = ReporterSingleton().get_instance()
+    reporter = LoggerSingleton().get_instance()
     sanitized_storage_name = sanitize_name(storage_name)
     # ensure container name follows Azure Blob Storage naming conventions
     try:
@@ -144,7 +138,8 @@ async def upload_files(
             detail=f"Invalid blob container name: '{storage_name}'. Please try a different name.",
         )
     try:
-        blob_service_client = BlobServiceClientSingletonAsync.get_instance()
+        azure_client_manager = AzureClientManager()
+        blob_service_client = azure_client_manager.get_blob_service_client_async()
         container_client = blob_service_client.get_container_client(
             sanitized_storage_name
         )
@@ -165,10 +160,8 @@ async def upload_files(
             ]
             await asyncio.gather(*tasks)
         # update container-store in cosmosDB since upload process was successful
-        container_store_client = (
-            azure_storage_client_manager.get_cosmos_container_client(
-                database_name="graphrag", container_name="container-store"
-            )
+        container_store_client = azure_client_manager.get_cosmos_container_client(
+            database_name="graphrag", container_name="container-store"
         )
         container_store_client.upsert_item({
             "id": sanitized_storage_name,
@@ -194,22 +187,21 @@ async def delete_files(storage_name: str):
     """
     Delete a specified data storage container.
     """
+    azure_client_manager = AzureClientManager()
     sanitized_storage_name = sanitize_name(storage_name)
     try:
         # delete container in Azure Storage
         delete_blob_container(sanitized_storage_name)
         # update container-store in cosmosDB
-        container_store_client = (
-            azure_storage_client_manager.get_cosmos_container_client(
-                database_name="graphrag", container_name="container-store"
-            )
+        container_store_client = azure_client_manager.get_cosmos_container_client(
+            database_name="graphrag", container_name="container-store"
         )
         container_store_client.delete_item(
             item=sanitized_storage_name,
             partition_key=sanitized_storage_name,
         )
     except Exception:
-        reporter = ReporterSingleton().get_instance()
+        reporter = LoggerSingleton().get_instance()
         reporter.on_error(
             f"Error deleting container {storage_name}.",
             details={"Container": storage_name},
