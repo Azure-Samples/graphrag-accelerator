@@ -4,10 +4,7 @@
 Integration tests for the /graph API endpoints.
 """
 
-import pytest
 
-
-@pytest.mark.skip(reason="temporary skip")
 def test_get_graphml_file(client, container_with_graphml_file):
     """Test retrieving a graphml file endpoint."""
     url = f"/graph/graphml/{container_with_graphml_file}"
