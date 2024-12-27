@@ -48,8 +48,8 @@ def delete_cosmos_container_item(container: str, item_id: str):
     try:
         azure_client_manager.get_cosmos_container_client(
             "graphrag", container
-        ).delete_item(item_id)
-        # cosmos_client.get_database_client(database).get_container_client(container).delete_item(item_id)
+        ).delete_item(item_id, item_id)
+        # cosmos_client.get_database_client(database).get_container_client(container).delete_item(item_id, item_id)
     except exceptions.CosmosResourceNotFoundError:
         # If item does not exist, do nothing
         pass
