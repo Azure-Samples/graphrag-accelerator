@@ -104,7 +104,6 @@ async def global_search_streaming(request: GraphRequest):
             nodes_table_path = f"abfs://{index_name}/{NODES_TABLE}"
 
             # read parquet files into DataFrames and add provenance information
-
             # note that nodes need to set before communities to that max community id makes sense
             nodes_df = query_helper.get_df(nodes_table_path)
             for i in nodes_df["human_readable_id"]:
