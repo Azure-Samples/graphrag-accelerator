@@ -69,8 +69,7 @@ def container_with_graphml_file(blob_service_client, cosmos_client):
     ).get_container_client("container-store")
     container_store_client.upsert_item({
         "id": sanitized_name,
-        "container_name": sanitized_name,
-        "index_name": sanitized_name,
+        "human_readable_name": sanitized_name,
         "type": "index",
     })
     yield container_name
@@ -113,8 +112,7 @@ def container_with_index_files(blob_service_client, cosmos_client):
     ).get_container_client("container-store")
     container_store_client.upsert_item({
         "id": sanitized_name,
-        "container_name": sanitized_name,
-        "index_name": sanitized_name,
+        "human_readable_name": sanitized_name,
         "type": "index",
     })
     yield container_name
