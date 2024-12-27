@@ -6,6 +6,7 @@ import re
 from math import ceil
 from typing import List
 
+from azure.cosmos import exceptions
 from azure.storage.blob import ContainerClient
 from fastapi import (
     APIRouter,
@@ -192,14 +193,17 @@ async def delete_files(storage_name: str):
     try:
         # delete container in Azure Storage
         delete_blob_container(sanitized_storage_name)
-        # update container-store in cosmosDB
+        # delete entry from container-store in cosmosDB
         container_store_client = azure_client_manager.get_cosmos_container_client(
             database_name="graphrag", container_name="container-store"
         )
-        container_store_client.delete_item(
-            item=sanitized_storage_name,
-            partition_key=sanitized_storage_name,
-        )
+        try:
+            container_store_client.delete_item(
+                item=sanitized_storage_name,
+                partition_key=sanitized_storage_name,
+            )
+        except exceptions.CosmosResourceNotFoundError:
+            pass
     except Exception:
         reporter = LoggerSingleton().get_instance()
         reporter.on_error(
