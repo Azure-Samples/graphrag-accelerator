@@ -30,10 +30,10 @@ jobs:
           python-version: '3.10'
 
       - name: Install Azurite
-        run: |
-          npm install -g azurite
-          mkdir azurite
-          azurite --silent --location azurite --debug azurite\debug.log &
+        id: azuright
+        uses: potatoqualitee/azuright@v1.1
+        with:
+          self-signed-cert: true
 
       # For more information on installation/setup of Azure Cosmos DB Emulator
       # https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-develop-emulator?tabs=docker-linux%2Cpython&pivots=api-nosql
