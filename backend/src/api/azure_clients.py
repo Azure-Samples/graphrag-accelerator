@@ -174,7 +174,7 @@ class AzureClientManager:
         return self._cosmos_client.get_database_client(database=database_name)
 
     def get_cosmos_container_client(
-        self, database_name: str, container_name: str
+        self, database: str, container: str
     ) -> ContainerProxy:
         """
         Returns a Cosmos container client.
@@ -187,5 +187,5 @@ class AzureClientManager:
             ContainerProxy: The Cosmos DB container client.
         """
         return self._cosmos_client.get_database_client(
-            database=database_name
-        ).get_container_client(container=container_name)
+            database=database
+        ).get_container_client(container=container)

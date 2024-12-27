@@ -44,12 +44,10 @@ def delete_cosmos_container_item(container: str, item_id: str):
     If exception is raised, the calling function should catch it.
     """
     azure_client_manager = AzureClientManager()
-    # cosmos_client = azure_client_manager.get_cosmos_client()
     try:
         azure_client_manager.get_cosmos_container_client(
-            "graphrag", container
+            database="graphrag", container=container
         ).delete_item(item_id, item_id)
-        # cosmos_client.get_database_client(database).get_container_client(container).delete_item(item_id, item_id)
     except exceptions.CosmosResourceNotFoundError:
         # If item does not exist, do nothing
         pass
@@ -74,7 +72,7 @@ def validate_index_file_exist(index_name: str, file_name: str):
     azure_client_manager = AzureClientManager()
     try:
         cosmos_container_client = azure_client_manager.get_cosmos_container_client(
-            database_name="graphrag", container_name="container-store"
+            database="graphrag", container="container-store"
         )
         cosmos_container_client.read_item(index_name, index_name)
     except Exception:
@@ -176,7 +174,7 @@ def retrieve_original_blob_container_name(sanitized_name: str) -> str | None:
     azure_client_manager = AzureClientManager()
     try:
         container_store_client = azure_client_manager.get_cosmos_container_client(
-            database_name="graphrag", container_name="container-store"
+            database="graphrag", container="container-store"
         )
         for item in container_store_client.read_all_items():
             if item["id"] == sanitized_name:

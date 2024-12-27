@@ -162,7 +162,7 @@ async def _start_indexing_pipeline(index_name: str):
         blob_service_client.create_container(sanitized_index_name)
 
     cosmos_container_client = azure_client_manager.get_cosmos_container_client(
-        database_name="graphrag", container_name="container-store"
+        database="graphrag", container="container-store"
     )
     cosmos_container_client.upsert_item({
         "id": sanitized_index_name,
@@ -331,7 +331,7 @@ async def get_all_indexes():
     try:
         azure_client_manager = AzureClientManager()
         container_store_client = azure_client_manager.get_cosmos_container_client(
-            database_name="graphrag", container_name="container-store"
+            database="graphrag", container="container-store"
         )
         for item in container_store_client.read_all_items():
             if item["type"] == "index":
@@ -413,7 +413,7 @@ async def delete_index(index_name: str):
         # update container-store in cosmosDB
         try:
             container_store_client = azure_client_manager.get_cosmos_container_client(
-                database_name="graphrag", container_name="container-store"
+                database="graphrag", container="container-store"
             )
             container_store_client.delete_item(
                 item=sanitized_index_name, partition_key=sanitized_index_name
@@ -424,7 +424,7 @@ async def delete_index(index_name: str):
         # update jobs database in cosmosDB
         try:
             jobs_container = azure_client_manager.get_cosmos_container_client(
-                database_name="graphrag", container_name="jobs"
+                database="graphrag", container="jobs"
             )
             jobs_container.delete_item(
                 item=sanitized_index_name, partition_key=sanitized_index_name

@@ -111,7 +111,7 @@ class PipelineJob:
     def _jobs_container():
         azure_storage_client = AzureClientManager()
         return azure_storage_client.get_cosmos_container_client(
-            database_name="graphrag", container_name="jobs"
+            database="graphrag", container="jobs"
         )
 
     @classmethod

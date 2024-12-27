@@ -109,7 +109,7 @@ def main():
     azure_storage_client_manager = AzureClientManager()
     job_container_store_client = (
         azure_storage_client_manager.get_cosmos_container_client(
-            database_name="graphrag", container_name="jobs"
+            database="graphrag", container="jobs"
         )
     )
     # retrieve status of all index jobs that are scheduled or running

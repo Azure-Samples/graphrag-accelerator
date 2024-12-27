@@ -46,7 +46,7 @@ async def get_all_data_storage_containers():
     items = []
     try:
         container_store_client = azure_client_manager.get_cosmos_container_client(
-            database_name="graphrag", container_name="container-store"
+            database="graphrag", container="container-store"
         )
         for item in container_store_client.read_all_items():
             if item["type"] == "data":
@@ -161,7 +161,7 @@ async def upload_files(
             await asyncio.gather(*tasks)
         # update container-store in cosmosDB since upload process was successful
         container_store_client = azure_client_manager.get_cosmos_container_client(
-            database_name="graphrag", container_name="container-store"
+            database="graphrag", container="container-store"
         )
         container_store_client.upsert_item({
             "id": sanitized_storage_name,
