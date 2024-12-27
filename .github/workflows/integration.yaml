@@ -57,10 +57,10 @@ jobs:
         run: |
           pytest --cov=src --junitxml=test-results.xml tests/
 
-      - name: Upload pytest test results
+      - name: Upload test results
         uses: actions/upload-artifact@v4
         with:
           name: pytest-results
-          path: test-results.xml
+          path: ${{ github.workspace }}/backend/test-results.xml
         # Use always() to always run this step to publish test results when there are test failures
         if: ${{ always() }}
