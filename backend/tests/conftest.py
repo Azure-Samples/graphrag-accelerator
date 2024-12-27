@@ -76,7 +76,7 @@ def container_with_graphml_file(blob_service_client, cosmos_client):
     yield container_name
     # cleanup
     blob_service_client.delete_container(sanitized_name)
-    container_store_client.delete_item(sanitized_name, sanitized_name)
+    # container_store_client.delete_item(sanitized_name, sanitized_name)
 
 
 @pytest.fixture(scope="session")
@@ -120,7 +120,7 @@ def container_with_index_files(blob_service_client, cosmos_client):
     yield container_name
     # cleanup
     blob_service_client.delete_container(sanitized_name)
-    container_store_client.delete_item(sanitized_name, sanitized_name)
+    # container_store_client.delete_item(sanitized_name, sanitized_name)
 
 
 @pytest.fixture(scope="session")

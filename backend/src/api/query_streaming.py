@@ -186,8 +186,8 @@ async def global_search_streaming(request: GraphRequest):
             media_type="application/json",
         )
     except Exception as e:
-        reporter = LoggerSingleton().get_instance()
-        reporter.on_error(
+        logger = LoggerSingleton().get_instance()
+        logger.on_error(
             message="Error encountered while streaming global search response",
             cause=e,
             stack=traceback.format_exc(),
@@ -429,8 +429,8 @@ async def local_search_streaming(request: GraphRequest):
             media_type="application/json",
         )
     except Exception as e:
-        reporter = LoggerSingleton().get_instance()
-        reporter.on_error(
+        logger = LoggerSingleton().get_instance()
+        logger.on_error(
             message="Error encountered while streaming local search response",
             cause=e,
             stack=traceback.format_exc(),

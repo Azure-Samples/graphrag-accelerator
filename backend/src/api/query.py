@@ -197,8 +197,8 @@ async def global_query(request: GraphRequest):
 
         return GraphResponse(result=result[0], context_data=context_data)
     except Exception as e:
-        reporter = LoggerSingleton().get_instance()
-        reporter.on_error(
+        logger = LoggerSingleton().get_instance()
+        logger.on_error(
             message="Could not perform global search.",
             cause=e,
             stack=traceback.format_exc(),

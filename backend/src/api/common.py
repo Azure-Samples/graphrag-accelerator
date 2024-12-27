@@ -5,6 +5,7 @@ import hashlib
 import os
 import re
 
+from azure.cosmos import exceptions
 from azure.identity import DefaultAzureCredential
 from fastapi import HTTPException
 
@@ -35,6 +36,23 @@ def delete_blob_container(container_name: str):
     blob_service_client = azure_client_manager.get_blob_service_client()
     if blob_service_client.get_container_client(container_name).exists():
         blob_service_client.delete_container(container_name)
+
+
+def delete_cosmos_container_item(container: str, item_id: str):
+    """
+    Delete an item from a cosmosdb container. If it does not exist, do nothing.
+    If exception is raised, the calling function should catch it.
+    """
+    azure_client_manager = AzureClientManager()
+    # cosmos_client = azure_client_manager.get_cosmos_client()
+    try:
+        azure_client_manager.get_cosmos_container_client(
+            "graphrag", container
+        ).delete_item(item_id)
+        # cosmos_client.get_database_client(database).get_container_client(container).delete_item(item_id)
+    except exceptions.CosmosResourceNotFoundError:
+        # If item does not exist, do nothing
+        pass
 
 
 def validate_index_file_exist(index_name: str, file_name: str):

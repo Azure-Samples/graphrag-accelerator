@@ -55,8 +55,8 @@ async def get_report_info(index_name: str, report_id: str):
         ][0]
         return ReportResponse(text=report_content)
     except Exception:
-        reporter = LoggerSingleton().get_instance()
-        reporter.on_error("Could not get report.")
+        logger = LoggerSingleton().get_instance()
+        logger.on_error("Could not get report.")
         raise HTTPException(
             status_code=500,
             detail=f"Error retrieving report '{report_id}' from index '{index_name}'.",
@@ -97,8 +97,8 @@ async def get_chunk_info(index_name: str, text_unit_id: str):
             text=row["chunk"].values[0], source_document=row["source_doc"].values[0]
         )
     except Exception:
-        reporter = LoggerSingleton().get_instance()
-        reporter.on_error("Could not get text chunk.")
+        logger = LoggerSingleton().get_instance()
+        logger.on_error("Could not get text chunk.")
         raise HTTPException(
             status_code=500,
             detail=f"Error retrieving text chunk '{text_unit_id}' from index '{index_name}'.",
@@ -127,8 +127,8 @@ async def get_entity_info(index_name: str, entity_id: int):
             text_units=row["text_unit_ids"].values[0].tolist(),
         )
     except Exception:
-        reporter = LoggerSingleton().get_instance()
-        reporter.on_error("Could not get entity")
+        logger = LoggerSingleton().get_instance()
+        logger.on_error("Could not get entity")
         raise HTTPException(
             status_code=500,
             detail=f"Error retrieving entity '{entity_id}' from index '{index_name}'.",
@@ -172,8 +172,8 @@ async def get_claim_info(index_name: str, claim_id: int):
             document_ids=row["document_ids"].values[0].tolist(),
         )
     except Exception:
-        reporter = LoggerSingleton().get_instance()
-        reporter.on_error("Could not get claim.")
+        logger = LoggerSingleton().get_instance()
+        logger.on_error("Could not get claim.")
         raise HTTPException(
             status_code=500,
             detail=f"Error retrieving claim '{claim_id}' from index '{index_name}'.",
@@ -218,8 +218,8 @@ async def get_relationship_info(index_name: str, relationship_id: int):
             ],  # extract text_unit_ids from a list of panda series
         )
     except Exception:
-        reporter = LoggerSingleton().get_instance()
-        reporter.on_error("Could not get relationship.")
+        logger = LoggerSingleton().get_instance()
+        logger.on_error("Could not get relationship.")
         raise HTTPException(
             status_code=500,
             detail=f"Error retrieving relationship '{relationship_id}' from index '{index_name}'.",

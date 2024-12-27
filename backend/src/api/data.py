@@ -6,7 +6,6 @@ import re
 from math import ceil
 from typing import List
 
-from azure.cosmos import exceptions
 from azure.storage.blob import ContainerClient
 from fastapi import (
     APIRouter,
@@ -17,6 +16,7 @@ from fastapi import (
 from src.api.azure_clients import AzureClientManager
 from src.api.common import (
     delete_blob_container,
+    delete_cosmos_container_item,
     sanitize_name,
     validate_blob_container_name,
 )
@@ -128,7 +128,6 @@ async def upload_files(
     Raises:
         HTTPException: If the container name is invalid or if any error occurs during the upload process.
     """
-    reporter = LoggerSingleton().get_instance()
     sanitized_storage_name = sanitize_name(storage_name)
     # ensure container name follows Azure Blob Storage naming conventions
     try:
@@ -171,7 +170,8 @@ async def upload_files(
         })
         return BaseResponse(status="File upload successful.")
     except Exception:
-        reporter.on_error("Error uploading files.", details={"files": files})
+        logger = LoggerSingleton().get_instance()
+        logger.on_error("Error uploading files.", details={"files": files})
         raise HTTPException(
             status_code=500,
             detail=f"Error uploading files to container '{storage_name}'.",
@@ -188,25 +188,16 @@ async def delete_files(storage_name: str):
     """
     Delete a specified data storage container.
     """
-    azure_client_manager = AzureClientManager()
+    # azure_client_manager = AzureClientManager()
     sanitized_storage_name = sanitize_name(storage_name)
     try:
         # delete container in Azure Storage
         delete_blob_container(sanitized_storage_name)
         # delete entry from container-store in cosmosDB
-        container_store_client = azure_client_manager.get_cosmos_container_client(
-            database_name="graphrag", container_name="container-store"
-        )
-        try:
-            container_store_client.delete_item(
-                item=sanitized_storage_name,
-                partition_key=sanitized_storage_name,
-            )
-        except exceptions.CosmosResourceNotFoundError:
-            pass
+        delete_cosmos_container_item("container-store", sanitized_storage_name)
     except Exception:
-        reporter = LoggerSingleton().get_instance()
-        reporter.on_error(
+        logger = LoggerSingleton().get_instance()
+        logger.on_error(
             f"Error deleting container {storage_name}.",
             details={"Container": storage_name},
         )

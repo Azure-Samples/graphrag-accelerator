@@ -69,11 +69,11 @@ async def generate_prompts(storage_name: str, limit: int = 5):
             output=f"{temp_dir}/prompts",
         )
     except Exception as e:
-        reporter = LoggerSingleton().get_instance()
+        logger = LoggerSingleton().get_instance()
         error_details = {
             "storage_name": storage_name,
         }
-        reporter.on_error(
+        logger.on_error(
             message="Auto-prompt generation failed.",
             cause=e,
             stack=traceback.format_exc(),

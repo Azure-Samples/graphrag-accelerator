@@ -43,8 +43,8 @@ async def get_graphml_file(index_name: str):
             headers={"Content-Disposition": f"attachment; filename={graphml_filename}"},
         )
     except Exception:
-        reporter = LoggerSingleton().get_instance()
-        reporter.on_error("Could not retrieve graphml file")
+        logger = LoggerSingleton().get_instance()
+        logger.on_error("Could not retrieve graphml file")
         raise HTTPException(
             status_code=500,
             detail=f"Could not retrieve graphml file for index '{index_name}'.",

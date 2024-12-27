@@ -170,7 +170,7 @@ async def _start_indexing_pipeline(index_name: str):
         "type": "index",
     })
 
-    reporter = LoggerSingleton().get_instance()
+    logger = LoggerSingleton().get_instance()
     pipelinejob = PipelineJob()
     pipeline_job = pipelinejob.load_item(sanitized_index_name)
     sanitized_storage_name = pipeline_job.sanitized_storage_name
@@ -229,19 +229,19 @@ async def _start_indexing_pipeline(index_name: str):
     for workflow in pipeline_config.workflows:
         pipeline_job.all_workflows.append(workflow.name)
 
-    # create new reporters/callbacks just for this job
-    reporters = []
-    reporter_names = os.getenv("REPORTERS", Reporters.CONSOLE.name.upper()).split(",")
-    for reporter_name in reporter_names:
+    # create new loggers/callbacks just for this job
+    loggers = []
+    logger_names = os.getenv("REPORTERS", Reporters.CONSOLE.name.upper()).split(",")
+    for logger_name in logger_names:
         try:
-            reporters.append(Reporters[reporter_name.upper()])
+            loggers.append(Reporters[logger_name.upper()])
         except KeyError:
-            raise ValueError(f"Unknown reporter type: {reporter_name}")
+            raise ValueError(f"Unknown logger type: {logger_name}")
     workflow_callbacks = load_pipeline_logger(
         index_name=index_name,
         num_workflow_steps=len(pipeline_job.all_workflows),
         reporting_dir=sanitized_index_name,
-        reporters=reporters,
+        reporters=loggers,
     )
 
     # add pipeline job callback to the callback manager
@@ -305,7 +305,7 @@ async def _start_indexing_pipeline(index_name: str):
             details=error_details,
         )
         # log error in global index directory logs
-        reporter.on_error(
+        logger.on_error(
             message=f"Indexing pipeline failed for index '{index_name}'.",
             cause=e,
             stack=traceback.format_exc(),
@@ -337,8 +337,8 @@ async def get_all_indexes():
             if item["type"] == "index":
                 items.append(item["human_readable_name"])
     except Exception:
-        reporter = LoggerSingleton().get_instance()
-        reporter.on_error("Error retrieving index names")
+        logger = LoggerSingleton().get_instance()
+        logger.on_error("Error retrieving index names")
     return IndexNameList(index_name=items)
 
 
@@ -363,13 +363,13 @@ def _delete_k8s_job(job_name: str, namespace: str) -> None:
     # function should only work when running in AKS
     if not os.getenv("KUBERNETES_SERVICE_HOST"):
         return None
-    reporter = LoggerSingleton().get_instance()
+    logger = LoggerSingleton().get_instance()
     kubernetes_config.load_incluster_config()
     try:
         batch_v1 = kubernetes_client.BatchV1Api()
         batch_v1.delete_namespaced_job(name=job_name, namespace=namespace)
     except Exception:
-        reporter.on_error(
+        logger.on_error(
             message=f"Error deleting k8s job {job_name}.",
             details={"container": job_name},
         )
@@ -380,7 +380,7 @@ def _delete_k8s_job(job_name: str, namespace: str) -> None:
         if job_pod:
             core_v1.delete_namespaced_pod(job_pod, namespace=namespace)
     except Exception:
-        reporter.on_error(
+        logger.on_error(
             message=f"Error deleting k8s pod for job {job_name}.",
             details={"container": job_name},
         )
@@ -442,8 +442,8 @@ async def delete_index(index_name: str):
             index_client.delete_index(ai_search_index_name)
 
     except Exception:
-        reporter = LoggerSingleton().get_instance()
-        reporter.on_error(
+        logger = LoggerSingleton().get_instance()
+        logger.on_error(
             message=f"Error encountered while deleting all data for index {index_name}.",
             stack=None,
             details={"container": index_name},
