@@ -15,7 +15,7 @@ from src.main import app
 
 
 @pytest.fixture(scope="session")
-def blob_with_data_container_name(blob_service_client):
+def blob_with_data_container_name(blob_service_client: BlobServiceClient):
     # create a storage container and upload some data
     container_name = "container-with-data"
     blob_service_client.create_container(container_name)
@@ -27,7 +27,7 @@ def blob_with_data_container_name(blob_service_client):
 
 
 @pytest.fixture(scope="session")
-def blob_service_client():
+def blob_service_client() -> Generator[BlobServiceClient, None, None]:
     blob_service_client = BlobServiceClient.from_connection_string(
         os.environ["STORAGE_CONNECTION_STRING"]
     )
@@ -36,7 +36,7 @@ def blob_service_client():
 
 
 @pytest.fixture(scope="session")
-def cosmos_client():
+def cosmos_client() -> Generator[CosmosClient, None, None]:
     """ "Initializes the CosmosDB databases that graphrag expects at startup time."""
     # setup
     client = CosmosClient.from_connection_string(os.environ["COSMOS_CONNECTION_STRING"])
@@ -53,7 +53,9 @@ def cosmos_client():
 
 
 @pytest.fixture(scope="session")
-def container_with_graphml_file(blob_service_client, cosmos_client):
+def container_with_graphml_file(
+    blob_service_client: BlobServiceClient, cosmos_client: CosmosClient
+):
     """create a storage container and upload a fake graphml file"""
     container_name = "container-with-graphml"
     sanitized_name = sanitize_name(container_name)
@@ -79,7 +81,9 @@ def container_with_graphml_file(blob_service_client, cosmos_client):
 
 
 @pytest.fixture(scope="session")
-def container_with_index_files(blob_service_client, cosmos_client):
+def container_with_index_files(
+    blob_service_client: BlobServiceClient, cosmos_client: CosmosClient
+):
     """create a storage container and upload a set of parquet files associated with a valid index"""
     container_name = "container-with-index-files"
     sanitized_name = sanitize_name(container_name)
@@ -122,6 +126,6 @@ def container_with_index_files(blob_service_client, cosmos_client):
 
 
 @pytest.fixture(scope="session")
-def client(request) -> Generator:
+def client(request) -> Generator[TestClient, None, None]:
     with TestClient(app) as c:
         yield c

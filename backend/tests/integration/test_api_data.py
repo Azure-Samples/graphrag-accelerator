@@ -6,8 +6,10 @@ Integration tests for the /data API endpoints.
 
 import os
 
+from azure.cosmos import CosmosClient
 
-def test_upload_files(cosmos_client, client):
+
+def test_upload_files(cosmos_client: CosmosClient, client):
     """Test uploading files to a data blob container."""
     # create a single file
     with open("test.txt", "wb") as f:
@@ -26,14 +28,14 @@ def test_upload_files(cosmos_client, client):
         os.remove("test.txt")
 
 
-def test_delete_files(cosmos_client, client):
+def test_delete_files(cosmos_client: CosmosClient, client):
     """Test deleting a data blob container."""
     # delete a data blob container
     response = client.delete("/data/testContainer")
     assert response.status_code == 200
 
 
-def test_get_list_of_data_containers(cosmos_client, client):
+def test_get_list_of_data_containers(cosmos_client: CosmosClient, client):
     """Test getting a list of all data blob containers."""
     response = client.get("/data")
     assert response.status_code == 200

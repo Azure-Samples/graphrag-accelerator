@@ -5,7 +5,7 @@ Integration tests for the /graph API endpoints.
 """
 
 
-def test_get_graphml_file(client, container_with_graphml_file):
+def test_get_graphml_file(client, container_with_graphml_file: str):
     """Test retrieving a graphml file endpoint."""
     url = f"/graph/graphml/{container_with_graphml_file}"
     response = client.get(url)

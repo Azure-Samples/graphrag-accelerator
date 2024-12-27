@@ -4,14 +4,16 @@
 Integration tests for the /index API endpoints.
 """
 
+from azure.cosmos import CosmosClient
 
-def test_get_list_of_index_containers_empty(client, cosmos_client):
+
+def test_get_list_of_index_containers_empty(client, cosmos_client: CosmosClient):
     """Test getting a list of all blob containers holding an index."""
     response = client.get("/index")
     assert response.status_code == 200
 
 
-def test_schedule_index_without_data(client, cosmos_client):
+def test_schedule_index_without_data(client, cosmos_client: CosmosClient):
     """Test scheduling an index job with a non-existent data blob container."""
     response = client.post(
         "/index",
