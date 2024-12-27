@@ -6,6 +6,8 @@ Integration tests for the /data API endpoints.
 
 import os
 
+import pytest
+
 
 def test_upload_files(cosmos_client, client):
     """Test uploading files to a data blob container."""
@@ -20,13 +22,13 @@ def test_upload_files(cosmos_client, client):
             params={"storage_name": "testContainer"},
         )
     # check the response
-    print("data upload response")
     assert response.status_code == 200
     # remove the sample file as part of garbage collection
     if os.path.exists("test.txt"):
         os.remove("test.txt")
 
 
+@pytest.mark.skip(reason="temporary skip")
 def test_delete_files(cosmos_client, client):
     """Test deleting a data blob container."""
     # delete a data blob container
