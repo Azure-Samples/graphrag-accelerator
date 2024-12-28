@@ -176,11 +176,13 @@ def retrieve_original_blob_container_name(sanitized_name: str) -> str | None:
         container_store_client = azure_client_manager.get_cosmos_container_client(
             database="graphrag", container="container-store"
         )
-        for item in container_store_client.read_all_items():
-            if item["id"] == sanitized_name:
-                return item["human_readable_name"]
+        try:
+            return container_store_client.read_item(sanitized_name, sanitized_name)[
+                "human_readable_name"
+            ]
+        except exceptions.CosmosResourceNotFoundError:
+            return None
     except Exception:
         raise HTTPException(
             status_code=500, detail="Error retrieving original blob name."
         )
-    return None

@@ -37,7 +37,7 @@ def blob_service_client() -> Generator[BlobServiceClient, None, None]:
 
 @pytest.fixture(scope="session")
 def cosmos_client() -> Generator[CosmosClient, None, None]:
-    """ "Initializes the CosmosDB databases that graphrag expects at startup time."""
+    """Initializes the CosmosDB databases that graphrag expects at startup time."""
     # setup
     client = CosmosClient.from_connection_string(os.environ["COSMOS_CONNECTION_STRING"])
     db_client = client.create_database_if_not_exists(id="graphrag")
@@ -56,7 +56,7 @@ def cosmos_client() -> Generator[CosmosClient, None, None]:
 def container_with_graphml_file(
     blob_service_client: BlobServiceClient, cosmos_client: CosmosClient
 ):
-    """create a storage container and upload a fake graphml file"""
+    """Create a storage container that mimics a valid index and upload a fake graphml file"""
     container_name = "container-with-graphml"
     sanitized_name = sanitize_name(container_name)
     if not blob_service_client.get_container_client(sanitized_name).exists():
@@ -71,7 +71,7 @@ def container_with_graphml_file(
     ).get_container_client("container-store")
     container_store_client.upsert_item({
         "id": sanitized_name,
-        "human_readable_name": sanitized_name,
+        "human_readable_name": container_name,
         "type": "index",
     })
     yield container_name
@@ -84,7 +84,7 @@ def container_with_graphml_file(
 def container_with_index_files(
     blob_service_client: BlobServiceClient, cosmos_client: CosmosClient
 ):
-    """create a storage container and upload a set of parquet files associated with a valid index"""
+    """Create a storage container and upload a set of parquet files associated with a valid index"""
     container_name = "container-with-index-files"
     sanitized_name = sanitize_name(container_name)
     if not blob_service_client.get_container_client(sanitized_name).exists():
@@ -116,7 +116,7 @@ def container_with_index_files(
     ).get_container_client("container-store")
     container_store_client.upsert_item({
         "id": sanitized_name,
-        "human_readable_name": sanitized_name,
+        "human_readable_name": container_name,
         "type": "index",
     })
     yield container_name
