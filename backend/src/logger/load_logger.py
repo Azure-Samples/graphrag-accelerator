@@ -25,8 +25,13 @@ def load_pipeline_logger(
     num_workflow_steps: int = 0,
 ) -> WorkflowCallbacks:
     """Create a callback manager and register a list of loggers.
+
     Loggers may be configured as generic loggers or associated with a specified indexing job.
     """
+    # always register the console logger if no loggers are specified
+    if Reporters.CONSOLE not in reporters:
+        reporters.append(Reporters.CONSOLE)
+
     azure_client_manager = AzureClientManager()
     callback_manager = WorkflowCallbacksManager()
     for reporter in reporters:
@@ -37,7 +42,7 @@ def load_pipeline_logger(
                 if reporting_dir is not None:
                     container_name = os.path.join(reporting_dir, container_name)
                 # ensure the root directory exists; if not, create it
-                blob_service_client = azure_client_manager.get_blob_service_client
+                blob_service_client = azure_client_manager.get_blob_service_client()
                 container_root = Path(container_name).parts[0]
                 if not blob_service_client.get_container_client(
                     container_root
@@ -47,9 +52,7 @@ def load_pipeline_logger(
                 callback_manager.register(
                     BlobWorkflowCallbacks(
                         blob_service_client=blob_service_client,
-                        storage_account_blob_url=os.environ["STORAGE_ACCOUNT_BLOB_URL"],
                         container_name=container_name,
-                        blob_name=f"{datetime.now().strftime('%Y-%m-%d-%H:%M:%S:%f')}.logs.txt",
                         index_name=index_name,
                         num_workflow_steps=num_workflow_steps,
                     )
@@ -68,13 +71,11 @@ def load_pipeline_logger(
                         )
                     )
             case Reporters.CONSOLE:
-                pass
+                callback_manager.register(
+                    ConsoleWorkflowCallbacks(
+                        index_name=index_name, num_workflow_steps=num_workflow_steps
+                    )
+                )
             case _:
                 print(f"WARNING: unknown reporter type: {reporter}. Skipping.")
-    # always register the console reporter as a fallback
-    callback_manager.register(
-        ConsoleWorkflowCallbacks(
-            index_name=index_name, num_workflow_steps=num_workflow_steps
-        )
-    )
     return callback_manager

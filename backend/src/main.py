@@ -18,6 +18,7 @@ from kubernetes import (
     config,
 )
 
+from src.api.azure_clients import AzureClientManager
 from src.api.data import data_route
 from src.api.graph import graph_route
 from src.api.index import index_route
@@ -43,17 +44,32 @@ async def catch_all_exceptions_middleware(request: Request, call_next):
         return Response("Unexpected internal server error.", status_code=500)
 
 
-# deploy a cronjob to manage indexing jobs
+def intialize_cosmosdb_setup():
+    """Initialise CosmosDB (if necessary) by setting up a database and containers that are expected at startup time."""
+    azure_client_manager = AzureClientManager()
+    client = azure_client_manager.get_cosmos_client()
+    client.create_database_if_not_exists("graphrag")
+    client.get_database_client("graphrag").create_container_if_not_exists("jobs", "/id")
+    client.get_database_client("graphrag").create_container_if_not_exists(
+        "container-store", "/id"
+    )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # This function is called when the FastAPI application first starts up.
-    # To manage multiple graphrag indexing jobs, we deploy a k8s cronjob.
-    # This cronjob will act as a job manager that creates/manages the execution of graphrag indexing jobs as they are requested.
+    """Deploy a cronjob to manage indexing jobs.
 
-    # if TESTING environment variable is set, exit early to avoid creating the cronjob
+    This function is called when the FastAPI application first starts up.
+    To manage multiple graphrag indexing jobs, we deploy a k8s cronjob.
+    This cronjob will act as a job manager that creates/manages the execution of graphrag indexing jobs as they are requested.
+    """
+    # if running in a TESTING environment, exit early to avoid creating k8s resources
     if os.getenv("TESTING"):
         yield
         return
+
+    # Initialize CosmosDB setup
+    intialize_cosmosdb_setup()
 
     try:
         # Check if the cronjob exists and create it if it does not exist
@@ -86,8 +102,8 @@ async def lifespan(app: FastAPI):
             )
     except Exception as e:
         print("Failed to create graphrag cronjob.")
-        reporter = LoggerSingleton().get_instance()
-        reporter.on_error(
+        logger = LoggerSingleton().get_instance()
+        logger.on_error(
             message="Failed to create graphrag cronjob",
             cause=str(e),
             stack=traceback.format_exc(),

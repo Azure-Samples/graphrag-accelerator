@@ -43,7 +43,7 @@ class BlobWorkflowCallbacks(NoopWorkflowCallbacks):
         """
         self._blob_service_client = blob_service_client
         self._blob_name = (
-            f"{container_name}/{datetime.now().strftime('%Y-%m-%d-%H:%M:%S:%f')}.logs.txt"
+            f"{datetime.now().strftime('%Y-%m-%d-%H:%M:%S:%f')}.logs.txt"
             if not blob_name
             else blob_name
         )
