@@ -18,7 +18,7 @@ RUN cd backend \
     && poetry install
 
 # download all nltk data that graphrag requires
-RUN python -m nltk.downloader punkt averaged_perceptron_tagger maxent_ne_chunker words wordnet
+RUN python -c "import nltk;nltk.download(['punkt','averaged_perceptron_tagger','maxent_ne_chunker','words','wordnet'])"
 
 WORKDIR /backend
 EXPOSE 80

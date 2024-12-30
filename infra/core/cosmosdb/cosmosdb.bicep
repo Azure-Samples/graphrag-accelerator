@@ -89,45 +89,6 @@ resource graphragDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@20
   }
 }
 
-//// comment out entitiesContainer resource as the set of entity configuration API endpoints that use this have been disabled for now
-// resource entitiesContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2022-11-15' = {
-//   parent: graphragDatabase
-//   name: 'entities'
-//   properties: {
-//     resource: {
-//       id: 'entities'
-//       indexingPolicy: {
-//         indexingMode: 'consistent'
-//         automatic: true
-//         includedPaths: [
-//           {
-//             path: '/*'
-//           }
-//         ]
-//         excludedPaths: [
-//           {
-//             path: '/"_etag"/?'
-//           }
-//         ]
-//       }
-//       partitionKey: {
-//         paths: [
-//           '/id'
-//         ]
-//         kind: 'Hash'
-//         version: 2
-//       }
-//       uniqueKeyPolicy: {
-//         uniqueKeys: []
-//       }
-//       conflictResolutionPolicy: {
-//         mode: 'LastWriterWins'
-//         conflictResolutionPath: '/_ts'
-//       }
-//     }
-//   }
-// }
-
 resource jobsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2022-11-15' = {
   parent: graphragDatabase
   name: 'jobs'
