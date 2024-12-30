@@ -17,11 +17,11 @@ from kubernetes import (
     config,
 )
 
-from src.api.azure_clients import AzureStorageClientManager
+from src.api.azure_clients import AzureClientManager
 from src.api.common import sanitize_name
-from src.models import PipelineJob
-from src.reporting.reporter_singleton import ReporterSingleton
+from src.logger.logger_singleton import LoggerSingleton
 from src.typing.pipeline import PipelineJobState
+from src.utils.pipeline import PipelineJob
 
 
 def schedule_indexing_job(index_name: str):
@@ -47,7 +47,7 @@ def schedule_indexing_job(index_name: str):
             body=job_manifest, namespace=os.environ["AKS_NAMESPACE"]
         )
     except Exception:
-        reporter = ReporterSingleton().get_instance()
+        reporter = LoggerSingleton().get_instance()
         reporter.on_error(
             "Index job manager encountered error scheduling indexing job",
         )
@@ -107,10 +107,10 @@ def main():
     """
     kubernetes_jobs = list_k8s_jobs(os.environ["AKS_NAMESPACE"])
 
-    azure_storage_client_manager = AzureStorageClientManager()
+    azure_storage_client_manager = AzureClientManager()
     job_container_store_client = (
         azure_storage_client_manager.get_cosmos_container_client(
-            database_name="graphrag", container_name="jobs"
+            database="graphrag", container="jobs"
         )
     )
     # retrieve status of all index jobs that are scheduled or running

@@ -1,0 +1,66 @@
+name: Testing
+on:
+  workflow_dispatch: # triggered manually via the GitHub UI
+  pull_request:      # triggered when a PR is created or updated
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+    paths:             # only trigger on changes in specific directories
+      - '.github/**/*.yaml'
+      - 'backend/**'
+      - 'docker/**'
+      - 'backend/poetry.lock'
+      - 'backend/pyproject.toml'
+
+env:
+  PYTHON_VERSION: '3.10'
+
+jobs:
+  tests:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Azurite
+        shell: bash
+        run: |
+          npm install -g azurite
+          azurite --silent &
+
+      # For more information on installation/setup of Azure Cosmos DB Emulator
+      # https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-develop-emulator?tabs=docker-linux%2Cpython&pivots=api-nosql
+      # Note: the emulator is only available on Windows runners. It can take longer than the default to initially startup so we increase the default timeout.
+      # If a job fails due to timeout, restarting the cicd job usually resolves the problem.
+      - name: Install Azure Cosmos DB emulator
+        run: |
+          Write-Host "Launching Cosmos DB Emulator"
+          Import-Module "$env:ProgramFiles\Azure Cosmos DB Emulator\PSModules\Microsoft.Azure.CosmosDB.Emulator"
+          Start-CosmosDbEmulator -Timeout 500
+
+      - name: Install dependencies
+        working-directory: ${{ github.workspace }}/backend
+        run: |
+          pip install poetry
+          poetry config virtualenvs.create false
+          poetry install --with test
+
+      - name: Run pytests
+        working-directory: ${{ github.workspace }}/backend
+        run: |
+          pytest --cov=src --junitxml=test-results.xml tests/
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results
+          path: ${{ github.workspace }}/backend/test-results.xml
+        # Use always() to always run this step to publish test results when there are test failures
+        if: ${{ always() }}

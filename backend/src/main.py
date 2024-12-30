@@ -13,11 +13,13 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
+from fastapi_offline import FastAPIOffline
 from kubernetes import (
     client,
     config,
 )
 
+from src.api.azure_clients import AzureClientManager
 from src.api.data import data_route
 from src.api.graph import graph_route
 from src.api.index import index_route
@@ -25,7 +27,7 @@ from src.api.index_configuration import index_configuration_route
 from src.api.query import query_route
 from src.api.query_streaming import query_streaming_route
 from src.api.source import source_route
-from src.reporting import ReporterSingleton
+from src.logger import LoggerSingleton
 
 
 async def catch_all_exceptions_middleware(request: Request, call_next):
@@ -33,21 +35,43 @@ async def catch_all_exceptions_middleware(request: Request, call_next):
     try:
         return await call_next(request)
     except Exception as e:
-        reporter = ReporterSingleton().get_instance()
+        reporter = LoggerSingleton().get_instance()
+        stack = traceback.format_exc()
         reporter.on_error(
             message="Unexpected internal server error",
             cause=e,
-            stack=traceback.format_exc(),
+            stack=stack,
         )
         return Response("Unexpected internal server error.", status_code=500)
 
 
-# deploy a cronjob to manage indexing jobs
+def intialize_cosmosdb_setup():
+    """Initialise CosmosDB (if necessary) by setting up a database and containers that are expected at startup time."""
+    azure_client_manager = AzureClientManager()
+    client = azure_client_manager.get_cosmos_client()
+    client.create_database_if_not_exists("graphrag")
+    client.get_database_client("graphrag").create_container_if_not_exists("jobs", "/id")
+    client.get_database_client("graphrag").create_container_if_not_exists(
+        "container-store", "/id"
+    )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # This function is called when the FastAPI application first starts up.
-    # To manage multiple graphrag indexing jobs, we deploy a k8s cronjob.
-    # This cronjob will act as a job manager that creates/manages the execution of graphrag indexing jobs as they are requested.
+    """Deploy a cronjob to manage indexing jobs.
+
+    This function is called when the FastAPI application first starts up.
+    To manage multiple graphrag indexing jobs, we deploy a k8s cronjob.
+    This cronjob will act as a job manager that creates/manages the execution of graphrag indexing jobs as they are requested.
+    """
+    # if running in a TESTING environment, exit early to avoid creating k8s resources
+    if os.getenv("TESTING"):
+        yield
+        return
+
+    # Initialize CosmosDB setup
+    intialize_cosmosdb_setup()
+
     try:
         # Check if the cronjob exists and create it if it does not exist
         config.load_incluster_config()
@@ -79,8 +103,8 @@ async def lifespan(app: FastAPI):
             )
     except Exception as e:
         print("Failed to create graphrag cronjob.")
-        reporter = ReporterSingleton().get_instance()
-        reporter.on_error(
+        logger = LoggerSingleton().get_instance()
+        logger.on_error(
             message="Failed to create graphrag cronjob",
             cause=str(e),
             stack=traceback.format_exc(),
@@ -89,9 +113,10 @@ async def lifespan(app: FastAPI):
     # shutdown/garbage collection code goes here
 
 
-app = FastAPI(
+app = FastAPIOffline(
     docs_url="/manpage/docs",
     openapi_url="/manpage/openapi.json",
+    root_path=os.getenv("API_ROOT_PATH", ""),
     title="GraphRAG",
     version=os.getenv("GRAPHRAG_VERSION", "undefined_version"),
     lifespan=lifespan,

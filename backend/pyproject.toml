@@ -12,7 +12,6 @@ authors = [
     "Shane Solomon <shane.solomon@microsoft.com>",
     "Kenny Zhang <zhangken@microsoft.com>"
 ]
-readme = "README.md"
 license = "MIT"
 package-mode = false
 
@@ -28,8 +27,15 @@ jupyter = "*"
 pre-commit = ">=3.6.0"
 ruff = ">=0.1.13"
 
+[tool.poetry.group.test]
+optional = true
+
 [tool.poetry.group.test.dependencies]
 pytest = ">=8.2.1"
+pytest-asyncio = "^0.25.0"
+pytest-cov = "^6.0.0"
+pytest-env = "^1.1.5"
+pytest-xdist = "^3.6.1"
 wikipedia = ">=1.4.0"
 
 [tool.poetry.group.backend.dependencies]
@@ -44,6 +50,7 @@ azure-storage-blob = ">=12.19.0"
 datashaper = ">=0.0.46"
 environs = ">=9.5.0"
 fastapi = ">=0.110.0"
+fastapi-offline = ">=1.7.3"
 fastparquet = ">=2023.10.1"
 fsspec = ">=2024.2.0"
 graphrag = "==0.3.3"

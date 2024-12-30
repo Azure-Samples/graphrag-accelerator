@@ -14,16 +14,12 @@ from fastapi import (
 from fastapi.responses import StreamingResponse
 from graphrag.prompt_tune.cli import prompt_tune as generate_fine_tune_prompts
 
-from src.api.azure_clients import (
-    AzureStorageClientManager,
-    BlobServiceClientSingleton,
-)
+from src.api.azure_clients import AzureClientManager
 from src.api.common import (
     sanitize_name,
 )
-from src.reporting import ReporterSingleton
+from src.logger import LoggerSingleton
 
-azure_storage_client_manager = AzureStorageClientManager()
 index_configuration_route = APIRouter(
     prefix="/index/config", tags=["Index Configuration"]
 )
@@ -40,7 +36,8 @@ async def generate_prompts(storage_name: str, limit: int = 5):
     community reports, and summarize descriptions based on a sample of provided data.
     """
     # check for storage container existence
-    blob_service_client = BlobServiceClientSingleton().get_instance()
+    azure_client_manager = AzureClientManager()
+    blob_service_client = azure_client_manager.get_blob_service_client()
     sanitized_storage_name = sanitize_name(storage_name)
     if not blob_service_client.get_container_client(sanitized_storage_name).exists():
         raise HTTPException(
@@ -72,11 +69,11 @@ async def generate_prompts(storage_name: str, limit: int = 5):
             output=f"{temp_dir}/prompts",
         )
     except Exception as e:
-        reporter = ReporterSingleton().get_instance()
+        logger = LoggerSingleton().get_instance()
         error_details = {
             "storage_name": storage_name,
         }
-        reporter.on_error(
+        logger.on_error(
             message="Auto-prompt generation failed.",
             cause=e,
             stack=traceback.format_exc(),

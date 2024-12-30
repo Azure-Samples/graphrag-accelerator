@@ -19,14 +19,14 @@ from graphrag.query.api import (
 )
 from graphrag.query.api import local_search_streaming as local_search_streaming_internal
 
-from src.api.azure_clients import BlobServiceClientSingleton
+from src.api.azure_clients import AzureClientManager
 from src.api.common import (
     sanitize_name,
     validate_index_file_exist,
 )
 from src.api.query import _is_index_complete
+from src.logger import LoggerSingleton
 from src.models import GraphRequest
-from src.reporting import ReporterSingleton
 from src.utils import query as query_helper
 
 from .query import _get_embedding_description_store, _update_context
@@ -104,7 +104,6 @@ async def global_search_streaming(request: GraphRequest):
             nodes_table_path = f"abfs://{index_name}/{NODES_TABLE}"
 
             # read parquet files into DataFrames and add provenance information
-
             # note that nodes need to set before communities to that max community id makes sense
             nodes_df = query_helper.get_df(nodes_table_path)
             for i in nodes_df["human_readable_id"]:
@@ -186,8 +185,8 @@ async def global_search_streaming(request: GraphRequest):
             media_type="application/json",
         )
     except Exception as e:
-        reporter = ReporterSingleton().get_instance()
-        reporter.on_error(
+        logger = LoggerSingleton().get_instance()
+        logger.on_error(
             message="Error encountered while streaming global search response",
             cause=e,
             stack=traceback.format_exc(),
@@ -210,15 +209,14 @@ async def local_search_streaming(request: GraphRequest):
     sanitized_index_names_link = {
         s: i for s, i in zip(sanitized_index_names, index_names)
     }
-
     for index_name in sanitized_index_names:
         if not _is_index_complete(index_name):
             raise HTTPException(
                 status_code=500,
                 detail=f"{sanitized_index_names_link[index_name]} not ready for querying.",
             )
-
-    blob_service_client = BlobServiceClientSingleton.get_instance()
+    azure_client_manager = AzureClientManager()
+    blob_service_client = azure_client_manager.get_blob_service_client()
 
     community_dfs = []
     covariates_dfs = []
@@ -430,8 +428,8 @@ async def local_search_streaming(request: GraphRequest):
             media_type="application/json",
         )
     except Exception as e:
-        reporter = ReporterSingleton().get_instance()
-        reporter.on_error(
+        logger = LoggerSingleton().get_instance()
+        logger.on_error(
             message="Error encountered while streaming local search response",
             cause=e,
             stack=traceback.format_exc(),

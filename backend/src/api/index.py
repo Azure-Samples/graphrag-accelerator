@@ -22,39 +22,31 @@ from graphrag.index import create_pipeline_config
 from graphrag.index.bootstrap import bootstrap
 from graphrag.index.run import run_pipeline_with_config
 from kubernetes import (
-    client,
-    config,
+    client as kubernetes_client,
+)
+from kubernetes import (
+    config as kubernetes_config,
 )
 
-from src.api.azure_clients import (
-    AzureStorageClientManager,
-    BlobServiceClientSingleton,
-    get_database_container_client,
-)
+from src.api.azure_clients import AzureClientManager
 from src.api.common import (
     delete_blob_container,
     sanitize_name,
     validate_blob_container_name,
 )
+from src.logger import (
+    LoggerSingleton,
+    PipelineJobWorkflowCallbacks,
+    Reporters,
+    load_pipeline_logger,
+)
 from src.models import (
     BaseResponse,
     IndexNameList,
     IndexStatusResponse,
-    PipelineJob,
 )
-from src.reporting import ReporterSingleton
-from src.reporting.load_reporter import load_pipeline_reporter
-from src.reporting.pipeline_job_workflow_callbacks import PipelineJobWorkflowCallbacks
-from src.reporting.typing import Reporters
-from src.typing import PipelineJobState
-
-blob_service_client = BlobServiceClientSingleton.get_instance()
-azure_storage_client_manager = (
-    AzureStorageClientManager()
-)  # TODO: update API to use the AzureStorageClientManager
-
-ai_search_url = os.environ["AI_SEARCH_URL"]
-ai_search_audience = os.environ["AI_SEARCH_AUDIENCE"]
+from src.typing.pipeline import PipelineJobState
+from src.utils.pipeline import PipelineJob
 
 index_route = APIRouter(
     prefix="/index",
@@ -75,7 +67,8 @@ async def setup_indexing_pipeline(
     community_report_prompt: UploadFile | None = None,
     summarize_descriptions_prompt: UploadFile | None = None,
 ):
-    _blob_service_client = BlobServiceClientSingleton().get_instance()
+    azure_client_manager = AzureClientManager()
+    blob_service_client = azure_client_manager.get_blob_service_client()
     pipelinejob = PipelineJob()
 
     # validate index name against blob container naming rules
@@ -90,7 +83,7 @@ async def setup_indexing_pipeline(
 
     # check for data container existence
     sanitized_storage_name = sanitize_name(storage_name)
-    if not _blob_service_client.get_container_client(sanitized_storage_name).exists():
+    if not blob_service_client.get_container_client(sanitized_storage_name).exists():
         raise HTTPException(
             status_code=500,
             detail=f"Storage blob container {storage_name} does not exist",
@@ -163,19 +156,21 @@ async def _start_indexing_pipeline(index_name: str):
     sanitized_index_name = sanitize_name(index_name)
 
     # update or create new item in container-store in cosmosDB
-    _blob_service_client = BlobServiceClientSingleton().get_instance()
-    if not _blob_service_client.get_container_client(sanitized_index_name).exists():
-        _blob_service_client.create_container(sanitized_index_name)
-    container_store_client = get_database_container_client(
-        database_name="graphrag", container_name="container-store"
+    azure_client_manager = AzureClientManager()
+    blob_service_client = azure_client_manager.get_blob_service_client()
+    if not blob_service_client.get_container_client(sanitized_index_name).exists():
+        blob_service_client.create_container(sanitized_index_name)
+
+    cosmos_container_client = azure_client_manager.get_cosmos_container_client(
+        database="graphrag", container="container-store"
     )
-    container_store_client.upsert_item({
+    cosmos_container_client.upsert_item({
         "id": sanitized_index_name,
         "human_readable_name": index_name,
         "type": "index",
     })
 
-    reporter = ReporterSingleton().get_instance()
+    logger = LoggerSingleton().get_instance()
     pipelinejob = PipelineJob()
     pipeline_job = pipelinejob.load_item(sanitized_index_name)
     sanitized_storage_name = pipeline_job.sanitized_storage_name
@@ -234,19 +229,19 @@ async def _start_indexing_pipeline(index_name: str):
     for workflow in pipeline_config.workflows:
         pipeline_job.all_workflows.append(workflow.name)
 
-    # create new reporters/callbacks just for this job
-    reporters = []
-    reporter_names = os.getenv("REPORTERS", Reporters.CONSOLE.name.upper()).split(",")
-    for reporter_name in reporter_names:
+    # create new loggers/callbacks just for this job
+    loggers = []
+    logger_names = os.getenv("REPORTERS", Reporters.CONSOLE.name.upper()).split(",")
+    for logger_name in logger_names:
         try:
-            reporters.append(Reporters[reporter_name.upper()])
+            loggers.append(Reporters[logger_name.upper()])
         except KeyError:
-            raise ValueError(f"Unknown reporter type: {reporter_name}")
-    workflow_callbacks = load_pipeline_reporter(
+            raise ValueError(f"Unknown logger type: {logger_name}")
+    workflow_callbacks = load_pipeline_logger(
         index_name=index_name,
         num_workflow_steps=len(pipeline_job.all_workflows),
         reporting_dir=sanitized_index_name,
-        reporters=reporters,
+        reporters=loggers,
     )
 
     # add pipeline job callback to the callback manager
@@ -310,7 +305,7 @@ async def _start_indexing_pipeline(index_name: str):
             details=error_details,
         )
         # log error in global index directory logs
-        reporter.on_error(
+        logger.on_error(
             message=f"Indexing pipeline failed for index '{index_name}'.",
             cause=e,
             stack=traceback.format_exc(),
@@ -334,15 +329,16 @@ async def get_all_indexes():
     """
     items = []
     try:
-        container_store_client = get_database_container_client(
-            database_name="graphrag", container_name="container-store"
+        azure_client_manager = AzureClientManager()
+        container_store_client = azure_client_manager.get_cosmos_container_client(
+            database="graphrag", container="container-store"
         )
         for item in container_store_client.read_all_items():
             if item["type"] == "index":
                 items.append(item["human_readable_name"])
     except Exception:
-        reporter = ReporterSingleton().get_instance()
-        reporter.on_error("Error retrieving index names")
+        logger = LoggerSingleton().get_instance()
+        logger.on_error("Error retrieving index names")
     return IndexNameList(index_name=items)
 
 
@@ -351,8 +347,8 @@ def _get_pod_name(job_name: str, namespace: str) -> str | None:
     # function should work only when running in AKS
     if not os.getenv("KUBERNETES_SERVICE_HOST"):
         return None
-    config.load_incluster_config()
-    v1 = client.CoreV1Api()
+    kubernetes_config.load_incluster_config()
+    v1 = kubernetes_client.CoreV1Api()
     ret = v1.list_namespaced_pod(namespace=namespace)
     for i in ret.items:
         if job_name in i.metadata.name:
@@ -367,24 +363,24 @@ def _delete_k8s_job(job_name: str, namespace: str) -> None:
     # function should only work when running in AKS
     if not os.getenv("KUBERNETES_SERVICE_HOST"):
         return None
-    reporter = ReporterSingleton().get_instance()
-    config.load_incluster_config()
+    logger = LoggerSingleton().get_instance()
+    kubernetes_config.load_incluster_config()
     try:
-        batch_v1 = client.BatchV1Api()
+        batch_v1 = kubernetes_client.BatchV1Api()
         batch_v1.delete_namespaced_job(name=job_name, namespace=namespace)
     except Exception:
-        reporter.on_error(
+        logger.on_error(
             message=f"Error deleting k8s job {job_name}.",
             details={"container": job_name},
         )
         pass
     try:
-        core_v1 = client.CoreV1Api()
+        core_v1 = kubernetes_client.CoreV1Api()
         job_pod = _get_pod_name(job_name, os.environ["AKS_NAMESPACE"])
         if job_pod:
             core_v1.delete_namespaced_pod(job_pod, namespace=namespace)
     except Exception:
-        reporter.on_error(
+        logger.on_error(
             message=f"Error deleting k8s pod for job {job_name}.",
             details={"container": job_name},
         )
@@ -402,6 +398,7 @@ async def delete_index(index_name: str):
     Delete a specified index.
     """
     sanitized_index_name = sanitize_name(index_name)
+    azure_client_manager = AzureClientManager()
     try:
         # kill indexing job if it is running
         if os.getenv("KUBERNETES_SERVICE_HOST"):  # only found if in AKS
@@ -415,8 +412,8 @@ async def delete_index(index_name: str):
 
         # update container-store in cosmosDB
         try:
-            container_store_client = get_database_container_client(
-                database_name="graphrag", container_name="container-store"
+            container_store_client = azure_client_manager.get_cosmos_container_client(
+                database="graphrag", container="container-store"
             )
             container_store_client.delete_item(
                 item=sanitized_index_name, partition_key=sanitized_index_name
@@ -426,8 +423,8 @@ async def delete_index(index_name: str):
 
         # update jobs database in cosmosDB
         try:
-            jobs_container = get_database_container_client(
-                database_name="graphrag", container_name="jobs"
+            jobs_container = azure_client_manager.get_cosmos_container_client(
+                database="graphrag", container="jobs"
             )
             jobs_container.delete_item(
                 item=sanitized_index_name, partition_key=sanitized_index_name
@@ -436,17 +433,17 @@ async def delete_index(index_name: str):
             pass
 
         index_client = SearchIndexClient(
-            endpoint=ai_search_url,
+            endpoint=os.environ["AI_SEARCH_URL"],
             credential=DefaultAzureCredential(),
-            audience=ai_search_audience,
+            audience=os.environ["AI_SEARCH_AUDIENCE"],
         )
         ai_search_index_name = f"{sanitized_index_name}_description_embedding"
         if ai_search_index_name in index_client.list_index_names():
             index_client.delete_index(ai_search_index_name)
 
     except Exception:
-        reporter = ReporterSingleton().get_instance()
-        reporter.on_error(
+        logger = LoggerSingleton().get_instance()
+        logger.on_error(
             message=f"Error encountered while deleting all data for index {index_name}.",
             stack=None,
             details={"container": index_name},

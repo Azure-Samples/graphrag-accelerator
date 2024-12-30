@@ -2,17 +2,29 @@
 # Licensed under the MIT License.
 
 import hashlib
+import os
 import re
 
+from azure.cosmos import exceptions
+from azure.identity import DefaultAzureCredential
 from fastapi import HTTPException
 
-from src.api.azure_clients import (
-    AzureStorageClientManager,
-    BlobServiceClientSingleton,
-)
+from src.api.azure_clients import AzureClientManager
 
-blob_service_client = BlobServiceClientSingleton.get_instance()
-azure_storage_client_manager = AzureStorageClientManager()
+
+def get_pandas_storage_options() -> dict:
+    """Generate the storage options required by pandas to read parquet files from Storage."""
+    # For more information on the options available, see: https://github.com/fsspec/adlfs?tab=readme-ov-file#setting-credentials
+    azure_client_manager = AzureClientManager()
+    options = {
+        "account_name": azure_client_manager.storage_account_name,
+        "account_host": azure_client_manager.storage_account_hostname,
+    }
+    if os.getenv("STORAGE_CONNECTION_STRING"):
+        options["connection_string"] = os.getenv("STORAGE_CONNECTION_STRING")
+    else:
+        options["credential"] = DefaultAzureCredential()
+    return options
 
 
 def delete_blob_container(container_name: str):
@@ -20,8 +32,25 @@ def delete_blob_container(container_name: str):
     Delete a blob container. If it does not exist, do nothing.
     If exception is raised, the calling function should catch it.
     """
+    azure_client_manager = AzureClientManager()
+    blob_service_client = azure_client_manager.get_blob_service_client()
     if blob_service_client.get_container_client(container_name).exists():
         blob_service_client.delete_container(container_name)
+
+
+def delete_cosmos_container_item(container: str, item_id: str):
+    """
+    Delete an item from a cosmosdb container. If it does not exist, do nothing.
+    If exception is raised, the calling function should catch it.
+    """
+    azure_client_manager = AzureClientManager()
+    try:
+        azure_client_manager.get_cosmos_container_client(
+            database="graphrag", container=container
+        ).delete_item(item_id, item_id)
+    except exceptions.CosmosResourceNotFoundError:
+        # If item does not exist, do nothing
+        pass
 
 
 def validate_index_file_exist(index_name: str, file_name: str):
@@ -40,18 +69,18 @@ def validate_index_file_exist(index_name: str, file_name: str):
 
     Raises: ValueError
     """
-    # verify index_name is a valid index by checking container-store in cosmos db
+    azure_client_manager = AzureClientManager()
     try:
-        container_store_client = (
-            azure_storage_client_manager.get_cosmos_container_client(
-                database_name="graphrag", container_name="container-store"
-            )
+        cosmos_container_client = azure_client_manager.get_cosmos_container_client(
+            database="graphrag", container="container-store"
         )
-        container_store_client.read_item(index_name, index_name)
+        cosmos_container_client.read_item(index_name, index_name)
     except Exception:
         raise ValueError(f"Container {index_name} is not a valid index.")
     # check for file existence
-    index_container_client = blob_service_client.get_container_client(index_name)
+    index_container_client = (
+        azure_client_manager.get_blob_service_client().get_container_client(index_name)
+    )
     if not index_container_client.exists():
         raise ValueError(f"Container {index_name} not found.")
     if not index_container_client.get_blob_client(file_name).exists():
@@ -142,45 +171,18 @@ def retrieve_original_blob_container_name(sanitized_name: str) -> str | None:
     Returns: str
         The original human-readable name.
     """
+    azure_client_manager = AzureClientManager()
     try:
-        container_store_client = (
-            azure_storage_client_manager.get_cosmos_container_client(
-                database_name="graphrag", container_name="container-store"
-            )
+        container_store_client = azure_client_manager.get_cosmos_container_client(
+            database="graphrag", container="container-store"
         )
-        for item in container_store_client.read_all_items():
-            if item["id"] == sanitized_name:
-                return item["human_readable_name"]
+        try:
+            return container_store_client.read_item(sanitized_name, sanitized_name)[
+                "human_readable_name"
+            ]
+        except exceptions.CosmosResourceNotFoundError:
+            return None
     except Exception:
         raise HTTPException(
             status_code=500, detail="Error retrieving original blob name."
         )
-    return None
-
-
-def retrieve_original_entity_config_name(sanitized_name: str) -> str | None:
-    """
-    Retrieve the original human-readable entity config name of a sanitized entity config name.
-
-    Args:
-    -----
-    sanitized_name (str)
-        The sanitized name to be converted back to the original name.
-
-    Returns: str
-        The original human-readable name.
-    """
-    try:
-        container_store_client = (
-            azure_storage_client_manager.get_cosmos_container_client(
-                database_name="graphrag", container_name="entities"
-            )
-        )
-        for item in container_store_client.read_all_items():
-            if item["id"] == sanitized_name:
-                return item["human_readable_name"]
-    except Exception:
-        raise HTTPException(
-            status_code=500, detail="Error retrieving original entity config name."
-        )
-    return None
