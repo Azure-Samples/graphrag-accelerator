@@ -25,19 +25,19 @@ from graphrag.vector_stores.base import (
     VectorStoreSearchResult,
 )
 
-from src.api.azure_clients import BlobServiceClientSingleton
+from src.api.azure_clients import AzureClientManager
 from src.api.common import (
     sanitize_name,
     validate_index_file_exist,
 )
+from src.logger import LoggerSingleton
 from src.models import (
     GraphRequest,
     GraphResponse,
-    PipelineJob,
 )
-from src.reporting import ReporterSingleton
-from src.typing import PipelineJobState
+from src.typing.pipeline import PipelineJobState
 from src.utils import query as query_helper
+from src.utils.pipeline import PipelineJob
 
 query_route = APIRouter(
     prefix="/query",
@@ -115,8 +115,7 @@ async def global_query(request: GraphRequest):
             nodes_table_path = f"abfs://{index_name}/{NODES_TABLE}"
 
             # read the parquet files into DataFrames and add provenance information
-
-            # note that nodes need to set before communities to that max community id makes sense
+            # note that nodes need to be set before communities so that max community id makes sense
             nodes_df = query_helper.get_df(nodes_table_path)
             for i in nodes_df["human_readable_id"]:
                 links["nodes"][i + max_vals["nodes"] + 1] = {
@@ -197,8 +196,8 @@ async def global_query(request: GraphRequest):
 
         return GraphResponse(result=result[0], context_data=context_data)
     except Exception as e:
-        reporter = ReporterSingleton().get_instance()
-        reporter.on_error(
+        logger = LoggerSingleton().get_instance()
+        logger.on_error(
             message="Could not perform global search.",
             cause=e,
             stack=traceback.format_exc(),
@@ -230,7 +229,8 @@ async def local_query(request: GraphRequest):
                 detail=f"{index_name} not ready for querying.",
             )
 
-    blob_service_client = BlobServiceClientSingleton.get_instance()
+    azure_client_manager = AzureClientManager()
+    blob_service_client = azure_client_manager.get_blob_service_client()
 
     community_dfs = []
     covariates_dfs = []
