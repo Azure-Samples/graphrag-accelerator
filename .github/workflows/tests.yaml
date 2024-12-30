@@ -1,4 +1,4 @@
-name: Integration Testing
+name: Testing
 on:
   workflow_dispatch: # triggered manually via the GitHub UI
   pull_request:      # triggered when a PR is created or updated
@@ -18,7 +18,7 @@ env:
   PYTHON_VERSION: '3.10'
 
 jobs:
-  integration-tests:
+  tests:
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -52,7 +52,7 @@ jobs:
           poetry config virtualenvs.create false
           poetry install --with test
 
-      - name: Run integration tests
+      - name: Run pytests
         working-directory: ${{ github.workspace }}/backend
         run: |
           pytest --cov=src --junitxml=test-results.xml tests/
