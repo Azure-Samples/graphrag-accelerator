@@ -19,7 +19,7 @@ RUN cd backend \
     && poetry install
 
 # download all nltk data that graphrag requires
-RUN python -m nltk.downloader punkt averaged_perceptron_tagger maxent_ne_chunker words wordnet
+RUN python -c "import nltk;nltk.download(['punkt','averaged_perceptron_tagger','maxent_ne_chunker','words','wordnet'])"
 
 # download tiktoken model encodings
 RUN python -c "import tiktoken; tiktoken.encoding_for_model('gpt-3.5-turbo'); tiktoken.encoding_for_model('gpt-4'); tiktoken.encoding_for_model('gpt-4o');"

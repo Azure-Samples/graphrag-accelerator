@@ -2,12 +2,12 @@ notebooks
 
 # Environments
 .env
-.venv
 env/
-venv/
 ENV/
-env.bak/
-venv.bak/
+**/env.bak
+**/venv.bak
+**/.venv
+**/venv
 
 .github
 .git
