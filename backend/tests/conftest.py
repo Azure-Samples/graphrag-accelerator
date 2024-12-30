@@ -94,7 +94,7 @@ def container_with_index_files(
     this_directory = os.path.dirname(
         os.path.abspath(inspect.getfile(inspect.currentframe()))
     )
-    data_root = f"{this_directory}/data/aliens-dataset/output"
+    data_root = f"{this_directory}/data/synthetic-dataset/output"
     for file in [
         "create_base_documents.parquet",
         "create_final_entities.parquet",
@@ -102,7 +102,6 @@ def container_with_index_files(
         "create_final_community_reports.parquet",
         "create_base_text_units.parquet",
     ]:
-        print(file)
         blob_client = blob_service_client.get_blob_client(
             sanitized_name, f"output/{file}"
         )
@@ -122,7 +121,7 @@ def container_with_index_files(
     yield container_name
     # cleanup
     blob_service_client.delete_container(sanitized_name)
-    # container_store_client.delete_item(sanitized_name, sanitized_name)
+    container_store_client.delete_item(sanitized_name, sanitized_name)
 
 
 @pytest.fixture(scope="session")

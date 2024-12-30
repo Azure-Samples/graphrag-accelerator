@@ -44,9 +44,9 @@ from src.models import (
     BaseResponse,
     IndexNameList,
     IndexStatusResponse,
-    PipelineJob,
 )
 from src.typing.pipeline import PipelineJobState
+from src.utils.pipeline import PipelineJob
 
 index_route = APIRouter(
     prefix="/index",

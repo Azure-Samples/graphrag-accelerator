@@ -20,8 +20,8 @@ from kubernetes import (
 from src.api.azure_clients import AzureClientManager
 from src.api.common import sanitize_name
 from src.logger.logger_singleton import LoggerSingleton
-from src.models import PipelineJob
 from src.typing.pipeline import PipelineJobState
+from src.utils.pipeline import PipelineJob
 
 
 def schedule_indexing_job(index_name: str):

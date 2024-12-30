@@ -34,10 +34,10 @@ from src.logger import LoggerSingleton
 from src.models import (
     GraphRequest,
     GraphResponse,
-    PipelineJob,
 )
 from src.typing.pipeline import PipelineJobState
 from src.utils import query as query_helper
+from src.utils.pipeline import PipelineJob
 
 query_route = APIRouter(
     prefix="/query",
