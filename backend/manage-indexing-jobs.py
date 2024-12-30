@@ -88,7 +88,8 @@ def list_k8s_jobs(namespace: str) -> list[str]:
     jobs = batch_v1.list_namespaced_job(namespace=namespace)
     job_list = []
     for job in jobs.items:
-        job_list.append(job.metadata.name)
+        if job.metadata.name.startswith("indexing-job-") and job.status.active:
+            job_list.append(job.metadata.name)
     return job_list
 
 
@@ -124,7 +125,7 @@ def main():
                 )
                 pipelinejob = PipelineJob()
                 pipeline_job = pipelinejob.load_item(item["sanitized_index_name"])
-                pipeline_job["status"] = PipelineJobState.FAILED.value
+                pipeline_job.status = PipelineJobState.FAILED
             else:
                 print(
                     f"Indexing job for '{item['human_readable_index_name']}' already running. Will not schedule another. Exiting..."
