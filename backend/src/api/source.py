@@ -137,11 +137,14 @@ async def get_entity_info(index_name: str, entity_id: int):
             f"abfs://{sanitized_index_name}/{ENTITY_EMBEDDING_TABLE}",
             storage_options=get_pandas_storage_options(),
         )
-        row = entity_table[entity_table.human_readable_id == entity_id]
+        # check if entity_id exists in the index
+        if not entity_table["human_readable_id"].isin([entity_id]).any():
+            raise ValueError(f"Entity '{entity_id}' not found in index '{index_name}'.")
+        row = entity_table[entity_table["human_readable_id"] == entity_id]
         return EntityResponse(
-            name=row["name"].values[0],
-            description=row["description"].values[0],
-            text_units=row["text_unit_ids"].values[0].tolist(),
+            name=row["name"].to_numpy()[0],
+            description=row["description"].to_numpy()[0],
+            text_units=row["text_unit_ids"].to_numpy()[0].tolist(),
         )
     except Exception:
         logger = LoggerSingleton().get_instance()

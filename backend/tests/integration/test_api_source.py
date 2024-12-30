@@ -23,3 +23,15 @@ def test_get_chunk_info(container_with_index_files: str, client: TestClient):
         f"/source/text/{container_with_index_files}/5b2d21ec6fc171c30bdda343f128f5a6"
     )
     assert response.status_code == 200
+
+
+def test_get_entity_info(container_with_index_files: str, client: TestClient):
+    """Test retrieving an entity description."""
+    response = client.get(f"/source/entity/{container_with_index_files}/1")
+    assert response.status_code == 200
+
+
+def test_get_relationship_info(container_with_index_files: str, client: TestClient):
+    """Test retrieving an entity description."""
+    response = client.get(f"/source/relationship/{container_with_index_files}/1")
+    assert response.status_code == 200
