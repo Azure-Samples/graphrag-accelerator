@@ -15,12 +15,15 @@ param publicNetworkAccess string = 'Disabled'
   '00000000-0000-0000-0000-000000000001' // 'Cosmos DB Built-in Data Reader' role
   '00000000-0000-0000-0000-000000000002' // 'Cosmos DB Built-in Data Contributor' role
 ])
-param roleDefinitionId string = '00000000-0000-0000-0000-000000000002'
+param roleDefinitionId array = [
+  '00000000-0000-0000-0000-000000000001'
+  '00000000-0000-0000-0000-000000000002'
+]
 
 param principalId string
 
 
-resource cosmosDb 'Microsoft.DocumentDB/databaseAccounts@2022-11-15' = {
+resource cosmosDb 'Microsoft.DocumentDB/databaseAccounts@2024-11-15' = {
   name: cosmosDbName
   location: location
   tags: {
@@ -165,15 +168,17 @@ resource containerStoreContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatab
   }
 }
 
-resource sqlRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2023-11-15' = {
-  name: guid('${roleDefinitionId}-${principalId}-${cosmosDb.id}')
-  parent: cosmosDb
-  properties: {
-    roleDefinitionId: '/${subscription().id}/resourceGroups/${resourceGroup().name}/providers/Microsoft.DocumentDB/databaseAccounts/${cosmosDb.name}/sqlRoleDefinitions/${roleDefinitionId}'
-    principalId: principalId
-    scope: cosmosDb.id
+resource sqlRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2023-11-15' = [
+  for id in roleDefinitionId: {
+    name: guid('${id}-${principalId}-${cosmosDb.id}')
+    parent: cosmosDb
+    properties: {
+      roleDefinitionId: '${resourceGroup().id}/providers/Microsoft.DocumentDB/databaseAccounts/${cosmosDb.name}/sqlRoleDefinitions/${id}'
+      principalId: principalId
+      scope: cosmosDb.id
+    }
   }
-}
+]
 
 output name string = cosmosDb.name
 output id string = cosmosDb.id
