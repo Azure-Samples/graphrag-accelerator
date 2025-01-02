@@ -44,16 +44,6 @@ def test_on_workflow_end(workflow_callbacks):
     assert workflow_callbacks._blob_service_client.get_blob_client().append_block.called
 
 
-# def test_on_workflow_step_start(workflow_callbacks):
-#     workflow_callbacks.on_workflow_step_start("test_step", object())
-#     assert workflow_callbacks._blob_service_client.get_blob_client().append_block.called
-
-
-# def test_on_workflow_step_end(workflow_callbacks):
-#     workflow_callbacks.on_workflow_step_end("test_step", object())
-#     assert workflow_callbacks._blob_service_client.get_blob_client().append_block.called
-
-
 def test_on_error(workflow_callbacks):
     workflow_callbacks.on_error("test_error", Exception("test_exception"))
     assert workflow_callbacks._blob_service_client.get_blob_client().append_block.called

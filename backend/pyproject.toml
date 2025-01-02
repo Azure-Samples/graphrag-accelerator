@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "graphrag-solution-accelerator"
-version = "0.1.1"
+version = "1.0.1"
 description = ""
 authors = [
     "Josh Bradley <joshbradley@microsoft.com>",
@@ -10,7 +10,7 @@ authors = [
     "Douglas Orbaker <dorbaker@microsoft.com>",
     "Chris Sanchez <chrissanchez@microsoft.com>",
     "Shane Solomon <shane.solomon@microsoft.com>",
-    "Kenny Zhang <zhangken@microsoft.com>"
+    "Kenny Zhang <zhangken@microsoft.com>",
 ]
 license = "MIT"
 package-mode = false
@@ -45,6 +45,7 @@ attrs = ">=23.2.0"
 azure-core = ">=1.30.1"
 azure-cosmos = ">=4.5.1"
 azure-identity = ">=1.15.0"
+azure-monitor-opentelemetry-exporter = "*"
 azure-search-documents = ">=11.4.0"
 azure-storage-blob = ">=12.19.0"
 datashaper = ">=0.0.46"
@@ -53,13 +54,12 @@ fastapi = ">=0.110.0"
 fastapi-offline = ">=1.7.3"
 fastparquet = ">=2023.10.1"
 fsspec = ">=2024.2.0"
-graphrag = "==0.3.3"
+graphrag = "==1.0.1"
 graspologic = ">=3.3.0"
 httpx = ">=0.25.2"
 kubernetes = ">=29.0.0"
 networkx = ">=3.2.1"
 nltk = "*"
-azure-monitor-opentelemetry-exporter = "*"
 opentelemetry-sdk = ">=1.27.0"
 pandas = ">=2.2.1"
 pyaml-env = ">=1.2.1"
@@ -69,8 +69,8 @@ python-multipart = ">=0.0.6"
 requests = "*"
 rich = ">=13.7.1"
 tiktoken = ">=0.6.0"
-uvicorn = ">=0.23.2"
 urllib3 = ">=2.2.2"
+uvicorn = ">=0.23.2"
 
 [tool.ruff]
 target-version = "py310"

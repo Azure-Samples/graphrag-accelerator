@@ -445,7 +445,7 @@ installGraphRAGHelmChart () {
     local cosmosEndpoint=$(jq -r .azure_cosmosdb_endpoint.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$cosmosEndpoint" "Unable to parse CosmosDB endpoint from Azure outputs, exiting..."
 
-    local graphragHostname=$(jq -r .azure_graphrag_hostname.value <<< $AZURE_OUTPUTS)
+    local graphragHostname=$(jq -r .azure_app_hostname.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$graphragHostname" "Unable to parse graphrag hostname from deployment outputs, exiting..."
 
     local storageAccountBlobUrl=$(jq -r .azure_storage_account_blob_url.value <<< $AZURE_OUTPUTS)
@@ -559,7 +559,7 @@ deployGraphragAPI () {
     local apimName=$(jq -r .azure_apim_name.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$apimName" "Error parsing apim name from azure outputs, exiting..."
     local backendSwaggerUrl="$apimGatewayUrl/manpage/openapi.json"
-    local graphragUrl=$(jq -r .azure_graphrag_url.value <<< $AZURE_OUTPUTS)
+    local graphragUrl=$(jq -r .azure_app_url.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$graphragUrl" "Error parsing GraphRAG URL from azure outputs, exiting..."
 
     waitForGraphragBackend $backendSwaggerUrl

@@ -17,14 +17,14 @@ Private Endpoints
 Managed Identity
 */
 
-@description('Unique name to append to each resource')
-param resourceBaseName string = ''
-var resourceBaseNameFinal = !empty(resourceBaseName) ? resourceBaseName : toLower(uniqueString('${subscription().id}/resourceGroups/${graphRagName}'))
-
 @minLength(1)
 @maxLength(64)
 @description('Name of the resource group that GraphRAG will be deployed in.')
-param graphRagName string
+param resourceGroupName string
+
+@description('Unique name to append to each resource')
+param resourceBaseName string = ''
+var resourceBaseNameFinal = !empty(resourceBaseName) ? resourceBaseName : toLower(uniqueString('${subscription().id}/resourceGroups/${resourceGroupName}'))
 
 @description('Cloud region for all resources')
 param location string = resourceGroup().location
@@ -34,13 +34,13 @@ param deployerPrincipalId string
 
 @minLength(1)
 @description('Name of the publisher of the API Management instance.')
-param publisherName string
+param apiPublisherName string
 
 @minLength(1)
 @description('Email address of the publisher of the API Management instance.')
-param publisherEmail string
+param apiPublisherEmail string
 
-@description('The AKS namespace the workload identity service account will be created in.')
+@description('The AKS namespace to install GraphRAG in.')
 param aksNamespace string = 'graphrag'
 
 @description('Public key to allow access to AKS Linux nodes.')
@@ -52,21 +52,25 @@ param enablePrivateEndpoints bool = true
 @description('Whether to restore the API Management instance.')
 param restoreAPIM bool = false
 
-param acrName string = ''
-param apimName string = ''
+// optional parameters that will default to a generated name if not provided
 param apimTier string = 'Developer'
+param apimName string = ''
+param acrName string = ''
 param storageAccountName string = ''
 param cosmosDbName string = ''
 param aiSearchName string = ''
-var graphRagDnsLabel = 'graphrag'
-var dnsDomain = 'graphrag.io'
-var graphRagHostname = '${graphRagDnsLabel}.${dnsDomain}'
-var graphRagUrl = 'http://${graphRagHostname}'
+
 var abbrs = loadJsonContent('abbreviations.json')
-var tags = { 'azd-env-name': graphRagName }
+var tags = { 'azd-env-name': resourceGroupName }
 var workloadIdentityName = '${abbrs.managedIdentityUserAssignedIdentities}${resourceBaseNameFinal}'
 var aksServiceAccountName = '${aksNamespace}-workload-sa'
 var workloadIdentitySubject = 'system:serviceaccount:${aksNamespace}:${aksServiceAccountName}'
+
+// endpoint configuration
+var dnsDomain = 'graphrag.io'
+var appHostname = 'graphrag.${dnsDomain}'
+var appUrl = 'http://${appHostname}'
+
 @description('Role definitions for various roles that will be assigned at deployment time. Learn more: https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles')
 var roles = {
   storageBlobDataContributor: resourceId(
@@ -81,28 +85,27 @@ var roles = {
     'Microsoft.Authorization/roleDefinitions',
     '8ebe5a00-799e-43f5-93ac-243d3dce84a7'  // AI Search Index Data Contributor Role
   )
-  aiSearchIndexDataReader: resourceId (
+  aiSearchIndexDataReader: resourceId(
     'Microsoft.Authorization/roleDefinitions',
     '1407120a-92aa-4202-b7e9-c0e197c71c8f'  // AI Search Index Data Reader Role
   )
-  privateDnsZoneContributor: resourceId (
+  privateDnsZoneContributor: resourceId(
     'Microsoft.Authorization/roleDefinitions',
     'b12aa53e-6015-4669-85d0-8515ebb3ae7f'  // Private DNS Zone Contributor Role
   )
-  networkContributor: resourceId (
+  networkContributor: resourceId(
     'Microsoft.Authorization/roleDefinitions',
     '4d97b98b-1d4f-4787-a291-c67834d212e7'  // Network Contributor Role
   )
-  cognitiveServicesOpenaiContributor: resourceId (
+  cognitiveServicesOpenaiContributor: resourceId(
     'Microsoft.Authorization/roleDefinitions',
     'a001fd3d-188f-4b5d-821b-7da978bf7442'  // Cognitive Services OpenAI Contributor
   )
-  acrPull: resourceId (
+  acrPull: resourceId(
     'Microsoft.Authorization/roleDefinitions',
     '7f951dda-4ed3-4680-a7ca-43fe172d538d'  // ACR Pull Role
   )
 }
-
 
 module log 'core/log-analytics/log.bicep' = {
   name: 'log-analytics'
@@ -281,8 +284,8 @@ module apim 'core/apim/apim.bicep' = {
     sku: apimTier
     skuCount: 1 // TODO expose in param for premium sku
     availabilityZones: [] // TODO expose in param for premium sku
-    publisherEmail: publisherEmail
-    publisherName: publisherName
+    publisherEmail: apiPublisherEmail
+    publisherName: apiPublisherName
     logAnalyticsWorkspaceId: log.outputs.id
     subnetId: vnet.properties.subnets[0].id // apim subnet
   }
@@ -292,7 +295,7 @@ module graphragApi 'core/apim/apim.graphrag-documentation.bicep' = {
   name: 'graphrag-api'
   params: {
     apimname: apim.outputs.name
-    backendUrl: graphRagUrl
+    backendUrl: appUrl
   }
 }
 
@@ -407,8 +410,8 @@ output azure_app_insights_connection_string string = apim.outputs.appInsightsCon
 output azure_apim_name string = apim.outputs.name
 output azure_apim_gateway_url string = apim.outputs.apimGatewayUrl
 output azure_dns_zone_name string = privateDnsZone.outputs.name
-output azure_graphrag_hostname string = graphRagHostname
-output azure_graphrag_url string = graphRagUrl
+output azure_app_hostname string = appHostname
+output azure_app_url string = appUrl
 output azure_workload_identity_client_id string = workloadIdentity.outputs.clientId
 output azure_workload_identity_principal_id string = workloadIdentity.outputs.principalId
 output azure_workload_identity_name string = workloadIdentity.outputs.name
