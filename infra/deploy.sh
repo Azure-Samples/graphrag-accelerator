@@ -264,11 +264,11 @@ createResourceGroupIfNotExists () {
     local location=$1
     local rg=$2
     printf "Checking if resource group $rg exists... "
-    az group show -n $rg -o json >/dev/null 2>&1
+    az group show -n $rg -o json > /dev/null 2>&1
     if [ $? -ne 0 ]; then
         printf "No.\n"
         printf "Creating resource group... "
-        az group create -l $location -n $rg >/dev/null 2>&1
+        az group create -l $location -n $rg > /dev/null 2>&1
         printf "Done.\n"
     else
         printf "Yes.\n"
@@ -295,7 +295,7 @@ getAksCredentials () {
     local rg=$1
     local aks=$2
     printf "Getting AKS credentials... "
-    az aks get-credentials -g $rg -n $aks --overwrite-existing 2>&1
+    az aks get-credentials -g $rg -n $aks --overwrite-existing > /dev/null 2>&1
     exitIfCommandFailed $? "Error getting AKS credentials, exiting..."
     kubelogin convert-kubeconfig -l azurecli
     exitIfCommandFailed $? "Error logging into AKS, exiting..."

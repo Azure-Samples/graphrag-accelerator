@@ -82,7 +82,7 @@ resource cosmosDb 'Microsoft.DocumentDB/databaseAccounts@2024-11-15' = {
   }
 }
 
-resource graphragDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2022-11-15' = {
+resource graphragDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2024-11-15' = {
   parent: cosmosDb
   name: 'graphrag'
   properties: {
@@ -92,7 +92,7 @@ resource graphragDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@20
   }
 }
 
-resource jobsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2022-11-15' = {
+resource jobsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-11-15' = {
   parent: graphragDatabase
   name: 'jobs'
   properties: {
@@ -130,7 +130,7 @@ resource jobsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/conta
   }
 }
 
-resource containerStoreContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2022-11-15' = {
+resource containerStoreContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-11-15' = {
   parent: graphragDatabase
   name: 'container-store'
   properties: {
@@ -168,12 +168,12 @@ resource containerStoreContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatab
   }
 }
 
-resource sqlRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2023-11-15' = [
-  for id in roleDefinitionId: {
-    name: guid('${id}-${principalId}-${cosmosDb.id}')
+resource sqlRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-11-15' = [
+  for roleId in roleDefinitionId: {
+    name: guid('${roleId}-${principalId}-${cosmosDb.id}')
     parent: cosmosDb
     properties: {
-      roleDefinitionId: '${resourceGroup().id}/providers/Microsoft.DocumentDB/databaseAccounts/${cosmosDb.name}/sqlRoleDefinitions/${id}'
+      roleDefinitionId: '${resourceGroup().id}/providers/Microsoft.DocumentDB/databaseAccounts/${cosmosDb.name}/sqlRoleDefinitions/${roleId}'
       principalId: principalId
       scope: cosmosDb.id
     }
