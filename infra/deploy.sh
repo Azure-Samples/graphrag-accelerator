@@ -347,12 +347,12 @@ deployAzureResources () {
         --resource-group $RESOURCE_GROUP \
         --template-file ./main.bicep \
         --parameters "resourceBaseName=$RESOURCE_BASE_NAME" \
-        --parameters "graphRagName=$RESOURCE_GROUP" \
+        --parameters "resourceGroupName=$RESOURCE_GROUP" \
         --parameters "apimName=$APIM_NAME" \
         --parameters "apimTier=$APIM_TIER" \
-        --parameters "publisherName=$PUBLISHER_NAME" \
+        --parameters "apiPublisherName=$PUBLISHER_NAME" \
+        --parameters "apiPublisherEmail=$PUBLISHER_EMAIL" \
         --parameters "aksSshRsaPublicKey=$SSH_PUBLICKEY" \
-        --parameters "publisherEmail=$PUBLISHER_EMAIL" \
         --parameters "enablePrivateEndpoints=$ENABLE_PRIVATE_ENDPOINTS" \
         --parameters "acrName=$CONTAINER_REGISTRY_NAME" \
         --parameters "deployerPrincipalId=$deployerPrincipalId" \

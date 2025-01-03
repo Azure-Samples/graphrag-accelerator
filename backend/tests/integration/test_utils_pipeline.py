@@ -42,7 +42,9 @@ def cosmos_index_job_entry(cosmos_client) -> Generator[str, None, None]:
 
 
 def test_pipeline_job_interface(cosmos_index_job_entry):
+    """Test the src.utils.pipeline.PipelineJob class interface."""
     pipeline_job = PipelineJob()
+
     # test creating a new entry
     pipeline_job.create_item(
         id="synthetic_id",
@@ -69,3 +71,36 @@ def test_pipeline_job_interface(cosmos_index_job_entry):
     assert pipeline_job.status == PipelineJobState.COMPLETE
     assert pipeline_job.percent_complete == 50.0
     assert pipeline_job.progress == "some progress"
+    assert pipeline_job.calculate_percent_complete() == 50.0
+
+    # test setters and getters
+    pipeline_job.id = "newID"
+    assert pipeline_job.id == "newID"
+    pipeline_job.epoch_request_time = 1
+    assert pipeline_job.epoch_request_time == 1
+
+    pipeline_job.human_readable_index_name = "new_human_readable_index_name"
+    assert pipeline_job.human_readable_index_name == "new_human_readable_index_name"
+    pipeline_job.sanitized_index_name = "new_sanitized_index_name"
+    assert pipeline_job.sanitized_index_name == "new_sanitized_index_name"
+
+    pipeline_job.human_readable_storage_name = "new_human_readable_storage_name"
+    assert pipeline_job.human_readable_storage_name == "new_human_readable_storage_name"
+    pipeline_job.sanitized_storage_name = "new_sanitized_storage_name"
+    assert pipeline_job.sanitized_storage_name == "new_sanitized_storage_name"
+
+    pipeline_job.entity_extraction_prompt = "new_entity_extraction_prompt"
+    assert pipeline_job.entity_extraction_prompt == "new_entity_extraction_prompt"
+    pipeline_job.community_report_prompt = "new_community_report_prompt"
+    assert pipeline_job.community_report_prompt == "new_community_report_prompt"
+    pipeline_job.summarize_descriptions_prompt = "new_summarize_descriptions_prompt"
+    assert pipeline_job.summarize_descriptions_prompt == "new_summarize_descriptions_prompt"
+
+    pipeline_job.all_workflows = ["new_workflow1", "new_workflow2", "new_workflow3"]
+    assert len(pipeline_job.all_workflows) == 3
+
+    pipeline_job.completed_workflows = ["new_workflow1", "new_workflow2"]
+    assert len(pipeline_job.completed_workflows) == 2
+
+    pipeline_job.failed_workflows = ["new_workflow3"]
+    assert len(pipeline_job.failed_workflows) == 1
