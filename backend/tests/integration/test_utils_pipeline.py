@@ -94,7 +94,10 @@ def test_pipeline_job_interface(cosmos_index_job_entry):
     pipeline_job.community_report_prompt = "new_community_report_prompt"
     assert pipeline_job.community_report_prompt == "new_community_report_prompt"
     pipeline_job.summarize_descriptions_prompt = "new_summarize_descriptions_prompt"
-    assert pipeline_job.summarize_descriptions_prompt == "new_summarize_descriptions_prompt"
+    assert (
+        pipeline_job.summarize_descriptions_prompt
+        == "new_summarize_descriptions_prompt"
+    )
 
     pipeline_job.all_workflows = ["new_workflow1", "new_workflow2", "new_workflow3"]
     assert len(pipeline_job.all_workflows) == 3

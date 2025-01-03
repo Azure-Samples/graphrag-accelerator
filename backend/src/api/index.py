@@ -17,9 +17,9 @@ from fastapi import (
     HTTPException,
     UploadFile,
 )
-from graphrag.config import create_graphrag_config
-from graphrag.index import create_pipeline_config
+from graphrag.config.create_graphrag_config import create_graphrag_config
 from graphrag.index.bootstrap import bootstrap
+from graphrag.index.create_pipeline_config import create_pipeline_config
 from graphrag.index.run import run_pipeline_with_config
 from kubernetes import (
     client as kubernetes_client,
