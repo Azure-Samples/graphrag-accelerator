@@ -13,11 +13,13 @@ from fastapi import (
     HTTPException,
 )
 from fastapi.responses import StreamingResponse
-from graphrag.config import create_graphrag_config
-from graphrag.query.api import (
+from graphrag.api.query import (
     global_search_streaming as global_search_streaming_internal,
 )
-from graphrag.query.api import local_search_streaming as local_search_streaming_internal
+from graphrag.api.query import (
+    local_search_streaming as local_search_streaming_internal,
+)
+from graphrag.config import create_graphrag_config
 
 from src.api.azure_clients import AzureClientManager
 from src.api.common import (

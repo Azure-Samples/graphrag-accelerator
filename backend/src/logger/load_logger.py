@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import List
 
 from datashaper import WorkflowCallbacks, WorkflowCallbacksManager
-from graphrag.index.reporting import FileWorkflowCallbacks
+from graphrag.callbacks.file_workflow_callbacks import FileWorkflowCallbacks
 
 from src.api.azure_clients import AzureClientManager
 from src.logger.application_insights_workflow_callbacks import (

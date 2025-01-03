@@ -5,9 +5,9 @@ import logging
 from enum import Enum
 from typing import Literal
 
-from graphrag.index.config import (
+from graphrag.index.config.reporting import (
     PipelineReportingConfig,
-    reporting,
+    PipelineReportingConfigTypes,
 )
 from pydantic import Field as pydantic_Field
 
@@ -46,5 +46,5 @@ class PipelineAppInsightsReportingConfig(
 
 # add the new type to the existing PipelineReportingConfigTypes
 PipelineReportingConfigTypes = (
-    reporting.PipelineReportingConfigTypes | PipelineAppInsightsReportingConfig
+    PipelineReportingConfigTypes | PipelineAppInsightsReportingConfig
 )
