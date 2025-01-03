@@ -404,9 +404,9 @@ async def local_search_streaming(request: GraphRequest):
         parameters.embeddings.vector_store["index_names"] = sanitized_index_names
         # internally write over the get_embedding_description_store
         # method to use the multi-index collection.
-        import graphrag.query.api
+        import graphrag.api.query
 
-        graphrag.query.api._get_embedding_description_store = (
+        graphrag.api.query._get_embedding_description_store = (
             _get_embedding_description_store
         )
 
