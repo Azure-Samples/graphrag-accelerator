@@ -13,11 +13,13 @@ from fastapi import (
     HTTPException,
 )
 from fastapi.responses import StreamingResponse
-from graphrag.config import create_graphrag_config
-from graphrag.query.api import (
+from graphrag.api.query import (
     global_search_streaming as global_search_streaming_internal,
 )
-from graphrag.query.api import local_search_streaming as local_search_streaming_internal
+from graphrag.api.query import (
+    local_search_streaming as local_search_streaming_internal,
+)
+from graphrag.config import create_graphrag_config
 
 from src.api.azure_clients import AzureClientManager
 from src.api.common import (
@@ -402,9 +404,9 @@ async def local_search_streaming(request: GraphRequest):
         parameters.embeddings.vector_store["index_names"] = sanitized_index_names
         # internally write over the get_embedding_description_store
         # method to use the multi-index collection.
-        import graphrag.query.api
+        import graphrag.api.query
 
-        graphrag.query.api._get_embedding_description_store = (
+        graphrag.api.query._get_embedding_description_store = (
             _get_embedding_description_store
         )
 

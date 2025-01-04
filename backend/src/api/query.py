@@ -16,9 +16,9 @@ from fastapi import (
     APIRouter,
     HTTPException,
 )
+from graphrag.api.query import global_search, local_search
 from graphrag.config import create_graphrag_config
 from graphrag.model.types import TextEmbedder
-from graphrag.query.api import global_search, local_search
 from graphrag.vector_stores.base import (
     BaseVectorStore,
     VectorStoreDocument,
@@ -408,9 +408,9 @@ async def local_query(request: GraphRequest):
     parameters.embeddings.vector_store["index_names"] = sanitized_index_names
     # internally write over the get_embedding_description_store
     # method to use the multi-index collection.
-    import graphrag.query.api
+    import graphrag.api.query
 
-    graphrag.query.api._get_embedding_description_store = (
+    graphrag.api.query._get_embedding_description_store = (
         _get_embedding_description_store
     )
     # perform async search

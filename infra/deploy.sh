@@ -264,11 +264,11 @@ createResourceGroupIfNotExists () {
     local location=$1
     local rg=$2
     printf "Checking if resource group $rg exists... "
-    az group show -n $rg -o json >/dev/null 2>&1
+    az group show -n $rg -o json > /dev/null 2>&1
     if [ $? -ne 0 ]; then
         printf "No.\n"
         printf "Creating resource group... "
-        az group create -l $location -n $rg >/dev/null 2>&1
+        az group create -l $location -n $rg > /dev/null 2>&1
         printf "Done.\n"
     else
         printf "Yes.\n"
@@ -295,7 +295,7 @@ getAksCredentials () {
     local rg=$1
     local aks=$2
     printf "Getting AKS credentials... "
-    az aks get-credentials -g $rg -n $aks --overwrite-existing 2>&1
+    az aks get-credentials -g $rg -n $aks --overwrite-existing > /dev/null 2>&1
     exitIfCommandFailed $? "Error getting AKS credentials, exiting..."
     kubelogin convert-kubeconfig -l azurecli
     exitIfCommandFailed $? "Error logging into AKS, exiting..."
@@ -347,12 +347,12 @@ deployAzureResources () {
         --resource-group $RESOURCE_GROUP \
         --template-file ./main.bicep \
         --parameters "resourceBaseName=$RESOURCE_BASE_NAME" \
-        --parameters "graphRagName=$RESOURCE_GROUP" \
+        --parameters "resourceGroupName=$RESOURCE_GROUP" \
         --parameters "apimName=$APIM_NAME" \
         --parameters "apimTier=$APIM_TIER" \
-        --parameters "publisherName=$PUBLISHER_NAME" \
+        --parameters "apiPublisherName=$PUBLISHER_NAME" \
+        --parameters "apiPublisherEmail=$PUBLISHER_EMAIL" \
         --parameters "aksSshRsaPublicKey=$SSH_PUBLICKEY" \
-        --parameters "publisherEmail=$PUBLISHER_EMAIL" \
         --parameters "enablePrivateEndpoints=$ENABLE_PRIVATE_ENDPOINTS" \
         --parameters "acrName=$CONTAINER_REGISTRY_NAME" \
         --parameters "deployerPrincipalId=$deployerPrincipalId" \
@@ -445,7 +445,7 @@ installGraphRAGHelmChart () {
     local cosmosEndpoint=$(jq -r .azure_cosmosdb_endpoint.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$cosmosEndpoint" "Unable to parse CosmosDB endpoint from Azure outputs, exiting..."
 
-    local graphragHostname=$(jq -r .azure_graphrag_hostname.value <<< $AZURE_OUTPUTS)
+    local graphragHostname=$(jq -r .azure_app_hostname.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$graphragHostname" "Unable to parse graphrag hostname from deployment outputs, exiting..."
 
     local storageAccountBlobUrl=$(jq -r .azure_storage_account_blob_url.value <<< $AZURE_OUTPUTS)
@@ -559,7 +559,7 @@ deployGraphragAPI () {
     local apimName=$(jq -r .azure_apim_name.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$apimName" "Error parsing apim name from azure outputs, exiting..."
     local backendSwaggerUrl="$apimGatewayUrl/manpage/openapi.json"
-    local graphragUrl=$(jq -r .azure_graphrag_url.value <<< $AZURE_OUTPUTS)
+    local graphragUrl=$(jq -r .azure_app_url.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$graphragUrl" "Error parsing GraphRAG URL from azure outputs, exiting..."
 
     waitForGraphragBackend $backendSwaggerUrl

@@ -18,12 +18,13 @@ from src.main import app
 def blob_with_data_container_name(blob_service_client: BlobServiceClient):
     # create a storage container and upload some data
     container_name = "container-with-data"
-    blob_service_client.create_container(container_name)
-    blob_client = blob_service_client.get_blob_client(container_name, "data.txt")
+    sanitized_name = sanitize_name(container_name)
+    blob_service_client.create_container(sanitized_name)
+    blob_client = blob_service_client.get_blob_client(sanitized_name, "data.txt")
     blob_client.upload_blob(data="Hello, World!", overwrite=True)
     yield container_name
     # cleanup
-    blob_service_client.delete_container(container_name)
+    blob_service_client.delete_container(sanitized_name)
 
 
 @pytest.fixture(scope="session")
