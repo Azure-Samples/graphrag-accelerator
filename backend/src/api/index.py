@@ -20,7 +20,6 @@ from fastapi import (
 from graphrag.config.create_graphrag_config import create_graphrag_config
 from graphrag.index.bootstrap import bootstrap
 from graphrag.index.create_pipeline_config import create_pipeline_config
-from graphrag.index.run import run_pipeline_with_config
 from kubernetes import (
     client as kubernetes_client,
 )
@@ -251,6 +250,8 @@ async def _start_indexing_pipeline(index_name: str):
 
     # run the pipeline
     try:
+        # TODO refactor to use the new replacement for run_pipeline_with_config
+        from graphrag.index.run import run_pipeline_with_config
         async for workflow_result in run_pipeline_with_config(
             config_or_path=pipeline_config,
             callbacks=workflow_callbacks,
