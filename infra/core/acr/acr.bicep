@@ -30,7 +30,7 @@ resource registry 'Microsoft.ContainerRegistry/registries@2023-11-01-preview' = 
 resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
   for role in roleAssignments: {
     name: guid('${role.principalId}-${role.principalType}-${role.roleDefinitionId}')
-    scope: registry
+    scope: resourceGroup()
     properties: role
   }
 ]

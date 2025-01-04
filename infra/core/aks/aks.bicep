@@ -43,12 +43,6 @@ param graphragVMSize string = 'standard_d8s_v5' // 8 vcpu, 32 GB memory
 @description('The VM size of nodes running GraphRAG indexing jobs.')
 param graphragIndexingVMSize string = 'standard_e8s_v5' // 8 vcpus, 64 GB memory
 
-@description('User name for the Linux Virtual Machines.')
-param linuxAdminUsername string = 'azureuser'
-
-@description('Configure all linux machines with the SSH RSA public key string. Your key should include three parts, for example \'ssh-rsa AAAAB...snip...UcyupgH azureuser@linuxvm\'')
-param sshRSAPublicKey string
-
 @description('Enable encryption at host')
 param enableEncryptionAtHost bool = false
 
@@ -69,7 +63,7 @@ resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' existing 
   name: privateDnsZoneName
 }
 
-resource aks 'Microsoft.ContainerService/managedClusters@2024-02-01' = {
+resource aks 'Microsoft.ContainerService/managedClusters@2024-09-02-preview' = {
   name: clusterName
   location: location
   identity: {
@@ -77,6 +71,7 @@ resource aks 'Microsoft.ContainerService/managedClusters@2024-02-01' = {
   }
   properties: {
     enableRBAC: true
+    disableLocalAccounts: true
     dnsPrefix: !empty(dnsPrefix) ? dnsPrefix : toLower(clusterName)
     aadProfile: {
       managed: true
@@ -118,16 +113,6 @@ resource aks 'Microsoft.ContainerService/managedClusters@2024-02-01' = {
         enabled: true
         dnsZoneResourceIds: [
           privateDnsZone.id
-        ]
-      }
-    }
-    linuxProfile: {
-      adminUsername: linuxAdminUsername
-      ssh: {
-        publicKeys: [
-          {
-            keyData: sshRSAPublicKey
-          }
         ]
       }
     }
@@ -200,7 +185,7 @@ resource aks 'Microsoft.ContainerService/managedClusters@2024-02-01' = {
   }
 }
 
-resource aksManagedAutoUpgradeSchedule 'Microsoft.ContainerService/managedClusters/maintenanceConfigurations@2024-03-02-preview' = {
+resource aksManagedAutoUpgradeSchedule 'Microsoft.ContainerService/managedClusters/maintenanceConfigurations@2024-09-02-preview' = {
   parent: aks
   name: 'aksManagedAutoUpgradeSchedule'
   properties: {
@@ -218,7 +203,7 @@ resource aksManagedAutoUpgradeSchedule 'Microsoft.ContainerService/managedCluste
   }
 }
 
-resource aksManagedNodeOSUpgradeSchedule 'Microsoft.ContainerService/managedClusters/maintenanceConfigurations@2024-03-02-preview' = {
+resource aksManagedNodeOSUpgradeSchedule 'Microsoft.ContainerService/managedClusters/maintenanceConfigurations@2024-09-02-preview' = {
   parent: aks
   name: 'aksManagedNodeOSUpgradeSchedule'
   properties: {
@@ -240,7 +225,7 @@ resource aksManagedNodeOSUpgradeSchedule 'Microsoft.ContainerService/managedClus
 resource webAppRoutingPrivateDnsContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
   for role in ingressRoleAssignments: {
     name: guid('${role.roleDefinitionId}-${privateDnsZone.id}')
-    scope: privateDnsZone
+    scope: resourceGroup()
     properties: {
       principalId: aks.properties.ingressProfile.webAppRouting.identity.objectId
       principalType: role.principalType

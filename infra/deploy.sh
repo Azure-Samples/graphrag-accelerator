@@ -275,22 +275,6 @@ createResourceGroupIfNotExists () {
     fi
 }
 
-createSshkeyIfNotExists () {
-    local rg=$1
-    local keyName="aks-publickey"
-    printf "Checking if sshkey exists... "
-    local keyDetails=$(az sshkey show -g $rg --name $keyName -o json 2> /dev/null)
-    if [ -z "$keyDetails" ]; then
-        printf "No.\n"
-        printf "Creating sshkey... "
-        local keyDetails=$(az sshkey create -g $rg --name $keyName -o json)
-        exitIfCommandFailed $? "Error creating sshkey."
-    else
-        printf "Yes.\n"
-    fi
-    SSHKEY_DETAILS=$keyDetails
-}
-
 getAksCredentials () {
     local rg=$1
     local aks=$2
@@ -334,8 +318,6 @@ checkForApimSoftDelete () {
 
 deployAzureResources () {
     echo "Deploying Azure resources..."
-    local SSH_PUBLICKEY=$(jq -r .publicKey <<< $SSHKEY_DETAILS)
-    exitIfValueEmpty "$SSH_PUBLICKEY" "Unable to read ssh publickey, exiting..."
     # get principal/object id of the signed in user
     local deployerPrincipalId=$(az ad signed-in-user show --output json | jq -r .id)
     exitIfValueEmpty $deployerPrincipalId "Principal ID of deployer not found"
@@ -352,7 +334,6 @@ deployAzureResources () {
         --parameters "apimTier=$APIM_TIER" \
         --parameters "apiPublisherName=$PUBLISHER_NAME" \
         --parameters "apiPublisherEmail=$PUBLISHER_EMAIL" \
-        --parameters "aksSshRsaPublicKey=$SSH_PUBLICKEY" \
         --parameters "enablePrivateEndpoints=$ENABLE_PRIVATE_ENDPOINTS" \
         --parameters "acrName=$CONTAINER_REGISTRY_NAME" \
         --parameters "deployerPrincipalId=$deployerPrincipalId" \
@@ -706,9 +687,6 @@ validateSKUs $LOCATION $VALIDATE_SKUS_FLAG
 
 # Create resource group
 createResourceGroupIfNotExists $LOCATION $RESOURCE_GROUP
-
-# Generate ssh key for AKS
-createSshkeyIfNotExists $RESOURCE_GROUP
 
 # Deploy Azure resources
 checkForApimSoftDelete

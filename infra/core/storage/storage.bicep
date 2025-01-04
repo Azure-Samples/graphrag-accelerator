@@ -71,7 +71,7 @@ resource storage 'Microsoft.Storage/storageAccounts@2023-01-01' = {
 resource storageRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
   for role in roleAssignments: {
     name: guid('${role.principalId}-${role.principalType}-${role.roleDefinitionId}')
-    scope: storage
+    scope: resourceGroup()
     properties: role
   }
 ]

@@ -31,7 +31,7 @@ resource aiSearch 'Microsoft.Search/searchServices@2024-03-01-preview' = {
 resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
   for role in roleAssignments: {
     name: guid('${role.principalId}-${role.principalType}-${role.roleDefinitionId}')
-    scope: aiSearch
+    scope: resourceGroup()
     properties: role
   }
 ]

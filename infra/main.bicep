@@ -34,17 +34,14 @@ param deployerPrincipalId string
 
 @minLength(1)
 @description('Name of the publisher of the API Management instance.')
-param apiPublisherName string
+param apiPublisherName string = 'Microsoft'
 
 @minLength(1)
 @description('Email address of the publisher of the API Management instance.')
-param apiPublisherEmail string
+param apiPublisherEmail string = 'publisher@microsoft.com'
 
 @description('The AKS namespace to install GraphRAG in.')
 param aksNamespace string = 'graphrag'
-
-@description('Public key to allow access to AKS Linux nodes.')
-param aksSshRsaPublicKey string
 
 @description('Whether to enable private endpoints.')
 param enablePrivateEndpoints bool = true
@@ -108,7 +105,7 @@ var roles = {
 }
 
 module log 'core/log-analytics/log.bicep' = {
-  name: 'log-analytics'
+  name: 'log-analytics-deployment'
   params:{
     name: '${abbrs.operationalInsightsWorkspaces}${resourceBaseNameFinal}'
     location: location
@@ -117,7 +114,7 @@ module log 'core/log-analytics/log.bicep' = {
 }
 
 module nsg 'core/vnet/nsg.bicep' = {
-  name: 'nsg'
+  name: 'nsg-deployment'
   params: {
     nsgName: '${abbrs.networkNetworkSecurityGroups}${resourceBaseNameFinal}'
     location: location
@@ -125,7 +122,7 @@ module nsg 'core/vnet/nsg.bicep' = {
 }
 
 resource vnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
-  name: '${abbrs.networkVirtualNetworks}${resourceBaseNameFinal}'
+  name: '${abbrs.networkVirtualNetworks}${resourceBaseNameFinal}-deployment'
   location: location
   properties: {
     addressSpace: {
@@ -173,7 +170,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
 }
 
 module acr 'core/acr/acr.bicep' = {
-  name: 'acr'
+  name: 'acr-deployment'
   params: {
     registryName: !empty(acrName) ? acrName : '${abbrs.containerRegistryRegistries}${resourceBaseNameFinal}'
     location: location
@@ -188,14 +185,13 @@ module acr 'core/acr/acr.bicep' = {
 }
 
 module aks 'core/aks/aks.bicep' = {
-  name: 'aks'
+  name: 'aks-deployment'
   params:{
     clusterName: '${abbrs.containerServiceManagedClusters}${resourceBaseNameFinal}'
     location: location
     graphragVMSize: 'standard_d8s_v5'           // 8 vcpu, 32 GB memory
     graphragIndexingVMSize: 'standard_e8s_v5'   // 8 vcpus, 64 GB memory
-    clusterAdmins: ['${deployerPrincipalId}']
-    sshRSAPublicKey: aksSshRsaPublicKey
+    clusterAdmins: !empty(deployerPrincipalId) ? ['${deployerPrincipalId}'] : null
     logAnalyticsWorkspaceId: log.outputs.id
     subnetId: vnet.properties.subnets[1].id // aks subnet
     privateDnsZoneName: privateDnsZone.outputs.name
@@ -215,7 +211,7 @@ module aks 'core/aks/aks.bicep' = {
 }
 
 module cosmosdb 'core/cosmosdb/cosmosdb.bicep' = {
-  name: 'cosmosdb'
+  name: 'cosmosdb-deployment'
   params: {
     cosmosDbName: !empty(cosmosDbName) ? cosmosDbName : '${abbrs.documentDBDatabaseAccounts}${resourceBaseNameFinal}'
     location: location
@@ -225,7 +221,7 @@ module cosmosdb 'core/cosmosdb/cosmosdb.bicep' = {
 }
 
 module aiSearch 'core/ai-search/ai-search.bicep' = {
-  name: 'aisearch'
+  name: 'aisearch-deployment'
   params: {
     name: !empty(aiSearchName) ? aiSearchName : '${abbrs.searchSearchServices}${resourceBaseNameFinal}'
     location: location
@@ -251,7 +247,7 @@ module aiSearch 'core/ai-search/ai-search.bicep' = {
 }
 
 module storage 'core/storage/storage.bicep' = {
-  name: 'storage'
+  name: 'storage-deployment'
   params: {
     name: !empty(storageAccountName) ? storageAccountName : '${abbrs.storageStorageAccounts}${replace(resourceBaseNameFinal, '-', '')}'
     location: location
@@ -273,7 +269,7 @@ module storage 'core/storage/storage.bicep' = {
 }
 
 module apim 'core/apim/apim.bicep' = {
-  name: 'apim'
+  name: 'apim-deployment'
   params: {
     apiManagementName: !empty(apimName) ? apimName : '${abbrs.apiManagementService}${resourceBaseNameFinal}'
     restoreAPIM: restoreAPIM
@@ -292,7 +288,7 @@ module apim 'core/apim/apim.bicep' = {
 }
 
 module graphragApi 'core/apim/apim.graphrag-documentation.bicep' = {
-  name: 'graphrag-api'
+  name: 'graphrag-api-deployment'
   params: {
     apimname: apim.outputs.name
     backendUrl: appUrl
@@ -300,7 +296,7 @@ module graphragApi 'core/apim/apim.graphrag-documentation.bicep' = {
 }
 
 module workloadIdentity 'core/identity/identity.bicep' = {
-  name: 'workload-identity'
+  name: 'workload-identity-deployment'
   params: {
     name: workloadIdentityName
     location: location
@@ -315,7 +311,7 @@ module workloadIdentity 'core/identity/identity.bicep' = {
 }
 
 module privateDnsZone 'core/vnet/private-dns-zone.bicep' = {
-  name: 'private-dns-zone'
+  name: 'private-dns-zone-deployment'
   params: {
     name: dnsDomain
     vnetNames: [
@@ -325,7 +321,7 @@ module privateDnsZone 'core/vnet/private-dns-zone.bicep' = {
 }
 
 module privatelinkPrivateDns 'core/vnet/privatelink-private-dns-zones.bicep' = if (enablePrivateEndpoints) {
-  name: 'privatelink-private-dns-zones'
+  name: 'privatelink-private-dns-zones-deployment'
   params: {
     linkedVnetIds: [
       vnet.id
@@ -334,7 +330,7 @@ module privatelinkPrivateDns 'core/vnet/privatelink-private-dns-zones.bicep' = i
 }
 
 module azureMonitorPrivateLinkScope 'core/monitor/private-link-scope.bicep' = if (enablePrivateEndpoints) {
-  name: 'azure-monitor-privatelink-scope'
+  name: 'azure-monitor-privatelink-scope-deployment'
   params: {
     privateLinkScopeName: 'pls-${resourceBaseNameFinal}'
     privateLinkScopedResources: [
@@ -345,7 +341,7 @@ module azureMonitorPrivateLinkScope 'core/monitor/private-link-scope.bicep' = if
 }
 
 module cosmosDbPrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePrivateEndpoints) {
-  name: 'cosmosDb-private-endpoint'
+  name: 'cosmosDb-private-endpoint-deployment'
   params: {
     privateEndpointName: '${abbrs.privateEndpoint}cosmos-${cosmosdb.outputs.name}'
     location: location
@@ -357,7 +353,7 @@ module cosmosDbPrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePr
 }
 
 module blobStoragePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePrivateEndpoints) {
-  name: 'blob-storage-private-endpoint'
+  name: 'blob-storage-private-endpoint-deployment'
   params: {
     privateEndpointName: '${abbrs.privateEndpoint}blob-${storage.outputs.name}'
     location: location
@@ -369,7 +365,7 @@ module blobStoragePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enabl
 }
 
 module aiSearchPrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePrivateEndpoints) {
-  name: 'ai-search-private-endpoint'
+  name: 'ai-search-private-endpoint-deployment'
   params: {
     privateEndpointName: '${abbrs.privateEndpoint}search-${aiSearch.outputs.name}'
     location: location
@@ -381,7 +377,7 @@ module aiSearchPrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePr
 }
 
 module privateLinkScopePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePrivateEndpoints) {
-  name: 'privatelink-scope-private-endpoint'
+  name: 'privatelink-scope-private-endpoint-deployment'
   params: {
     privateEndpointName: '${abbrs.privateEndpoint}pls-${resourceBaseNameFinal}'
     location: location
