@@ -20,14 +20,14 @@ Managed Identity
 @minLength(1)
 @maxLength(64)
 @description('Name of the resource group that GraphRAG will be deployed in.')
-param resourceGroupName string
+param resourceGroup string
 
 @description('Unique name to append to each resource')
 param resourceBaseName string = ''
-var resourceBaseNameFinal = !empty(resourceBaseName) ? resourceBaseName : toLower(uniqueString('${subscription().id}/resourceGroups/${resourceGroupName}'))
+var resourceBaseNameFinal = !empty(resourceBaseName) ? resourceBaseName : toLower(uniqueString('${subscription().id}/resourceGroups/${resourceGroup}'))
 
 @description('Cloud region for all resources')
-param location string = resourceGroup().location
+param location string = az.resourceGroup().location
 
 @description('Principal/Object ID of the deployer. Will be used to assign admin roles to the AKS cluster.')
 param deployerPrincipalId string
@@ -58,7 +58,7 @@ param cosmosDbName string = ''
 param aiSearchName string = ''
 
 var abbrs = loadJsonContent('abbreviations.json')
-var tags = { 'azd-env-name': resourceGroupName }
+var tags = { 'azd-env-name': resourceGroup }
 var workloadIdentityName = '${abbrs.managedIdentityUserAssignedIdentities}${resourceBaseNameFinal}'
 var aksServiceAccountName = '${aksNamespace}-workload-sa'
 var workloadIdentitySubject = 'system:serviceaccount:${aksNamespace}:${aksServiceAccountName}'

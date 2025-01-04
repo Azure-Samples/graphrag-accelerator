@@ -329,7 +329,7 @@ deployAzureResources () {
         --resource-group $RESOURCE_GROUP \
         --template-file ./main.bicep \
         --parameters "resourceBaseName=$RESOURCE_BASE_NAME" \
-        --parameters "resourceGroupName=$RESOURCE_GROUP" \
+        --parameters "resourceGroup=$RESOURCE_GROUP" \
         --parameters "apimName=$APIM_NAME" \
         --parameters "apimTier=$APIM_TIER" \
         --parameters "apiPublisherName=$PUBLISHER_NAME" \
