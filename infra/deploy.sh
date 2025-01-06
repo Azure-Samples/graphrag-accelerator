@@ -16,17 +16,10 @@ GRAPHRAG_IMAGE=""
 PUBLISHER_EMAIL=""
 PUBLISHER_NAME=""
 RESOURCE_BASE_NAME=""
-REPORTERS=""
 CONTAINER_REGISTRY_NAME=""
 
 requiredParams=(
     LOCATION
-    GRAPHRAG_API_BASE
-    GRAPHRAG_API_VERSION
-    GRAPHRAG_LLM_MODEL
-    GRAPHRAG_LLM_DEPLOYMENT_NAME
-    GRAPHRAG_EMBEDDING_MODEL
-    GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME
     RESOURCE_GROUP
 )
 
@@ -239,10 +232,6 @@ populateOptionalParams () {
     if [ ! -z "$RESOURCE_BASE_NAME" ]; then
         printf "\tsetting RESOURCE_BASE_NAME=$RESOURCE_BASE_NAME\n"
     fi
-    if [ -z "$REPORTERS" ]; then
-        REPORTERS="blob,console,app_insights"
-        printf "\tsetting REPORTERS=blob,console,app_insights\n"
-    fi
     if [ -z "$GRAPHRAG_IMAGE" ]; then
         GRAPHRAG_IMAGE="graphrag:backend"
         printf "\tsetting GRAPHRAG_IMAGE=$GRAPHRAG_IMAGE\n"
@@ -434,7 +423,6 @@ installGraphRAGHelmChart () {
     local graphragEmbeddingModelDeployment=$(jq -r .azure_aoai_embedding_model_deployment_name.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$graphragEmbeddingModelDeployment" "Unable to parse embedding model deployment name from deployment outputs, exiting..."
 
-    local escapedReporters=$(sed "s/,/\\\,/g" <<< "$REPORTERS")
     reset_x=true
     if ! [ -o xtrace ]; then
         set -x
@@ -451,7 +439,6 @@ installGraphRAGHelmChart () {
         --set "ingress.host=$graphragHostname" \
         --set "graphragConfig.APP_INSIGHTS_CONNECTION_STRING=$appInsightsConnectionString" \
         --set "graphragConfig.AI_SEARCH_URL=https://$aiSearchName.$AISEARCH_ENDPOINT_SUFFIX" \
-        --set "graphragConfig.AI_SEARCH_AUDIENCE=$AISEARCH_AUDIENCE" \
         --set "graphragConfig.COSMOS_URI_ENDPOINT=$cosmosEndpoint" \
         --set "graphragConfig.GRAPHRAG_API_BASE=$graphragApiBase" \
         --set "graphragConfig.GRAPHRAG_API_VERSION=$graphragApiVersion" \
@@ -459,7 +446,6 @@ installGraphRAGHelmChart () {
         --set "graphragConfig.GRAPHRAG_LLM_DEPLOYMENT_NAME=$graphragLlmModelDeployment" \
         --set "graphragConfig.GRAPHRAG_EMBEDDING_MODEL=$graphragEmbeddingModel" \
         --set "graphragConfig.GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME=$graphragEmbeddingModelDeployment" \
-        --set "graphragConfig.REPORTERS=$escapedReporters" \
         --set "graphragConfig.STORAGE_ACCOUNT_BLOB_URL=$storageAccountBlobUrl"
 
     local helmResult=$?

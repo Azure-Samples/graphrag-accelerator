@@ -30,7 +30,7 @@ ingress:
     service.beta.kubernetes.io/azure-load-balancer-internal: "true"
 
 graphragConfig:
-  AI_SEARCH_AUDIENCE: ""
+  AI_SEARCH_AUDIENCE: "https://search.azure.com"
   AI_SEARCH_URL: ""
   APP_INSIGHTS_CONNECTION_STRING: ""
   COSMOS_URI_ENDPOINT: ""
