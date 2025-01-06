@@ -54,7 +54,7 @@ fastapi = ">=0.110.0"
 fastapi-offline = ">=1.7.3"
 fastparquet = ">=2023.10.1"
 fsspec = ">=2024.2.0"
-graphrag = "==1.0.1"
+graphrag = {git = "https://github.com/microsoft/graphrag.git", branch = "main"}
 graspologic = ">=3.3.0"
 httpx = ">=0.25.2"
 kubernetes = ">=29.0.0"

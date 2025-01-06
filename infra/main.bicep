@@ -169,6 +169,25 @@ resource vnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
   }
 }
 
+module aoai 'core/aoai/aoai.bicep' = {
+  name: 'aoai-deployment'
+  params: {
+    openAiName: '${abbrs.cognitiveServicesAccounts}${resourceBaseNameFinal}'
+    location: location
+    llmModelDeploymentName: 'gpt-4o-${uniqueString(resourceBaseNameFinal)}'
+    gpt4oTpm: 10
+    embeddingModelDeploymentName: 'text-embedding-ada-002-${uniqueString(resourceBaseNameFinal)}'
+    textEmbeddingAdaTpm: 10
+    roleAssignments: [
+      {
+        principalId: workloadIdentity.outputs.principalId
+        roleDefinitionId: roles.cognitiveServicesOpenaiContributor
+        principalType: 'ServicePrincipal'
+      }
+    ]
+  }
+}
+
 module acr 'core/acr/acr.bicep' = {
   name: 'acr-deployment'
   params: {

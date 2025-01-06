@@ -344,7 +344,6 @@ deployAzureResources () {
     AZURE_OUTPUTS=$(jq -r .properties.outputs <<< $AZURE_DEPLOY_RESULTS)
     exitIfCommandFailed $? "Error parsing outputs from Azure deployment..."
     exitIfValueEmpty "$AZURE_OUTPUTS" "Error parsing outputs from Azure deployment..."
-    assignAOAIRoleToManagedIdentity
 }
 
 validateSKUs() {
@@ -393,19 +392,6 @@ checkSKUQuotas() {
     local esv5_currVal=$(jq -r .currentValue <<< $esv5_usage_report)
     local esv5_reqVal=$(expr $esv5_currVal + 8)
     exitIfThresholdExceeded $esv5_reqVal $esv5_limit "Not enough Standard ESv5 Family vCPU quota for deployment. At least 8 vCPU is required."
-    printf "Done.\n"
-}
-
-assignAOAIRoleToManagedIdentity() {
-    printf "Assigning 'Cognitive Services OpenAI Contributor' role to managed identity... "
-    local servicePrincipalId=$(jq -r .azure_workload_identity_principal_id.value <<< $AZURE_OUTPUTS)
-    exitIfValueEmpty "$servicePrincipalId" "Unable to parse service principal id from azure outputs, exiting..."
-    local scope=$(az cognitiveservices account list --query "[?contains(properties.endpoint, '$GRAPHRAG_API_BASE')] | [0].id" -o tsv)
-    az role assignment create --only-show-errors \
-        --role "Cognitive Services OpenAI Contributor" \
-        --assignee "$servicePrincipalId" \
-        --scope "$scope" > /dev/null 2>&1
-    exitIfCommandFailed $? "Error assigning role to service principal, exiting..."
     printf "Done.\n"
 }
 
