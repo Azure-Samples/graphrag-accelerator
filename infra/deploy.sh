@@ -17,7 +17,6 @@ PUBLISHER_EMAIL=""
 PUBLISHER_NAME=""
 RESOURCE_BASE_NAME=""
 REPORTERS=""
-GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT=""
 CONTAINER_REGISTRY_NAME=""
 
 requiredParams=(
@@ -244,10 +243,6 @@ populateOptionalParams () {
         REPORTERS="blob,console,app_insights"
         printf "\tsetting REPORTERS=blob,console,app_insights\n"
     fi
-    if [ -z "$GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT" ]; then
-        GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT="https://cognitiveservices.azure.com/.default"
-        printf "\tsetting GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT=$GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT\n"
-    fi
     if [ -z "$GRAPHRAG_IMAGE" ]; then
         GRAPHRAG_IMAGE="graphrag:backend"
         printf "\tsetting GRAPHRAG_IMAGE=$GRAPHRAG_IMAGE\n"
@@ -426,6 +421,19 @@ installGraphRAGHelmChart () {
     exitIfValueEmpty "$graphragImageName" "Unable to parse graphrag image name, exiting..."
     exitIfValueEmpty "$graphragImageVersion" "Unable to parse graphrag image version, exiting..."
 
+    local graphragApiBase=$(jq -r .azure_aoai_endpoint.value <<< $AZURE_OUTPUTS)
+    exitIfValueEmpty "$graphragApiBase" "Unable to parse AOAI endpoint from deployment outputs, exiting..."
+    local graphragApiVersion=$(jq -r .azure_aoai_llm_model_api_version.value <<< $AZURE_OUTPUTS)
+    exitIfValueEmpty "$graphragApiVersion" "Unable to parse AOAI model api version from deployment outputs, exiting..."
+    local graphragLlmModel=$(jq -r .azure_aoai_llm_model.value <<< $AZURE_OUTPUTS)
+    exitIfValueEmpty "$graphragLlmModel" "Unable to parse LLM model name from deployment outputs, exiting..."
+    local graphragLlmModelDeployment=$(jq -r .azure_aoai_llm_model_deployment_name.value <<< $AZURE_OUTPUTS)
+    exitIfValueEmpty "$graphragLlmModelDeployment" "Unable to parse LLM model deployment name from deployment outputs, exiting..."
+    local graphragEmbeddingModel=$(jq -r .azure_aoai_embedding_model.value <<< $AZURE_OUTPUTS)
+    exitIfValueEmpty "$graphragEmbeddingModel" "Unable to parse embedding model name from deployment outputs, exiting..."
+    local graphragEmbeddingModelDeployment=$(jq -r .azure_aoai_embedding_model_deployment_name.value <<< $AZURE_OUTPUTS)
+    exitIfValueEmpty "$graphragEmbeddingModelDeployment" "Unable to parse embedding model deployment name from deployment outputs, exiting..."
+
     local escapedReporters=$(sed "s/,/\\\,/g" <<< "$REPORTERS")
     reset_x=true
     if ! [ -o xtrace ]; then
@@ -445,13 +453,12 @@ installGraphRAGHelmChart () {
         --set "graphragConfig.AI_SEARCH_URL=https://$aiSearchName.$AISEARCH_ENDPOINT_SUFFIX" \
         --set "graphragConfig.AI_SEARCH_AUDIENCE=$AISEARCH_AUDIENCE" \
         --set "graphragConfig.COSMOS_URI_ENDPOINT=$cosmosEndpoint" \
-        --set "graphragConfig.GRAPHRAG_API_BASE=$GRAPHRAG_API_BASE" \
-        --set "graphragConfig.GRAPHRAG_API_VERSION=$GRAPHRAG_API_VERSION" \
-        --set "graphragConfig.GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT=$GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT" \
-        --set "graphragConfig.GRAPHRAG_LLM_MODEL=$GRAPHRAG_LLM_MODEL" \
-        --set "graphragConfig.GRAPHRAG_LLM_DEPLOYMENT_NAME=$GRAPHRAG_LLM_DEPLOYMENT_NAME" \
-        --set "graphragConfig.GRAPHRAG_EMBEDDING_MODEL=$GRAPHRAG_EMBEDDING_MODEL" \
-        --set "graphragConfig.GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME=$GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME" \
+        --set "graphragConfig.GRAPHRAG_API_BASE=$graphragApiBase" \
+        --set "graphragConfig.GRAPHRAG_API_VERSION=$graphragApiVersion" \
+        --set "graphragConfig.GRAPHRAG_LLM_MODEL=$graphragLlmModel" \
+        --set "graphragConfig.GRAPHRAG_LLM_DEPLOYMENT_NAME=$graphragLlmModelDeployment" \
+        --set "graphragConfig.GRAPHRAG_EMBEDDING_MODEL=$graphragEmbeddingModel" \
+        --set "graphragConfig.GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME=$graphragEmbeddingModelDeployment" \
         --set "graphragConfig.REPORTERS=$escapedReporters" \
         --set "graphragConfig.STORAGE_ACCOUNT_BLOB_URL=$storageAccountBlobUrl"
 

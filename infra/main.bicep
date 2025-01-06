@@ -196,8 +196,8 @@ module acr 'core/acr/acr.bicep' = {
     roleAssignments: [
       {
         principalId: aks.outputs.kubeletPrincipalId
-        principalType: 'ServicePrincipal'
         roleDefinitionId: roles.acrPull
+        principalType: 'ServicePrincipal'
       }
     ]
   }
@@ -248,18 +248,18 @@ module aiSearch 'core/ai-search/ai-search.bicep' = {
     roleAssignments: [
       {
         principalId: workloadIdentity.outputs.principalId
-        principalType: 'ServicePrincipal'
         roleDefinitionId: roles.aiSearchContributor
+        principalType: 'ServicePrincipal'
       }
       {
         principalId: workloadIdentity.outputs.principalId
-        principalType: 'ServicePrincipal'
         roleDefinitionId: roles.aiSearchIndexDataContributor
+        principalType: 'ServicePrincipal'
       }
       {
         principalId: workloadIdentity.outputs.principalId
-        principalType: 'ServicePrincipal'
         roleDefinitionId: roles.aiSearchIndexDataReader
+        principalType: 'ServicePrincipal'
       }
     ]
   }
@@ -275,8 +275,8 @@ module storage 'core/storage/storage.bicep' = {
     roleAssignments: [
       {
         principalId: workloadIdentity.outputs.principalId
-        principalType: 'ServicePrincipal'
         roleDefinitionId: roles.storageBlobDataContributor
+        principalType: 'ServicePrincipal'
       }
     ]
     deleteRetentionPolicy: {
@@ -407,29 +407,50 @@ module privateLinkScopePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (
   }
 }
 
+
 output azure_location string = location
+
 output azure_tenant_id string = tenant().tenantId
+
 output azure_ai_search_name string = aiSearch.outputs.name
+
 output azure_acr_login_server string = acr.outputs.loginServer
 output azure_acr_name string = acr.outputs.name
+
+output azure_aoai_endpoint string = aoai.outputs.openAiEndpoint
+output azure_aoai_llm_model string = aoai.outputs.llmModel
+output azure_aoai_llm_model_deployment_name string = aoai.outputs.llmModelDeploymentName
+output azure_aoai_llm_model_api_version string = aoai.outputs.llmModelApiVersion
+output azure_aoai_embedding_model string = aoai.outputs.textEmbeddingModel
+output azure_aoai_embedding_model_deployment_name string = aoai.outputs.textEmbeddingModelDeploymentName
+output azure_aoai_embedding_model_api_version string = aoai.outputs.textEmbeddingModelApiVersion
+
 output azure_aks_name string = aks.outputs.name
 output azure_aks_controlplanefqdn string = aks.outputs.controlPlaneFqdn
 output azure_aks_managed_rg string = aks.outputs.managedResourceGroup
 output azure_aks_service_account_name string = aksServiceAccountName
-output azure_storage_account string = storage.outputs.name
-output azure_storage_account_blob_url string = storage.outputs.primaryEndpoints.blob
-output azure_cosmosdb_endpoint string = cosmosdb.outputs.endpoint
-output azure_cosmosdb_name string = cosmosdb.outputs.name
-output azure_cosmosdb_id string = cosmosdb.outputs.id
-output azure_app_insights_connection_string string = apim.outputs.appInsightsConnectionString
-output azure_apim_name string = apim.outputs.name
-output azure_apim_gateway_url string = apim.outputs.apimGatewayUrl
-output azure_dns_zone_name string = privateDnsZone.outputs.name
-output azure_app_hostname string = appHostname
-output azure_app_url string = appUrl
+
 output azure_workload_identity_client_id string = workloadIdentity.outputs.clientId
 output azure_workload_identity_principal_id string = workloadIdentity.outputs.principalId
 output azure_workload_identity_name string = workloadIdentity.outputs.name
+
+output azure_storage_account string = storage.outputs.name
+output azure_storage_account_blob_url string = storage.outputs.primaryEndpoints.blob
+
+output azure_cosmosdb_endpoint string = cosmosdb.outputs.endpoint
+output azure_cosmosdb_name string = cosmosdb.outputs.name
+output azure_cosmosdb_id string = cosmosdb.outputs.id
+
+output azure_app_insights_connection_string string = apim.outputs.appInsightsConnectionString
+
+output azure_apim_name string = apim.outputs.name
+output azure_apim_gateway_url string = apim.outputs.apimGatewayUrl
+
+output azure_dns_zone_name string = privateDnsZone.outputs.name
+
+output azure_app_hostname string = appHostname
+output azure_app_url string = appUrl
+
 output azure_private_dns_zones array = enablePrivateEndpoints ? union(
   privatelinkPrivateDns.outputs.privateDnsZones,
   [privateDnsZone.outputs.name]

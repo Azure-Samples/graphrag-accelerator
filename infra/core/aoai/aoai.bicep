@@ -76,5 +76,9 @@ resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
 ]
 
 output openAiEndpoint string = aoai.properties.endpoint
-output gpt4oDeploymentName string = gpt4oDeployment.name
-output textEmbeddingAdaDeploymentName string = textEmbeddingAdaDeployment.name
+output llmModel string = gpt4oDeployment.properties.model.name
+output llmModelDeploymentName string = gpt4oDeployment.name
+output llmModelApiVersion string = gpt4oDeployment.apiVersion
+output textEmbeddingModel string = textEmbeddingAdaDeployment.properties.model.name
+output textEmbeddingModelDeploymentName string = textEmbeddingAdaDeployment.name
+output textEmbeddingModelApiVersion string = textEmbeddingAdaDeployment.apiVersion
