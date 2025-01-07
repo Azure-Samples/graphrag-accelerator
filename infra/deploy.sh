@@ -419,7 +419,7 @@ assignAOAIRoleToManagedIdentity() {
     printf "Assigning 'Cognitive Services OpenAI Contributor' role to managed identity... "
     local servicePrincipalId=$(jq -r .azure_workload_identity_principal_id.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$servicePrincipalId" "Unable to parse service principal id from azure outputs, exiting..."
-    local scope=$(az cognitiveservices account list --query "[?contains(properties.endpoint, '$GRAPHRAG_API_BASE')] | [0].id" -o tsv)
+    local scope=$(az cognitiveservices account list --subscription $GRAPHRAG_OPENAI_SUBSCRIPTION --query "[?contains(properties.endpoint, '$GRAPHRAG_API_BASE')] | [0].id" -o tsv)
     az role assignment create --only-show-errors \
         --role "Cognitive Services OpenAI Contributor" \
         --assignee "$servicePrincipalId" \
