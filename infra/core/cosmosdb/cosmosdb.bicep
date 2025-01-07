@@ -7,7 +7,7 @@ param cosmosDbName string
 @description('The location of the CosmosDB resource.')
 param location string = resourceGroup().location
 
-@allowed([ 'Enabled', 'Disabled' ])
+@allowed(['Enabled', 'Disabled'])
 param publicNetworkAccess string = 'Disabled'
 
 @description('Role definition id to assign to the principal. Learn more: https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-setup-rbac')
@@ -21,7 +21,6 @@ param roleDefinitionId array = [
 ]
 
 param principalId string
-
 
 resource cosmosDb 'Microsoft.DocumentDB/databaseAccounts@2024-11-15' = {
   name: cosmosDbName

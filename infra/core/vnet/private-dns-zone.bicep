@@ -7,7 +7,6 @@ param name string
 @description('The name of the virtual networks the DNS zone should be associated with.')
 param vnetNames string[]
 
-
 resource dnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
   name: name
   location: 'global'

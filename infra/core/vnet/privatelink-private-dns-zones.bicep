@@ -11,8 +11,12 @@ var storagePrivateDnsZoneNames = [blobStoragePrivateDnsZoneName]
 var privateDnsZoneData = loadJsonContent('private-dns-zone-groups.json')
 var cloudName = toLower(environment().name)
 var azureMonitorPrivateDnsZones = privateDnsZoneData[cloudName].azureMonitor
-var privateDnsZones = union(azureMonitorPrivateDnsZones, storagePrivateDnsZoneNames, [cosmosDbPrivateDnsZoneName], [aiSearchPrivateDnsZoneName])
-
+var privateDnsZones = union(
+  azureMonitorPrivateDnsZones,
+  storagePrivateDnsZoneNames,
+  [cosmosDbPrivateDnsZoneName],
+  [aiSearchPrivateDnsZoneName]
+)
 
 resource privateDnsZoneResources 'Microsoft.Network/privateDnsZones@2020-06-01' = [
   for name in privateDnsZones: {

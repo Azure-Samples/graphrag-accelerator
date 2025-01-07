@@ -19,7 +19,6 @@ param textEmbeddingAdaTpm int = 10
 @description('Array of objects with fields principalId, roleDefinitionId')
 param roleAssignments array = []
 
-
 resource aoai 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
   name: openAiName
   location: location

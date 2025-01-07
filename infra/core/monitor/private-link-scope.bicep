@@ -6,7 +6,6 @@ param privateLinkScopedResources array = []
 param queryAccessMode string = 'Open'
 param ingestionAccessMode string = 'PrivateOnly'
 
-
 resource privateLinkScope 'microsoft.insights/privateLinkScopes@2021-07-01-preview' = {
   name: privateLinkScopeName
   location: 'global'

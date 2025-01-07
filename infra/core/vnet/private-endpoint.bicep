@@ -14,7 +14,6 @@ param privateEndpointName string
 param groupId string
 param location string = resourceGroup().location
 
-
 resource privateEndpoint 'Microsoft.Network/privateEndpoints@2021-05-01' = {
   name: privateEndpointName
   location: location

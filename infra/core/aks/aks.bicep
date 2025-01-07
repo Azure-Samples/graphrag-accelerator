@@ -117,9 +117,9 @@ resource aks 'Microsoft.ContainerService/managedClusters@2024-09-02-preview' = {
       }
     }
     networkProfile: {
-      serviceCidr: '10.3.0.0/16'  // must not overlap with any subnet IP ranges
-      dnsServiceIP: '10.3.0.10'   // must be within the range specified in serviceCidr
-      podCidr: '10.244.0.0/16'    // IP range from which to assign pod IPs
+      serviceCidr: '10.3.0.0/16' // must not overlap with any subnet IP ranges
+      dnsServiceIP: '10.3.0.10' // must be within the range specified in serviceCidr
+      podCidr: '10.244.0.0/16' // IP range from which to assign pod IPs
     }
     autoUpgradeProfile: autoUpgradeProfile
     oidcIssuerProfile: {
