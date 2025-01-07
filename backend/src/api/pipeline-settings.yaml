@@ -32,7 +32,7 @@ cache:
 llm:
   type: azure_openai_chat
   api_base: $GRAPHRAG_API_BASE
-  api_version: $GRAPHRAG_API_VERSION
+  api_version: $GRAPHRAG_LLM_API_VERSION
   model: $GRAPHRAG_LLM_MODEL
   deployment_name: $GRAPHRAG_LLM_DEPLOYMENT_NAME
   cognitive_services_endpoint: $GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT
@@ -53,7 +53,7 @@ embeddings:
   llm:
     type: azure_openai_embedding
     api_base: $GRAPHRAG_API_BASE
-    api_version: $GRAPHRAG_API_VERSION
+    api_version: $GRAPHRAG_EMBEDDING_API_VERSION
     batch_size: 16
     model: $GRAPHRAG_EMBEDDING_MODEL
     deployment_name: $GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME
