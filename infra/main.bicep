@@ -31,9 +31,6 @@ var resourceBaseNameFinal = !empty(resourceBaseName)
 @description('Cloud region for all resources')
 param location string = az.resourceGroup().location
 
-@description('Principal/Object ID of the deployer. Will be used to assign admin roles to the AKS cluster.')
-param deployerPrincipalId string
-
 @minLength(1)
 @description('Name of the publisher of the API Management instance.')
 param apiPublisherName string = 'Microsoft'
@@ -52,7 +49,7 @@ param enablePrivateEndpoints bool = true
 param restoreAPIM bool = false
 
 // optional parameters that will default to a generated name if not provided
-param apimTier string = 'Developer'
+param apimTier string = 'StandardV2'
 param apimName string = ''
 param acrName string = ''
 param storageAccountName string = ''
@@ -185,8 +182,8 @@ module aoai 'core/aoai/aoai.bicep' = {
     roleAssignments: [
       {
         principalId: workloadIdentity.outputs.principalId
-        roleDefinitionId: roles.cognitiveServicesOpenaiContributor
         principalType: 'ServicePrincipal'
+        roleDefinitionId: roles.cognitiveServicesOpenaiContributor
       }
     ]
   }
@@ -200,8 +197,8 @@ module acr 'core/acr/acr.bicep' = {
     roleAssignments: [
       {
         principalId: aks.outputs.kubeletPrincipalId
-        roleDefinitionId: roles.acrPull
         principalType: 'ServicePrincipal'
+        roleDefinitionId: roles.acrPull
       }
     ]
   }
@@ -214,7 +211,7 @@ module aks 'core/aks/aks.bicep' = {
     location: location
     graphragVMSize: 'standard_d8s_v5' // 8 vcpu, 32 GB memory
     graphragIndexingVMSize: 'standard_e8s_v5' // 8 vcpus, 64 GB memory
-    clusterAdmins: !empty(deployerPrincipalId) ? ['${deployerPrincipalId}'] : null
+    clusterAdmins: null
     logAnalyticsWorkspaceId: log.outputs.id
     subnetId: vnet.properties.subnets[1].id // aks subnet
     privateDnsZoneName: privateDnsZone.outputs.name
@@ -252,18 +249,18 @@ module aiSearch 'core/ai-search/ai-search.bicep' = {
     roleAssignments: [
       {
         principalId: workloadIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
         roleDefinitionId: roles.aiSearchContributor
-        principalType: 'ServicePrincipal'
       }
       {
         principalId: workloadIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
         roleDefinitionId: roles.aiSearchIndexDataContributor
-        principalType: 'ServicePrincipal'
       }
       {
         principalId: workloadIdentity.outputs.principalId
-        roleDefinitionId: roles.aiSearchIndexDataReader
         principalType: 'ServicePrincipal'
+        roleDefinitionId: roles.aiSearchIndexDataReader
       }
     ]
   }
@@ -281,8 +278,8 @@ module storage 'core/storage/storage.bicep' = {
     roleAssignments: [
       {
         principalId: workloadIdentity.outputs.principalId
-        roleDefinitionId: roles.storageBlobDataContributor
         principalType: 'ServicePrincipal'
+        roleDefinitionId: roles.storageBlobDataContributor
       }
     ]
     deleteRetentionPolicy: {

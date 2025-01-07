@@ -52,6 +52,8 @@ resource gpt4oDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-
 resource textEmbeddingAdaDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
   parent: aoai
   name: embeddingModelDeploymentName
+  // NOTE: simultaneous model deployments are not supported at this time. As a workaround, use dependsOn to force the models to be deployed in a sequential manner.
+  dependsOn: [gpt4oDeployment]
   sku: {
     name: 'Standard'
     capacity: textEmbeddingAdaTpm
