@@ -16,7 +16,6 @@ GRAPHRAG_IMAGE=""
 PUBLISHER_EMAIL=""
 PUBLISHER_NAME=""
 RESOURCE_BASE_NAME=""
-CONTAINER_REGISTRY_NAME=""
 
 requiredParams=(
     LOCATION
@@ -316,7 +315,6 @@ deployAzureResources () {
         --parameters "apiPublisherName=$PUBLISHER_NAME" \
         --parameters "apiPublisherEmail=$PUBLISHER_EMAIL" \
         --parameters "enablePrivateEndpoints=$ENABLE_PRIVATE_ENDPOINTS" \
-        --parameters "acrName=$CONTAINER_REGISTRY_NAME" \
         --output json)
     # errors in deployment may not be caught by exitIfCommandFailed function so we also check the output for errors
     exitIfCommandFailed $? "Error deploying Azure resources..."

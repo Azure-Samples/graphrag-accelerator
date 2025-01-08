@@ -56,6 +56,24 @@ param storageAccountName string = ''
 param cosmosDbName string = ''
 param aiSearchName string = ''
 
+// AOAI parameters
+@description('Name of the AOAI LLM model to use. Must match official model id. For more information: https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models')
+@allowed(['gpt-4o', 'gpt-4o-mini'])
+param llmModelName string = 'gpt-4o'
+@description('Version of the AOAI LLM model to use.')
+param llmModelVersion string = '2024-08-06'
+@description('Quota of the AOAI LLM model to use.')
+@minValue(1)
+param llmModelQuota int = 10
+
+@description('Name of the AOAI embedding model to use. Must match official model id. For more information: https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models')
+@allowed(['text-embedding-ada-002', 'text-embedding-3-large'])
+param embeddingModelName string = 'text-embedding-ada-002'
+param embeddingModelVersion string = '2'
+@description('Quota of the AOAI embedding model to use.')
+@minValue(1)
+param embeddingModelQuota int = 10
+
 var abbrs = loadJsonContent('abbreviations.json')
 var tags = { 'azd-env-name': resourceGroup }
 var workloadIdentityName = '${abbrs.managedIdentityUserAssignedIdentities}${resourceBaseNameFinal}'
@@ -175,10 +193,12 @@ module aoai 'core/aoai/aoai.bicep' = {
   params: {
     openAiName: '${abbrs.cognitiveServicesAccounts}${resourceBaseNameFinal}'
     location: location
-    llmModelDeploymentName: 'gpt-4o-${uniqueString(resourceBaseNameFinal)}'
-    gpt4oTpm: 10
-    embeddingModelDeploymentName: 'text-embedding-ada-002-${uniqueString(resourceBaseNameFinal)}'
-    textEmbeddingAdaTpm: 10
+    llmModelName: llmModelName
+    llmModelVersion: llmModelVersion
+    llmTpmQuota: llmModelQuota
+    embeddingModelName: embeddingModelName
+    embeddingModelVersion: embeddingModelVersion
+    embeddingTpmQuota: embeddingModelQuota
     roleAssignments: [
       {
         principalId: workloadIdentity.outputs.principalId
@@ -419,6 +439,11 @@ output azure_ai_search_name string = aiSearch.outputs.name
 output azure_acr_login_server string = acr.outputs.loginServer
 output azure_acr_name string = acr.outputs.name
 
+output azure_aks_name string = aks.outputs.name
+output azure_aks_controlplanefqdn string = aks.outputs.controlPlaneFqdn
+output azure_aks_managed_rg string = aks.outputs.managedResourceGroup
+output azure_aks_service_account_name string = aksServiceAccountName
+
 output azure_aoai_endpoint string = aoai.outputs.openAiEndpoint
 output azure_aoai_llm_model string = aoai.outputs.llmModel
 output azure_aoai_llm_model_deployment_name string = aoai.outputs.llmModelDeploymentName
@@ -427,32 +452,27 @@ output azure_aoai_embedding_model string = aoai.outputs.textEmbeddingModel
 output azure_aoai_embedding_model_deployment_name string = aoai.outputs.textEmbeddingModelDeploymentName
 output azure_aoai_embedding_model_api_version string = aoai.outputs.textEmbeddingModelApiVersion
 
-output azure_aks_name string = aks.outputs.name
-output azure_aks_controlplanefqdn string = aks.outputs.controlPlaneFqdn
-output azure_aks_managed_rg string = aks.outputs.managedResourceGroup
-output azure_aks_service_account_name string = aksServiceAccountName
+output azure_apim_name string = apim.outputs.name
+output azure_apim_gateway_url string = apim.outputs.apimGatewayUrl
 
-output azure_workload_identity_client_id string = workloadIdentity.outputs.clientId
-output azure_workload_identity_principal_id string = workloadIdentity.outputs.principalId
-output azure_workload_identity_name string = workloadIdentity.outputs.name
+output azure_app_hostname string = appHostname
+output azure_app_url string = appUrl
 
-output azure_storage_account string = storage.outputs.name
-output azure_storage_account_blob_url string = storage.outputs.primaryEndpoints.blob
+output azure_app_insights_connection_string string = apim.outputs.appInsightsConnectionString
 
 output azure_cosmosdb_endpoint string = cosmosdb.outputs.endpoint
 output azure_cosmosdb_name string = cosmosdb.outputs.name
 output azure_cosmosdb_id string = cosmosdb.outputs.id
 
-output azure_app_insights_connection_string string = apim.outputs.appInsightsConnectionString
-
-output azure_apim_name string = apim.outputs.name
-output azure_apim_gateway_url string = apim.outputs.apimGatewayUrl
-
 output azure_dns_zone_name string = privateDnsZone.outputs.name
-
-output azure_app_hostname string = appHostname
-output azure_app_url string = appUrl
 
 output azure_private_dns_zones array = enablePrivateEndpoints
   ? union(privatelinkPrivateDns.outputs.privateDnsZones, [privateDnsZone.outputs.name])
   : []
+
+output azure_storage_account string = storage.outputs.name
+output azure_storage_account_blob_url string = storage.outputs.primaryEndpoints.blob
+
+output azure_workload_identity_client_id string = workloadIdentity.outputs.clientId
+output azure_workload_identity_principal_id string = workloadIdentity.outputs.principalId
+output azure_workload_identity_name string = workloadIdentity.outputs.name

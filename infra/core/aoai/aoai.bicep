@@ -4,17 +4,23 @@ param openAiName string = 'openai${uniqueString(resourceGroup().id)}'
 @description('Location for the Azure OpenAI instance')
 param location string = resourceGroup().location
 
-@description('LLM model deployment name')
-param llmModelDeploymentName string = 'gpt-4o'
+@description('LLM model name')
+param llmModelName string = 'gpt-4o'
 
-@description('Embedding model deployment name')
-param embeddingModelDeploymentName string = 'text-embedding-ada-002'
+@description('LLM Model API version')
+param llmModelVersion string
 
-@description('TPM quota for GPT-4o deployment')
-param gpt4oTpm int = 10
+@description('Embedding model name')
+param embeddingModelName string = 'text-embedding-ada-002'
 
-@description('TPM quota for text-embedding-ada-002 deployment')
-param textEmbeddingAdaTpm int = 10
+@description('Embedding Model API version')
+param embeddingModelVersion string
+
+@description('TPM quota for llm model deployment (x1000)')
+param llmTpmQuota int = 10
+
+@description('TPM quota for embedding model deployment (x1000)')
+param embeddingTpmQuota int = 10
 
 @description('Array of objects with fields principalId, roleDefinitionId')
 param roleAssignments array = []
@@ -32,39 +38,39 @@ resource aoai 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
   }
 }
 
-resource gpt4oDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
+resource llmDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
   parent: aoai
-  name: llmModelDeploymentName
+  name: llmModelName
   sku: {
     name: 'GlobalStandard'
-    capacity: gpt4oTpm
+    capacity: llmTpmQuota
   }
   properties: {
     model: {
       format: 'OpenAI'
-      name: 'gpt-4o'
-      version: '2024-05-13'
+      name: llmModelName
+      version: llmModelVersion
     }
-    currentCapacity: gpt4oTpm
+    currentCapacity: llmTpmQuota
   }
 }
 
-resource textEmbeddingAdaDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
+resource embeddingDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
   parent: aoai
-  name: embeddingModelDeploymentName
+  name: embeddingModelName
   // NOTE: simultaneous model deployments are not supported at this time. As a workaround, use dependsOn to force the models to be deployed in a sequential manner.
-  dependsOn: [gpt4oDeployment]
+  dependsOn: [llmDeployment]
   sku: {
     name: 'Standard'
-    capacity: textEmbeddingAdaTpm
+    capacity: embeddingTpmQuota
   }
   properties: {
     model: {
       format: 'OpenAI'
-      name: 'text-embedding-ada-002'
-      version: '2'
+      name: embeddingModelName
+      version: embeddingModelVersion
     }
-    currentCapacity: textEmbeddingAdaTpm
+    currentCapacity: embeddingTpmQuota
   }
 }
 
@@ -77,9 +83,9 @@ resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
 ]
 
 output openAiEndpoint string = aoai.properties.endpoint
-output llmModel string = gpt4oDeployment.properties.model.name
-output llmModelDeploymentName string = gpt4oDeployment.name
-output llmModelApiVersion string = gpt4oDeployment.apiVersion
-output textEmbeddingModel string = textEmbeddingAdaDeployment.properties.model.name
-output textEmbeddingModelDeploymentName string = textEmbeddingAdaDeployment.name
-output textEmbeddingModelApiVersion string = textEmbeddingAdaDeployment.apiVersion
+output llmModel string = llmDeployment.properties.model.name
+output llmModelDeploymentName string = llmDeployment.name
+output llmModelApiVersion string = llmDeployment.apiVersion
+output textEmbeddingModel string = embeddingDeployment.properties.model.name
+output textEmbeddingModelDeploymentName string = embeddingDeployment.name
+output textEmbeddingModelApiVersion string = embeddingDeployment.apiVersion

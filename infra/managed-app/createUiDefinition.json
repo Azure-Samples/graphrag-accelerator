@@ -1,0 +1,176 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/0.1.2-preview/CreateUIDefinition.MultiVm.json#",
+  "handler": "Microsoft.Azure.CreateUIDef",
+  "version": "0.1.2-preview",
+  "parameters": {
+    "basics": [
+      {}
+    ],
+    "steps": [
+      {
+        "name": "aoaiSettings",
+        "label": "AOAI Settings",
+        "subLabel": {
+          "preValidation": "Configure the AOAI settings",
+          "postValidation": "Completed"
+        },
+        "elements": [
+          {
+            "name": "llmModel",
+            "type": "Microsoft.Common.DropDown",
+            "label": "LLM Model",
+            "defaultValue": "gpt-4o",
+            "toolTip": "LLM model to use.",
+            "constraints": {
+              "allowedValues": [
+                {
+                  "label": "gpt-4o",
+                  "value": "gpt-4o"
+                },
+                {
+                  "label": "gpt-4o-mini",
+                  "value": "gpt-4o-mini"
+                }
+              ],
+              "required": true
+            },
+            "visible": true
+          },
+          {
+            "name": "llmModelVersion",
+            "type": "Microsoft.Common.DropDown",
+            "label": "LLM Model Version",
+            "defaultValue": "2024-08-06",
+            "toolTip": "LLM model version to use.",
+            "constraints": {
+              "allowedValues": [
+                {
+                  "label": "2024-08-06",
+                  "value": "2024-08-06"
+                },
+                {
+                  "label": "2024-07-18",
+                  "value": "2024-07-18"
+                }
+              ],
+              "required": true
+            },
+            "visible": true
+          },
+          {
+            "name": "llmModelQuota",
+            "type": "Microsoft.Common.TextBox",
+            "label": "LLM Model Quota (x1000)",
+            "placeholder": "85",
+            "defaultValue": "",
+            "toolTip": "Model quota to use.",
+            "constraints": {
+              "required": true,
+              "regex": "^[1-9][0-9]*$",
+              "validationMessage": "Valid LLM model quota."
+            },
+            "visible": true
+          },
+          {
+            "name": "embeddingModel",
+            "type": "Microsoft.Common.DropDown",
+            "label": "Embedding Model",
+            "defaultValue": "text-embedding-ada-002",
+            "toolTip": "Embedding model to use",
+            "constraints": {
+              "allowedValues": [
+                {
+                  "label": "text-embedding-ada-002",
+                  "value": "text-embedding-ada-002"
+                },
+                {
+                  "label": "text-embedding-3-large",
+                  "value": "text-embedding-3-large"
+                }
+              ],
+              "required": true
+            },
+            "visible": true
+          },
+          {
+            "name": "embeddingModelQuota",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Embedding Model Quota (x1000)",
+            "placeholder": "100",
+            "defaultValue": "",
+            "toolTip": "Model quota to use.",
+            "constraints": {
+              "required": true,
+              "regex": "^[1-9][0-9]*$",
+              "validationMessage": "Valid embedding model quota."
+            },
+            "visible": true
+          },
+          {
+            "name": "embeddingModelVersion",
+            "type": "Microsoft.Common.DropDown",
+            "label": "Embedding Model Version",
+            "defaultValue": "2",
+            "toolTip": "Use a valid embedding model version.",
+            "constraints": {
+              "allowedValues": [
+                {
+                  "label": "2",
+                  "value": "2"
+                },
+                {
+                  "label": "1",
+                  "value": "1"
+                }
+              ],
+              "required": true
+            },
+            "visible": true
+          }
+        ]
+      },
+      {
+        "name": "graphragSettings",
+        "label": "GraphRAG Settings",
+        "subLabel": {
+          "preValidation": "Configure the graphrag settings",
+          "postValidation": "Completed"
+        },
+        "elements": [
+          {
+            "name": "apimTier",
+            "type": "Microsoft.Common.DropDown",
+            "label": "APIM Tier",
+            "defaultValue": "StandardV2",
+            "toolTip": "APIM tier to use",
+            "constraints": {
+              "allowedValues": [
+                {
+                  "label": "Developer",
+                  "value": "Developer"
+                },
+                {
+                  "label": "StandardV2",
+                  "value": "StandardV2"
+                }
+              ],
+              "required": true
+            },
+            "visible": true
+          }
+        ]
+      }
+    ],
+    "outputs": {
+      "resourceGroup": "[resourceGroup().name]",
+      "location": "[location()]",
+      "apimTier": "[steps('graphragSettings').apimTier]",
+      "llmModelName": "[steps('aoaiSettings').llmModel]",
+      "llmModelQuota": "[int(steps('aoaiSettings').llmModelQuota)]",
+      "embeddingModelName": "[steps('aoaiSettings').embeddingModel]",
+      "embeddingModelQuota": "[int(steps('aoaiSettings').embeddingModelQuota)]",
+      "llmModelVersion": "[steps('aoaiSettings').llmModelVersion]",
+      "embeddingModelVersion": "[steps('aoaiSettings').embeddingModelVersion]"
+    }
+  }
+}
