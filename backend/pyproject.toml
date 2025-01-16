@@ -1,7 +1,4 @@
 [tool.poetry]
-name = "graphrag-solution-accelerator"
-version = "1.0.1"
-description = ""
 authors = [
     "Josh Bradley <joshbradley@microsoft.com>",
     "Newman Cheng <newmancheng@microsoft.com>",
@@ -12,8 +9,11 @@ authors = [
     "Shane Solomon <shane.solomon@microsoft.com>",
     "Kenny Zhang <zhangken@microsoft.com>",
 ]
+description = ""
 license = "MIT"
+name = "graphrag-solution-accelerator"
 package-mode = false
+version = "1.0.1"
 
 [tool.poetry.dependencies]
 python = "~3.10"
@@ -54,7 +54,7 @@ fastapi = ">=0.110.0"
 fastapi-offline = ">=1.7.3"
 fastparquet = ">=2023.10.1"
 fsspec = ">=2024.2.0"
-graphrag = "==1.0.1"
+graphrag = { git = "https://github.com/microsoft/graphrag.git", branch = "main" }
 graspologic = ">=3.3.0"
 httpx = ">=0.25.2"
 kubernetes = ">=29.0.0"
@@ -73,19 +73,19 @@ urllib3 = ">=2.2.2"
 uvicorn = ">=0.23.2"
 
 [tool.ruff]
-target-version = "py310"
-line-length = 88
 indent-width = 4
+line-length = 88
+target-version = "py310"
 
 [tool.ruff.format]
 preview = true
 quote-style = "double"
 
 [tool.ruff.lint]
+ignore = ["E402", "E501", "F821"]
 preview = true
 select = ["E", "F", "I"]
-ignore = ["E402", "E501", "F821"]
 
 [build-system]
-requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core"]
