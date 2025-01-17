@@ -27,7 +27,7 @@ def load_pipeline_logger(
 
     Loggers may be configured as generic loggers or associated with a specified indexing job.
     """
-    # always register the console logger if no loggers are specified
+    # always register the console logger as a fallback option
     if Reporters.CONSOLE not in reporters:
         reporters.append(Reporters.CONSOLE)
 

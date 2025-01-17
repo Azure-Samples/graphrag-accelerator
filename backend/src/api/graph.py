@@ -29,7 +29,7 @@ async def get_graphml_file(index_name: str):
     # validate index_name and graphml file existence
     azure_client_manager = AzureClientManager()
     sanitized_index_name = sanitize_name(index_name)
-    graphml_filename = "summarized_graph.graphml"
+    graphml_filename = "graph.graphml"
     blob_filepath = f"output/{graphml_filename}"  # expected file location of the graph based on the workflow
     validate_index_file_exist(sanitized_index_name, blob_filepath)
     try:

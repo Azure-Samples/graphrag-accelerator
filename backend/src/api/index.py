@@ -1,17 +1,15 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import asyncio
 import inspect
 import os
 import traceback
 from time import time
-from typing import cast
 
+import graphrag.api as api
 import yaml
 from azure.identity import DefaultAzureCredential
 from azure.search.documents.indexes import SearchIndexClient
-from datashaper import WorkflowCallbacksManager
 from fastapi import (
     APIRouter,
     HTTPException,
@@ -193,7 +191,7 @@ async def _start_indexing_pipeline(index_name: str):
             f"{sanitized_index_name}_description_embedding"
         )
 
-    # set prompts for entity extraction, community report, and summarize descriptions.
+    # set prompt for entity extraction
     if pipeline_job.entity_extraction_prompt:
         fname = "entity-extraction-prompt.txt"
         with open(fname, "w") as outfile:
@@ -201,13 +199,8 @@ async def _start_indexing_pipeline(index_name: str):
         data["entity_extraction"]["prompt"] = fname
     else:
         data.pop("entity_extraction")
-    if pipeline_job.community_report_prompt:
-        fname = "community-report-prompt.txt"
-        with open(fname, "w") as outfile:
-            outfile.write(pipeline_job.community_report_prompt)
-        data["community_reports"]["prompt"] = fname
-    else:
-        data.pop("community_reports")
+
+    # set prompt for summarize descriptions
     if pipeline_job.summarize_descriptions_prompt:
         fname = "summarize-descriptions-prompt.txt"
         with open(fname, "w") as outfile:
@@ -216,15 +209,24 @@ async def _start_indexing_pipeline(index_name: str):
     else:
         data.pop("summarize_descriptions")
 
-    # generate the default pipeline and override with custom settings
+    # set prompt for community report
+    if pipeline_job.community_report_prompt:
+        fname = "community-report-prompt.txt"
+        with open(fname, "w") as outfile:
+            outfile.write(pipeline_job.community_report_prompt)
+        data["community_reports"]["prompt"] = fname
+    else:
+        data.pop("community_reports")
+
+    # generate a default GraphRagConfig and override with custom settings
     parameters = create_graphrag_config(data, ".")
-    pipeline_config = create_pipeline_config(parameters, True)
 
     # reset pipeline job details
     pipeline_job.status = PipelineJobState.RUNNING
     pipeline_job.all_workflows = []
     pipeline_job.completed_workflows = []
     pipeline_job.failed_workflows = []
+    pipeline_config = create_pipeline_config(parameters)
     for workflow in pipeline_config.workflows:
         pipeline_job.all_workflows.append(workflow.name)
 
@@ -243,47 +245,42 @@ async def _start_indexing_pipeline(index_name: str):
         reporters=loggers,
     )
 
-    # add pipeline job callback to the callback manager
-    cast(WorkflowCallbacksManager, workflow_callbacks).register(
-        PipelineJobWorkflowCallbacks(pipeline_job)
-    )
+    # add pipeline job callback to monitor job progress
+    pipeline_job_callback = PipelineJobWorkflowCallbacks(pipeline_job)
 
     # run the pipeline
     try:
-        # TODO refactor to use the new replacement for run_pipeline_with_config
-        from graphrag.index.run import run_pipeline_with_config
-        async for workflow_result in run_pipeline_with_config(
-            config_or_path=pipeline_config,
-            callbacks=workflow_callbacks,
-            progress_reporter=None,
-        ):
-            await asyncio.sleep(0)
-            if len(workflow_result.errors or []) > 0:
-                # if the workflow failed, record the failure
-                pipeline_job.failed_workflows.append(workflow_result.workflow)
-                pipeline_job.update_db()
-                # TODO: exit early if a workflow fails and add more detailed error logging
-
+        await api.build_index(
+            config=parameters,
+            callbacks=[workflow_callbacks, pipeline_job_callback],
+        )
         # if job is done, check if any workflow steps failed
         if len(pipeline_job.failed_workflows) > 0:
             pipeline_job.status = PipelineJobState.FAILED
+            workflow_callbacks.on_log(
+                message=f"Indexing pipeline encountered error for index'{index_name}'.",
+                details={
+                    "index": index_name,
+                    "storage_name": storage_name,
+                    "status_message": "indexing pipeline encountered error",
+                },
+            )
         else:
             # record the workflow completion
             pipeline_job.status = PipelineJobState.COMPLETE
             pipeline_job.percent_complete = 100
+            workflow_callbacks.on_log(
+                message=f"Indexing pipeline complete for index'{index_name}'.",
+                details={
+                    "index": index_name,
+                    "storage_name": storage_name,
+                    "status_message": "indexing pipeline complete",
+                },
+            )
 
         pipeline_job.progress = (
             f"{len(pipeline_job.completed_workflows)} out of "
             f"{len(pipeline_job.all_workflows)} workflows completed successfully."
-        )
-
-        workflow_callbacks.on_log(
-            message=f"Indexing pipeline complete for index'{index_name}'.",
-            details={
-                "index": index_name,
-                "storage_name": storage_name,
-                "status_message": "indexing pipeline complete",
-            },
         )
 
         del workflow_callbacks  # garbage collect
