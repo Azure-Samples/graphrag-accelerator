@@ -1,7 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-from datashaper.workflow.workflow_callbacks import NoopWorkflowCallbacks
+from graphrag.callbacks.noop_workflow_callbacks import NoopWorkflowCallbacks
 
 from src.typing.pipeline import PipelineJobState
 from src.utils.pipeline import PipelineJob

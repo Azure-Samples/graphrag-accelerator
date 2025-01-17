@@ -11,7 +11,7 @@ from typing import (
     Optional,
 )
 
-from datashaper.workflow.workflow_callbacks import NoopWorkflowCallbacks
+from graphrag.callbacks.noop_workflow_callbacks import NoopWorkflowCallbacks
 
 
 class ConsoleWorkflowCallbacks(NoopWorkflowCallbacks):
@@ -107,7 +107,7 @@ class ConsoleWorkflowCallbacks(NoopWorkflowCallbacks):
             details = {}
         return {**self._properties, **details}
 
-    def on_workflow_start(self, name: str, instance: object) -> None:
+    def workflow_start(self, name: str, instance: object) -> None:
         """Execute this callback when a workflow starts."""
         self._workflow_name = name
         self._processed_workflow_steps.append(name)
@@ -128,7 +128,7 @@ class ConsoleWorkflowCallbacks(NoopWorkflowCallbacks):
             message, stack_info=False, extra=self._format_details(details=details)
         )
 
-    def on_workflow_end(self, name: str, instance: object) -> None:
+    def workflow_end(self, name: str, instance: object) -> None:
         """Execute this callback when a workflow ends."""
         message = f"Index: {self._index_name} -- " if self._index_name else ""
         workflow_progress = (
@@ -147,7 +147,7 @@ class ConsoleWorkflowCallbacks(NoopWorkflowCallbacks):
             message, stack_info=False, extra=self._format_details(details=details)
         )
 
-    def on_error(
+    def error(
         self,
         message: str,
         cause: Optional[BaseException] = None,
@@ -164,20 +164,14 @@ class ConsoleWorkflowCallbacks(NoopWorkflowCallbacks):
             extra=self._format_details(details=details),
         )
 
-    def on_warning(self, message: str, details: Optional[dict] = None) -> None:
+    def warning(self, message: str, details: Optional[dict] = None) -> None:
         """A call back handler for when a warning occurs."""
         self._logger.warning(
             message, stack_info=False, extra=self._format_details(details=details)
         )
 
-    def on_log(self, message: str, details: Optional[dict] = None) -> None:
+    def log(self, message: str, details: Optional[dict] = None) -> None:
         """A call back handler for when a log message occurs."""
         self._logger.info(
             message, stack_info=False, extra=self._format_details(details=details)
         )
-
-    def on_measure(
-        self, name: str, value: float, details: Optional[dict] = None
-    ) -> None:
-        """A call back handler for when a measurement occurs."""
-        pass

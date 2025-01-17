@@ -4,7 +4,7 @@
 import os
 from urllib.parse import urlparse
 
-from datashaper import WorkflowCallbacks
+from graphrag.callbacks.workflow_callbacks import WorkflowCallbacks
 
 from src.logger.load_logger import load_pipeline_logger
 from src.logger.typing import Reporters

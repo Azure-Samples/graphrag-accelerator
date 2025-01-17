@@ -13,7 +13,7 @@ from typing import (
 )
 
 from azure.monitor.opentelemetry.exporter import AzureMonitorLogExporter
-from datashaper.workflow.workflow_callbacks import NoopWorkflowCallbacks
+from graphrag.callbacks.noop_workflow_callbacks import NoopWorkflowCallbacks
 from opentelemetry._logs import (
     get_logger_provider,
     set_logger_provider,
@@ -121,7 +121,7 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
             return {}
         return {"custom_dimensions": {**self._properties, **unwrap_dict(details)}}
 
-    def on_workflow_start(self, name: str, instance: object) -> None:
+    def workflow_start(self, name: str, instance: object) -> None:
         """Execute this callback when a workflow starts."""
         self._workflow_name = name
         self._processed_workflow_steps.append(name)
@@ -142,7 +142,7 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
             message, stack_info=False, extra=self._format_details(details=details)
         )
 
-    def on_workflow_end(self, name: str, instance: object) -> None:
+    def workflow_end(self, name: str, instance: object) -> None:
         """Execute this callback when a workflow ends."""
         message = f"Index: {self._index_name} -- " if self._index_name else ""
         workflow_progress = (
@@ -161,7 +161,7 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
             message, stack_info=False, extra=self._format_details(details=details)
         )
 
-    def on_error(
+    def error(
         self,
         message: str,
         cause: Optional[BaseException] = None,
@@ -178,23 +178,17 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
             extra=self._format_details(details=details),
         )
 
-    def on_warning(self, message: str, details: Optional[dict] = None) -> None:
+    def warning(self, message: str, details: Optional[dict] = None) -> None:
         """A call back handler for when a warning occurs."""
         self._logger.warning(
             message, stack_info=False, extra=self._format_details(details=details)
         )
 
-    def on_log(self, message: str, details: Optional[dict] = None) -> None:
+    def log(self, message: str, details: Optional[dict] = None) -> None:
         """A call back handler for when a log message occurs."""
         self._logger.info(
             message, stack_info=False, extra=self._format_details(details=details)
         )
-
-    def on_measure(
-        self, name: str, value: float, details: Optional[dict] = None
-    ) -> None:
-        """A call back handler for when a measurement occurs."""
-        raise NotImplementedError("on_measure() not supported by this logger.")
 
 
 def unwrap_dict(input_dict, parent_key="", sep="_"):

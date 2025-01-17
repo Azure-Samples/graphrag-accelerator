@@ -5,8 +5,8 @@ import os
 from pathlib import Path
 from typing import List
 
-from datashaper import WorkflowCallbacks, WorkflowCallbacksManager
 from graphrag.callbacks.file_workflow_callbacks import FileWorkflowCallbacks
+from graphrag.callbacks.workflow_callbacks import WorkflowCallbacks
 
 from src.api.azure_clients import AzureClientManager
 from src.logger.application_insights_workflow_callbacks import (
@@ -23,7 +23,7 @@ def load_pipeline_logger(
     index_name: str = "",
     num_workflow_steps: int = 0,
 ) -> WorkflowCallbacks:
-    """Create a callback manager and register a list of loggers.
+    """Create and load a list of loggers.
 
     Loggers may be configured as generic loggers or associated with a specified indexing job.
     """
@@ -32,7 +32,7 @@ def load_pipeline_logger(
         reporters.append(Reporters.CONSOLE)
 
     azure_client_manager = AzureClientManager()
-    callback_manager = WorkflowCallbacksManager()
+    logger_callbacks = []
     for reporter in reporters:
         match reporter:
             case Reporters.BLOB:
@@ -48,7 +48,7 @@ def load_pipeline_logger(
                 ).exists():
                     blob_service_client.create_container(container_root)
                 # register the blob reporter
-                callback_manager.register(
+                logger_callbacks.append(
                     BlobWorkflowCallbacks(
                         blob_service_client=blob_service_client,
                         container_name=container_name,
@@ -57,10 +57,10 @@ def load_pipeline_logger(
                     )
                 )
             case Reporters.FILE:
-                callback_manager.register(FileWorkflowCallbacks(dir=reporting_dir))
+                logger_callbacks.append(FileWorkflowCallbacks(dir=reporting_dir))
             case Reporters.APP_INSIGHTS:
                 if os.getenv("APP_INSIGHTS_CONNECTION_STRING"):
-                    callback_manager.register(
+                    logger_callbacks.append(
                         ApplicationInsightsWorkflowCallbacks(
                             connection_string=os.environ[
                                 "APP_INSIGHTS_CONNECTION_STRING"
@@ -70,11 +70,11 @@ def load_pipeline_logger(
                         )
                     )
             case Reporters.CONSOLE:
-                callback_manager.register(
+                logger_callbacks.append(
                     ConsoleWorkflowCallbacks(
                         index_name=index_name, num_workflow_steps=num_workflow_steps
                     )
                 )
             case _:
                 print(f"WARNING: unknown reporter type: {reporter}. Skipping.")
-    return callback_manager
+    return logger_callbacks
