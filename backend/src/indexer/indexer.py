@@ -15,7 +15,6 @@ from graphrag.index.create_pipeline_config import create_pipeline_config
 
 from src.api.azure_clients import AzureClientManager
 from src.logger import (
-    Logger,
     PipelineJobUpdater,
     load_pipeline_logger,
 )
@@ -105,15 +104,11 @@ def start_indexing_job(index_name: str):
         pipeline_job.all_workflows.append(workflow.name)
 
     # create new loggers/callbacks just for this job
-    logger_names = []
-    for logger_type in ["BLOB", "CONSOLE", "APP_INSIGHTS"]:
-        logger_names.append(Logger[logger_type.upper()])
     print("Creating generic loggers...")
     logger: WorkflowCallbacks = load_pipeline_logger(
         logging_dir=sanitized_index_name,
         index_name=index_name,
         num_workflow_steps=len(pipeline_job.all_workflows),
-        loggers=logger_names,
     )
 
     # create pipeline job updater to monitor job progress

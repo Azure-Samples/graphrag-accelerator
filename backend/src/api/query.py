@@ -26,7 +26,7 @@ from graphrag.vector_stores.base import (
 )
 
 from src.api.azure_clients import AzureClientManager
-from src.logger import LoggerSingleton
+from src.logger.load_logger import load_pipeline_logger
 from src.typing.models import (
     GraphRequest,
     GraphResponse,
@@ -196,7 +196,7 @@ async def global_query(request: GraphRequest):
 
         return GraphResponse(result=result[0], context_data=context_data)
     except Exception as e:
-        logger = LoggerSingleton().get_instance()
+        logger = load_pipeline_logger()
         logger.error(
             message="Could not perform global search.",
             cause=e,

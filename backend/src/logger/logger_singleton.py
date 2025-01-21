@@ -5,7 +5,6 @@
 from graphrag.callbacks.workflow_callbacks import WorkflowCallbacks
 
 from src.logger.load_logger import load_pipeline_logger
-from src.logger.typing import Logger
 
 
 class LoggerSingleton:
@@ -14,8 +13,5 @@ class LoggerSingleton:
     @classmethod
     def get_instance(cls) -> WorkflowCallbacks:
         if not cls._instance:
-            reporters = []
-            for logger_type in ["BLOB", "CONSOLE", "APP_INSIGHTS"]:
-                reporters.append(Logger[logger_type])
-            cls._instance = load_pipeline_logger(logging_dir="", loggers=reporters)
+            cls._instance = load_pipeline_logger()
         return cls._instance

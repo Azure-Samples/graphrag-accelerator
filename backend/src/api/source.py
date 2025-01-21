@@ -5,7 +5,7 @@
 import pandas as pd
 from fastapi import APIRouter, HTTPException
 
-from src.logger import LoggerSingleton
+from src.logger.load_logger import load_pipeline_logger
 from src.typing.models import (
     ClaimResponse,
     EntityResponse,
@@ -61,7 +61,7 @@ async def get_report_info(index_name: str, report_id: str):
         ].to_numpy()[0]
         return ReportResponse(text=report_content)
     except Exception:
-        logger = LoggerSingleton().get_instance()
+        logger = load_pipeline_logger()
         logger.error("Could not get report.")
         raise HTTPException(
             status_code=500,
@@ -114,7 +114,7 @@ async def get_chunk_info(index_name: str, text_unit_id: str):
             source_document=row["source_document"].to_numpy()[0],
         )
     except Exception:
-        logger = LoggerSingleton().get_instance()
+        logger = load_pipeline_logger()
         logger.error("Could not get text chunk.")
         raise HTTPException(
             status_code=500,
@@ -147,7 +147,7 @@ async def get_entity_info(index_name: str, entity_id: int):
             text_units=row["text_unit_ids"].to_numpy()[0].tolist(),
         )
     except Exception:
-        logger = LoggerSingleton().get_instance()
+        logger = load_pipeline_logger()
         logger.error("Could not get entity")
         raise HTTPException(
             status_code=500,
@@ -192,7 +192,7 @@ async def get_claim_info(index_name: str, claim_id: int):
             document_ids=row["document_ids"].values[0].tolist(),
         )
     except Exception:
-        logger = LoggerSingleton().get_instance()
+        logger = load_pipeline_logger()
         logger.error("Could not get claim.")
         raise HTTPException(
             status_code=500,
@@ -238,7 +238,7 @@ async def get_relationship_info(index_name: str, relationship_id: int):
             ],  # extract text_unit_ids from a list of panda series
         )
     except Exception:
-        logger = LoggerSingleton().get_instance()
+        logger = load_pipeline_logger()
         logger.error("Could not get relationship.")
         raise HTTPException(
             status_code=500,

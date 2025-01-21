@@ -14,7 +14,7 @@ from fastapi import (
 )
 
 from src.api.azure_clients import AzureClientManager
-from src.logger import LoggerSingleton
+from src.logger.load_logger import load_pipeline_logger
 from src.typing.models import (
     BaseResponse,
     StorageNameList,
@@ -52,7 +52,7 @@ async def get_all_data_storage_containers():
             if item["type"] == "data":
                 items.append(item["human_readable_name"])
     except Exception:
-        reporter = LoggerSingleton().get_instance()
+        reporter = load_pipeline_logger()
         reporter.error("Error getting list of blob containers.")
         raise HTTPException(
             status_code=500, detail="Error getting list of blob containers."
@@ -170,7 +170,7 @@ async def upload_files(
         })
         return BaseResponse(status="File upload successful.")
     except Exception:
-        logger = LoggerSingleton().get_instance()
+        logger = load_pipeline_logger()
         logger.error("Error uploading files.", details={"files": files})
         raise HTTPException(
             status_code=500,
@@ -196,7 +196,7 @@ async def delete_files(storage_name: str):
         # delete entry from container-store in cosmosDB
         delete_cosmos_container_item("container-store", sanitized_storage_name)
     except Exception:
-        logger = LoggerSingleton().get_instance()
+        logger = load_pipeline_logger()
         logger.error(
             f"Error deleting container {storage_name}.",
             details={"Container": storage_name},

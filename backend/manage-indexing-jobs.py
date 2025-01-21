@@ -18,7 +18,7 @@ from kubernetes import (
 )
 
 from src.api.azure_clients import AzureClientManager
-from src.logger.logger_singleton import LoggerSingleton
+from src.logger.load_logger import load_pipeline_logger
 from src.typing.pipeline import PipelineJobState
 from src.utils.common import sanitize_name
 from src.utils.pipeline import PipelineJob
@@ -47,7 +47,7 @@ def schedule_indexing_job(index_name: str):
             body=job_manifest, namespace=os.environ["AKS_NAMESPACE"]
         )
     except Exception:
-        reporter = LoggerSingleton().get_instance()
+        reporter = load_pipeline_logger()
         reporter.error(
             "Index job manager encountered error scheduling indexing job",
         )

@@ -19,18 +19,19 @@ from src.logger.typing import Logger
 
 
 def load_pipeline_logger(
-    logging_dir: str | None,
+    logging_dir: str = "",
     index_name: str = "",
     num_workflow_steps: int = 0,
-    loggers: List[Logger] = [],
 ) -> WorkflowCallbacks:
     """Create and load a list of loggers.
 
-    Loggers may be configured as generic loggers or associated with a specified indexing job.
+    This function creates loggers for two different scenarios. Loggers can be instantiated as generic loggers or associated with a specified indexing job.
+    1. When an indexing job is running, custom index-specific loggers are created to log the job activity
+    2. When the fastapi app is running, generic loggers are used to log the app's activities.
     """
-    # always register the console logger as a fallback option
-    if Logger.CONSOLE not in loggers:
-        loggers.append(Logger.CONSOLE)
+    loggers: List[Logger] = []
+    for logger_type in ["BLOB", "CONSOLE", "APP_INSIGHTS"]:
+        loggers.append(Logger[logger_type])
 
     azure_client_manager = AzureClientManager()
     callback_manager = WorkflowCallbacksManager()
@@ -38,12 +39,12 @@ def load_pipeline_logger(
         match logger:
             case Logger.BLOB:
                 # create a dedicated container for logs
-                container_name = "logs"
-                if logging_dir is not None:
-                    container_name = os.path.join(logging_dir, container_name)
+                log_blob_name = "logs"
+                if logging_dir:
+                    log_blob_name = os.path.join(logging_dir, log_blob_name)
                 # ensure the root directory exists; if not, create it
                 blob_service_client = azure_client_manager.get_blob_service_client()
-                container_root = Path(container_name).parts[0]
+                container_root = Path(log_blob_name).parts[0]
                 if not blob_service_client.get_container_client(
                     container_root
                 ).exists():
@@ -51,7 +52,7 @@ def load_pipeline_logger(
                 callback_manager.register(
                     BlobWorkflowCallbacks(
                         blob_service_client=blob_service_client,
-                        container_name=container_name,
+                        container_name=log_blob_name,
                         index_name=index_name,
                         num_workflow_steps=num_workflow_steps,
                     )
@@ -62,9 +63,6 @@ def load_pipeline_logger(
                 if os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING"):
                     callback_manager.register(
                         ApplicationInsightsWorkflowCallbacks(
-                            connection_string=os.environ[
-                                "APPLICATIONINSIGHTS_CONNECTION_STRING"
-                            ],
                             index_name=index_name,
                             num_workflow_steps=num_workflow_steps,
                         )

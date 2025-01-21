@@ -8,7 +8,7 @@ from fastapi import (
 from fastapi.responses import StreamingResponse
 
 from src.api.azure_clients import AzureClientManager
-from src.logger import LoggerSingleton
+from src.logger.load_logger import load_pipeline_logger
 from src.utils.common import (
     sanitize_name,
     validate_index_file_exist,
@@ -43,7 +43,7 @@ async def get_graphml_file(index_name: str):
             headers={"Content-Disposition": f"attachment; filename={graphml_filename}"},
         )
     except Exception:
-        logger = LoggerSingleton().get_instance()
+        logger = load_pipeline_logger()
         logger.error("Could not retrieve graphml file")
         raise HTTPException(
             status_code=500,

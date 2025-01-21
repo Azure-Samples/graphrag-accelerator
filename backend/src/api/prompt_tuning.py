@@ -14,7 +14,7 @@ from fastapi import (
 from graphrag.config.create_graphrag_config import create_graphrag_config
 
 from src.api.azure_clients import AzureClientManager
-from src.logger import LoggerSingleton
+from src.logger.load_logger import load_pipeline_logger
 from src.utils.common import sanitize_name
 
 prompt_tuning_route = APIRouter(prefix="/index/config", tags=["Index Configuration"])
@@ -58,7 +58,7 @@ async def generate_prompts(storage_name: str, limit: int = 5):
             selection_method="random",
         )
     except Exception as e:
-        logger = LoggerSingleton().get_instance()
+        logger = load_pipeline_logger()
         error_details = {
             "storage_name": storage_name,
         }

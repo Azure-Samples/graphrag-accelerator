@@ -23,7 +23,7 @@ from graphrag.config import create_graphrag_config
 
 from src.api.azure_clients import AzureClientManager
 from src.api.query import _is_index_complete
-from src.logger import LoggerSingleton
+from src.logger.load_logger import load_pipeline_logger
 from src.typing.models import GraphRequest
 from src.utils.common import (
     get_df,
@@ -187,7 +187,7 @@ async def global_search_streaming(request: GraphRequest):
             media_type="application/json",
         )
     except Exception as e:
-        logger = LoggerSingleton().get_instance()
+        logger = load_pipeline_logger()
         logger.error(
             message="Error encountered while streaming global search response",
             cause=e,
@@ -430,7 +430,7 @@ async def local_search_streaming(request: GraphRequest):
             media_type="application/json",
         )
     except Exception as e:
-        logger = LoggerSingleton().get_instance()
+        logger = load_pipeline_logger()
         logger.error(
             message="Error encountered while streaming local search response",
             cause=e,

@@ -19,7 +19,7 @@ from kubernetes import (
 )
 
 from src.api.azure_clients import AzureClientManager
-from src.logger import LoggerSingleton
+from src.logger.load_logger import load_pipeline_logger
 from src.typing.models import (
     BaseResponse,
     IndexNameList,
@@ -156,7 +156,7 @@ async def get_all_indexes():
             if item["type"] == "index":
                 items.append(item["human_readable_name"])
     except Exception:
-        logger = LoggerSingleton().get_instance()
+        logger = load_pipeline_logger()
         logger.error("Error retrieving index names")
     return IndexNameList(index_name=items)
 
@@ -182,7 +182,7 @@ def _delete_k8s_job(job_name: str, namespace: str) -> None:
     # function should only work when running in AKS
     if not os.getenv("KUBERNETES_SERVICE_HOST"):
         return None
-    logger = LoggerSingleton().get_instance()
+    logger = load_pipeline_logger()
     kubernetes_config.load_incluster_config()
     try:
         batch_v1 = kubernetes_client.BatchV1Api()
@@ -261,7 +261,7 @@ async def delete_index(index_name: str):
             index_client.delete_index(ai_search_index_name)
 
     except Exception:
-        logger = LoggerSingleton().get_instance()
+        logger = load_pipeline_logger()
         logger.error(
             message=f"Error encountered while deleting all data for index {index_name}.",
             stack=None,

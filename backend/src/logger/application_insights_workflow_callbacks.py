@@ -25,6 +25,17 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
     _num_workflow_steps: int
     _processed_workflow_steps: list[str] = []
 
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        # follow a singleton pattern to ensure only one instance of the logger is created
+        # reference: https://builtin.com/data-science/new-python
+        if not cls._instance:
+            cls._instance = super(ApplicationInsightsWorkflowCallbacks, cls).__new__(
+                cls
+            )
+        return cls._instance
+
     def __init__(
         self,
         logger_name: str = "graphrag-accelerator",
@@ -41,15 +52,16 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
             num_workflow_steps (int): A list of workflow names ordered by their execution. Defaults to [].
             properties (Dict[str, Any], optional): Additional properties to be included in the log. Defaults to {}.
         """
-        self._logger: logging.Logger
-        self._logger_name = logger_name
-        self._index_name = index_name
-        self._num_workflow_steps = num_workflow_steps
-        self._properties = properties
-        self._workflow_name = "N/A"
-        self._processed_workflow_steps = []  # if logger is used in a pipeline job, maintain a running list of workflows that are processed
-        # initialize a new logger with an AppInsights handler
-        self.__init_logger()
+        if not hasattr(self, "initialized"):
+            self.initialized = True
+            self._logger_name = logger_name
+            self._index_name = index_name
+            self._num_workflow_steps = num_workflow_steps
+            self._properties = properties
+            self._workflow_name = "N/A"
+            self._processed_workflow_steps = []  # if logger is used in a pipeline job, maintain a running list of workflows that are processed
+            # initialize a new logger with an AppInsights handler
+            self.__init_logger()
 
     def __init_logger(self, max_logger_init_retries: int = 10):
         # Configure OpenTelemetry to use Azure Monitor with the
@@ -61,6 +73,7 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
             credential=DefaultAzureCredential(),
         )
         self._logger = logging.getLogger(self._logger_name)
+        self._logger.setLevel(logging.INFO)
 
     def _format_details(self, details: Dict[str, Any] | None = None) -> Dict[str, Any]:
         """

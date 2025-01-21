@@ -27,7 +27,7 @@ from src.api.prompt_tuning import prompt_tuning_route
 from src.api.query import query_route
 from src.api.query_streaming import query_streaming_route
 from src.api.source import source_route
-from src.logger import LoggerSingleton
+from src.logger.load_logger import load_pipeline_logger
 
 
 async def catch_all_exceptions_middleware(request: Request, call_next):
@@ -35,7 +35,7 @@ async def catch_all_exceptions_middleware(request: Request, call_next):
     try:
         return await call_next(request)
     except Exception as e:
-        reporter = LoggerSingleton().get_instance()
+        reporter = load_pipeline_logger()
         stack = traceback.format_exc()
         reporter.error(
             message="Unexpected internal server error",
@@ -103,7 +103,7 @@ async def lifespan(app: FastAPI):
             )
     except Exception as e:
         print("Failed to create graphrag cronjob.")
-        logger = LoggerSingleton().get_instance()
+        logger = load_pipeline_logger()
         logger.error(
             message="Failed to create graphrag cronjob",
             cause=str(e),
