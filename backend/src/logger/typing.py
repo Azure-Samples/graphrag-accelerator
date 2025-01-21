@@ -12,7 +12,7 @@ from graphrag.index.config.reporting import (
 from pydantic import Field as pydantic_Field
 
 
-class Reporters(Enum):
+class Logger(Enum):
     BLOB = (1, "blob")
     CONSOLE = (2, "console")
     FILE = (3, "file")
@@ -24,7 +24,7 @@ class PipelineAppInsightsReportingConfig(
 ):
     """Represents the ApplicationInsights reporting configuration for the pipeline."""
 
-    type: Literal["app_insights"] = Reporters.APP_INSIGHTS.name.lower()
+    type: Literal["app_insights"] = Logger.APP_INSIGHTS.name.lower()
     """The type of reporting."""
 
     connection_string: str = pydantic_Field(

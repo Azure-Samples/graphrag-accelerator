@@ -1,13 +1,9 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import inspect
 import os
-import traceback
 from time import time
 
-import graphrag.api as api
-import yaml
 from azure.identity import DefaultAzureCredential
 from azure.search.documents.indexes import SearchIndexClient
 from fastapi import (
@@ -15,9 +11,6 @@ from fastapi import (
     HTTPException,
     UploadFile,
 )
-from graphrag.config.create_graphrag_config import create_graphrag_config
-from graphrag.index.bootstrap import bootstrap
-from graphrag.index.create_pipeline_config import create_pipeline_config
 from kubernetes import (
     client as kubernetes_client,
 )
@@ -26,23 +19,18 @@ from kubernetes import (
 )
 
 from src.api.azure_clients import AzureClientManager
-from src.api.common import (
-    delete_blob_container,
-    sanitize_name,
-    validate_blob_container_name,
-)
-from src.logger import (
-    LoggerSingleton,
-    PipelineJobWorkflowCallbacks,
-    Reporters,
-    load_pipeline_logger,
-)
-from src.models import (
+from src.logger import LoggerSingleton
+from src.typing.models import (
     BaseResponse,
     IndexNameList,
     IndexStatusResponse,
 )
 from src.typing.pipeline import PipelineJobState
+from src.utils.common import (
+    delete_blob_container,
+    sanitize_name,
+    validate_blob_container_name,
+)
 from src.utils.pipeline import PipelineJob
 
 index_route = APIRouter(
@@ -57,7 +45,7 @@ index_route = APIRouter(
     response_model=BaseResponse,
     responses={200: {"model": BaseResponse}},
 )
-async def setup_indexing_pipeline(
+async def schedule_indexing_job(
     storage_name: str,
     index_name: str,
     entity_extraction_prompt: UploadFile | None = None,
@@ -148,173 +136,6 @@ async def setup_indexing_pipeline(
     return BaseResponse(status="Indexing job scheduled")
 
 
-async def _start_indexing_pipeline(index_name: str):
-    # get sanitized name
-    sanitized_index_name = sanitize_name(index_name)
-
-    # update or create new item in container-store in cosmosDB
-    azure_client_manager = AzureClientManager()
-    blob_service_client = azure_client_manager.get_blob_service_client()
-    if not blob_service_client.get_container_client(sanitized_index_name).exists():
-        blob_service_client.create_container(sanitized_index_name)
-
-    cosmos_container_client = azure_client_manager.get_cosmos_container_client(
-        database="graphrag", container="container-store"
-    )
-    cosmos_container_client.upsert_item({
-        "id": sanitized_index_name,
-        "human_readable_name": index_name,
-        "type": "index",
-    })
-
-    logger = LoggerSingleton().get_instance()
-    pipelinejob = PipelineJob()
-    pipeline_job = pipelinejob.load_item(sanitized_index_name)
-    sanitized_storage_name = pipeline_job.sanitized_storage_name
-    storage_name = pipeline_job.human_readable_index_name
-
-    # download nltk dependencies
-    bootstrap()
-
-    # load custom pipeline settings
-    this_directory = os.path.dirname(
-        os.path.abspath(inspect.getfile(inspect.currentframe()))
-    )
-    data = yaml.safe_load(open(f"{this_directory}/pipeline-settings.yaml"))
-    # dynamically set some values
-    data["input"]["container_name"] = sanitized_storage_name
-    data["storage"]["container_name"] = sanitized_index_name
-    data["reporting"]["container_name"] = sanitized_index_name
-    data["cache"]["container_name"] = sanitized_index_name
-    if "vector_store" in data["embeddings"]:
-        data["embeddings"]["vector_store"]["collection_name"] = (
-            f"{sanitized_index_name}_description_embedding"
-        )
-
-    # set prompt for entity extraction
-    if pipeline_job.entity_extraction_prompt:
-        fname = "entity-extraction-prompt.txt"
-        with open(fname, "w") as outfile:
-            outfile.write(pipeline_job.entity_extraction_prompt)
-        data["entity_extraction"]["prompt"] = fname
-    else:
-        data.pop("entity_extraction")
-
-    # set prompt for summarize descriptions
-    if pipeline_job.summarize_descriptions_prompt:
-        fname = "summarize-descriptions-prompt.txt"
-        with open(fname, "w") as outfile:
-            outfile.write(pipeline_job.summarize_descriptions_prompt)
-        data["summarize_descriptions"]["prompt"] = fname
-    else:
-        data.pop("summarize_descriptions")
-
-    # set prompt for community report
-    if pipeline_job.community_report_prompt:
-        fname = "community-report-prompt.txt"
-        with open(fname, "w") as outfile:
-            outfile.write(pipeline_job.community_report_prompt)
-        data["community_reports"]["prompt"] = fname
-    else:
-        data.pop("community_reports")
-
-    # generate a default GraphRagConfig and override with custom settings
-    parameters = create_graphrag_config(data, ".")
-
-    # reset pipeline job details
-    pipeline_job.status = PipelineJobState.RUNNING
-    pipeline_job.all_workflows = []
-    pipeline_job.completed_workflows = []
-    pipeline_job.failed_workflows = []
-    pipeline_config = create_pipeline_config(parameters)
-    for workflow in pipeline_config.workflows:
-        pipeline_job.all_workflows.append(workflow.name)
-
-    # create new loggers/callbacks just for this job
-    loggers = []
-    logger_names = os.getenv("REPORTERS", Reporters.CONSOLE.name.upper()).split(",")
-    for logger_name in logger_names:
-        try:
-            loggers.append(Reporters[logger_name.upper()])
-        except KeyError:
-            raise ValueError(f"Unknown logger type: {logger_name}")
-    workflow_callbacks = load_pipeline_logger(
-        index_name=index_name,
-        num_workflow_steps=len(pipeline_job.all_workflows),
-        reporting_dir=sanitized_index_name,
-        reporters=loggers,
-    )
-
-    # add pipeline job callback to monitor job progress
-    pipeline_job_callback = PipelineJobWorkflowCallbacks(pipeline_job)
-
-    # run the pipeline
-    try:
-        await api.build_index(
-            config=parameters,
-            callbacks=[workflow_callbacks, pipeline_job_callback],
-        )
-        # if job is done, check if any workflow steps failed
-        if len(pipeline_job.failed_workflows) > 0:
-            pipeline_job.status = PipelineJobState.FAILED
-            workflow_callbacks.on_log(
-                message=f"Indexing pipeline encountered error for index'{index_name}'.",
-                details={
-                    "index": index_name,
-                    "storage_name": storage_name,
-                    "status_message": "indexing pipeline encountered error",
-                },
-            )
-        else:
-            # record the workflow completion
-            pipeline_job.status = PipelineJobState.COMPLETE
-            pipeline_job.percent_complete = 100
-            workflow_callbacks.on_log(
-                message=f"Indexing pipeline complete for index'{index_name}'.",
-                details={
-                    "index": index_name,
-                    "storage_name": storage_name,
-                    "status_message": "indexing pipeline complete",
-                },
-            )
-
-        pipeline_job.progress = (
-            f"{len(pipeline_job.completed_workflows)} out of "
-            f"{len(pipeline_job.all_workflows)} workflows completed successfully."
-        )
-
-        del workflow_callbacks  # garbage collect
-        if pipeline_job.status == PipelineJobState.FAILED:
-            exit(1)  # signal to AKS that indexing job failed
-
-    except Exception as e:
-        pipeline_job.status = PipelineJobState.FAILED
-
-        # update failed state in cosmos db
-        error_details = {
-            "index": index_name,
-            "storage_name": storage_name,
-        }
-        # log error in local index directory logs
-        workflow_callbacks.on_error(
-            message=f"Indexing pipeline failed for index '{index_name}'.",
-            cause=e,
-            stack=traceback.format_exc(),
-            details=error_details,
-        )
-        # log error in global index directory logs
-        logger.on_error(
-            message=f"Indexing pipeline failed for index '{index_name}'.",
-            cause=e,
-            stack=traceback.format_exc(),
-            details=error_details,
-        )
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error encountered during indexing job for index '{index_name}'.",
-        )
-
-
 @index_route.get(
     "",
     summary="Get all indexes",
@@ -336,7 +157,7 @@ async def get_all_indexes():
                 items.append(item["human_readable_name"])
     except Exception:
         logger = LoggerSingleton().get_instance()
-        logger.on_error("Error retrieving index names")
+        logger.error("Error retrieving index names")
     return IndexNameList(index_name=items)
 
 
@@ -367,7 +188,7 @@ def _delete_k8s_job(job_name: str, namespace: str) -> None:
         batch_v1 = kubernetes_client.BatchV1Api()
         batch_v1.delete_namespaced_job(name=job_name, namespace=namespace)
     except Exception:
-        logger.on_error(
+        logger.error(
             message=f"Error deleting k8s job {job_name}.",
             details={"container": job_name},
         )
@@ -378,7 +199,7 @@ def _delete_k8s_job(job_name: str, namespace: str) -> None:
         if job_pod:
             core_v1.delete_namespaced_pod(job_pod, namespace=namespace)
     except Exception:
-        logger.on_error(
+        logger.error(
             message=f"Error deleting k8s pod for job {job_name}.",
             details={"container": job_name},
         )
@@ -441,7 +262,7 @@ async def delete_index(index_name: str):
 
     except Exception:
         logger = LoggerSingleton().get_instance()
-        logger.on_error(
+        logger.error(
             message=f"Error encountered while deleting all data for index {index_name}.",
             stack=None,
             details={"container": index_name},

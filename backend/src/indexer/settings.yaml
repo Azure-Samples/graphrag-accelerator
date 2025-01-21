@@ -17,8 +17,8 @@ llm:
   model_supports_json: True
   tokens_per_minute: 80_000
   requests_per_minute: 480
-  concurrent_requests: 25
-  max_retries: 25
+  concurrent_requests: 50
+  max_retries: 250
   max_retry_wait: 60.0
   sleep_on_rate_limit_recommendation: True
 
@@ -45,7 +45,7 @@ embeddings:
     deployment_name: $GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME
     cognitive_services_endpoint: $GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT
     tokens_per_minute: 350_000
-    requests_per_minute: 2100
+    requests_per_minute: 2_100
 
 ######################  Input settings  ######################
 input:

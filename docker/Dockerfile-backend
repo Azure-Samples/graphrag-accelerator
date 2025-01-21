@@ -1,8 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-# For more information about the base image visit:
-# https://mcr.microsoft.com/en-us/artifact/mar/devcontainers/python/about
+# For more information about the base image: https://mcr.microsoft.com/en-us/artifact/mar/devcontainers/python/about
 FROM mcr.microsoft.com/devcontainers/python:3.10-bookworm
 
 # default graphrag version will be 0.0.0 unless overridden by --build-arg
@@ -22,7 +21,6 @@ RUN cd backend \
 
 # download all nltk data that graphrag requires
 RUN python -c "import nltk;nltk.download(['punkt','averaged_perceptron_tagger','maxent_ne_chunker','words','wordnet'])"
-
 # download tiktoken model encodings
 RUN python -c "import tiktoken; tiktoken.encoding_for_model('gpt-3.5-turbo'); tiktoken.encoding_for_model('gpt-4'); tiktoken.encoding_for_model('gpt-4o');"
 

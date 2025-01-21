@@ -32,7 +32,9 @@ ingress:
 graphragConfig:
   AI_SEARCH_AUDIENCE: ""
   AI_SEARCH_URL: ""
-  APP_INSIGHTS_CONNECTION_STRING: ""
+  APPLICATIONINSIGHTS_CONNECTION_STRING: ""
+  # Must set hidden env variable to true to disable statsbeat. For more information: https://github.com/Azure/azure-sdk-for-python/issues/34804
+  APPLICATIONINSIGHTS_STATSBEAT_DISABLED_ALL: "True"
   COSMOS_URI_ENDPOINT: ""
   GRAPHRAG_API_BASE: ""
   GRAPHRAG_API_VERSION: ""
@@ -41,7 +43,6 @@ graphragConfig:
   GRAPHRAG_LLM_DEPLOYMENT_NAME: ""
   GRAPHRAG_EMBEDDING_MODEL: ""
   GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME: ""
-  REPORTERS: "blob,console,app_insights"
   STORAGE_ACCOUNT_BLOB_URL: ""
 
 master:
@@ -54,10 +55,12 @@ master:
     tag: ""
   podAnnotations: {}
   podLabels: {}
-  podSecurityContext: {}
+  podSecurityContext:
+    {}
     # fsGroup: 2000
 
-  securityContext: {}
+  securityContext:
+    {}
     # capabilities:
     #   drop:
     #   - ALL
@@ -125,8 +128,8 @@ master:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
         nodeSelectorTerms:
-        - matchExpressions:
-          - key: workload
-            operator: In
-            values:
-            - graphrag
+          - matchExpressions:
+              - key: workload
+                operator: In
+                values:
+                  - graphrag

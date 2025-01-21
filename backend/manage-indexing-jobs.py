@@ -18,9 +18,9 @@ from kubernetes import (
 )
 
 from src.api.azure_clients import AzureClientManager
-from src.api.common import sanitize_name
 from src.logger.logger_singleton import LoggerSingleton
 from src.typing.pipeline import PipelineJobState
+from src.utils.common import sanitize_name
 from src.utils.pipeline import PipelineJob
 
 
@@ -48,7 +48,7 @@ def schedule_indexing_job(index_name: str):
         )
     except Exception:
         reporter = LoggerSingleton().get_instance()
-        reporter.on_error(
+        reporter.error(
             "Index job manager encountered error scheduling indexing job",
         )
         # In the event of a catastrophic scheduling failure, something in k8s or the job manifest is likely broken.
@@ -68,14 +68,14 @@ def _generate_aks_job_manifest(
     The manifest must be valid YAML with certain values replaced by the provided arguments.
     """
     # NOTE: this file location is relative to the WORKDIR set in Dockerfile-backend
-    with open("indexing-job-template.yaml", "r") as f:
+    with open("index-job.yaml", "r") as f:
         manifest = yaml.safe_load(f)
     manifest["metadata"]["name"] = f"indexing-job-{sanitize_name(index_name)}"
     manifest["spec"]["template"]["spec"]["serviceAccountName"] = service_account_name
     manifest["spec"]["template"]["spec"]["containers"][0]["image"] = docker_image_name
     manifest["spec"]["template"]["spec"]["containers"][0]["command"] = [
         "python",
-        "run-indexing-job.py",
+        "src/indexer/indexer.py",
         f"-i={index_name}",
     ]
     return manifest

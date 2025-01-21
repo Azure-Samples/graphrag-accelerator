@@ -5,18 +5,18 @@
 import pandas as pd
 from fastapi import APIRouter, HTTPException
 
-from src.api.common import (
-    get_pandas_storage_options,
-    sanitize_name,
-    validate_index_file_exist,
-)
 from src.logger import LoggerSingleton
-from src.models import (
+from src.typing.models import (
     ClaimResponse,
     EntityResponse,
     RelationshipResponse,
     ReportResponse,
     TextUnitResponse,
+)
+from src.utils.common import (
+    pandas_storage_options,
+    sanitize_name,
+    validate_index_file_exist,
 )
 
 source_route = APIRouter(
@@ -46,7 +46,7 @@ async def get_report_info(index_name: str, report_id: str):
     try:
         report_table = pd.read_parquet(
             f"abfs://{sanitized_index_name}/{COMMUNITY_REPORT_TABLE}",
-            storage_options=get_pandas_storage_options(),
+            storage_options=pandas_storage_options(),
         )
         # check if report_id exists in the index
         if not report_table["community"].isin([report_id]).any():
@@ -62,7 +62,7 @@ async def get_report_info(index_name: str, report_id: str):
         return ReportResponse(text=report_content)
     except Exception:
         logger = LoggerSingleton().get_instance()
-        logger.on_error("Could not get report.")
+        logger.error("Could not get report.")
         raise HTTPException(
             status_code=500,
             detail=f"Error retrieving report '{report_id}' from index '{index_name}'.",
@@ -83,11 +83,11 @@ async def get_chunk_info(index_name: str, text_unit_id: str):
     try:
         text_units = pd.read_parquet(
             f"abfs://{sanitized_index_name}/{TEXT_UNITS_TABLE}",
-            storage_options=get_pandas_storage_options(),
+            storage_options=pandas_storage_options(),
         )
         docs = pd.read_parquet(
             f"abfs://{sanitized_index_name}/{DOCUMENTS_TABLE}",
-            storage_options=get_pandas_storage_options(),
+            storage_options=pandas_storage_options(),
         )
         # rename columns for easy joining
         docs = docs[["id", "title"]].rename(
@@ -115,7 +115,7 @@ async def get_chunk_info(index_name: str, text_unit_id: str):
         )
     except Exception:
         logger = LoggerSingleton().get_instance()
-        logger.on_error("Could not get text chunk.")
+        logger.error("Could not get text chunk.")
         raise HTTPException(
             status_code=500,
             detail=f"Error retrieving text chunk '{text_unit_id}' from index '{index_name}'.",
@@ -135,7 +135,7 @@ async def get_entity_info(index_name: str, entity_id: int):
     try:
         entity_table = pd.read_parquet(
             f"abfs://{sanitized_index_name}/{ENTITY_EMBEDDING_TABLE}",
-            storage_options=get_pandas_storage_options(),
+            storage_options=pandas_storage_options(),
         )
         # check if entity_id exists in the index
         if not entity_table["human_readable_id"].isin([entity_id]).any():
@@ -148,7 +148,7 @@ async def get_entity_info(index_name: str, entity_id: int):
         )
     except Exception:
         logger = LoggerSingleton().get_instance()
-        logger.on_error("Could not get entity")
+        logger.error("Could not get entity")
         raise HTTPException(
             status_code=500,
             detail=f"Error retrieving entity '{entity_id}' from index '{index_name}'.",
@@ -175,7 +175,7 @@ async def get_claim_info(index_name: str, claim_id: int):
     try:
         claims_table = pd.read_parquet(
             f"abfs://{sanitized_index_name}/{COVARIATES_TABLE}",
-            storage_options=get_pandas_storage_options(),
+            storage_options=pandas_storage_options(),
         )
         claims_table.human_readable_id = claims_table.human_readable_id.astype(
             float
@@ -193,7 +193,7 @@ async def get_claim_info(index_name: str, claim_id: int):
         )
     except Exception:
         logger = LoggerSingleton().get_instance()
-        logger.on_error("Could not get claim.")
+        logger.error("Could not get claim.")
         raise HTTPException(
             status_code=500,
             detail=f"Error retrieving claim '{claim_id}' from index '{index_name}'.",
@@ -214,11 +214,11 @@ async def get_relationship_info(index_name: str, relationship_id: int):
     try:
         relationship_table = pd.read_parquet(
             f"abfs://{sanitized_index_name}/{RELATIONSHIPS_TABLE}",
-            storage_options=get_pandas_storage_options(),
+            storage_options=pandas_storage_options(),
         )
         entity_table = pd.read_parquet(
             f"abfs://{sanitized_index_name}/{ENTITY_EMBEDDING_TABLE}",
-            storage_options=get_pandas_storage_options(),
+            storage_options=pandas_storage_options(),
         )
         row = relationship_table[
             relationship_table.human_readable_id == str(relationship_id)
@@ -239,7 +239,7 @@ async def get_relationship_info(index_name: str, relationship_id: int):
         )
     except Exception:
         logger = LoggerSingleton().get_instance()
-        logger.on_error("Could not get relationship.")
+        logger.error("Could not get relationship.")
         raise HTTPException(
             status_code=500,
             detail=f"Error retrieving relationship '{relationship_id}' from index '{index_name}'.",

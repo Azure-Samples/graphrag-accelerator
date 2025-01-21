@@ -20,19 +20,19 @@ spec:
           serviceAccountName: PLACEHOLDER
           restartPolicy: OnFailure
           containers:
-          - name: index-job-manager
-            image: PLACEHOLDER
-            imagePullPolicy: Always
-            resources:
-              requests:
-                cpu: "0.5"
-                memory: "0.5Gi"
-              limits:
-                cpu: "1"
-                memory: "1Gi"
-            envFrom:
-            - configMapRef:
-                name: graphrag
-            command:
-            - python
-            - "manage-indexing-jobs.py"
+            - name: index-job-manager
+              image: PLACEHOLDER
+              imagePullPolicy: Always
+              resources:
+                requests:
+                  cpu: "0.5"
+                  memory: "0.5Gi"
+                limits:
+                  cpu: "1"
+                  memory: "1Gi"
+              envFrom:
+                - configMapRef:
+                    name: graphrag
+              command:
+                - python
+                - "manage-indexing-jobs.py"

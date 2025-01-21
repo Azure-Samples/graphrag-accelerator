@@ -21,17 +21,17 @@ spec:
       nodeSelector:
         workload: graphrag-indexing
       containers:
-      - name: graphrag
-        image: PLACEHOLDER
-        imagePullPolicy: Always
-        resources:
-          requests:
-            cpu: "5"
-            memory: "36Gi"
-          limits:
-            cpu: "8"
-            memory: "64Gi"
-        envFrom:
-        - configMapRef:
-            name: graphrag
-        command: [PLACEHOLDER]
+        - name: graphrag
+          image: PLACEHOLDER
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: "5"
+              memory: "36Gi"
+            limits:
+              cpu: "8"
+              memory: "64Gi"
+          envFrom:
+            - configMapRef:
+                name: graphrag
+          command: [PLACEHOLDER]

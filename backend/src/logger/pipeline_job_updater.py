@@ -7,12 +7,12 @@ from src.typing.pipeline import PipelineJobState
 from src.utils.pipeline import PipelineJob
 
 
-class PipelineJobWorkflowCallbacks(NoopWorkflowCallbacks):
-    """A reporter that writes to a stream (sys.stdout)."""
+class PipelineJobUpdater(NoopWorkflowCallbacks):
+    """A callback that records pipeline updates."""
 
-    def __init__(self, pipeline_job: "PipelineJob"):
+    def __init__(self, pipeline_job: PipelineJob):
         """
-        This class defines a set of callback methods that can be used to report the progress and status of a workflow job.
+        This class defines a set of callback methods that can be used to log the progress of a pipeline job.
         It inherits from the NoopWorkflowCallbacks class, which provides default implementations for all the callback methods.
 
         Attributes:

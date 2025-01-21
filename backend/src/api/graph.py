@@ -8,11 +8,11 @@ from fastapi import (
 from fastapi.responses import StreamingResponse
 
 from src.api.azure_clients import AzureClientManager
-from src.api.common import (
+from src.logger import LoggerSingleton
+from src.utils.common import (
     sanitize_name,
     validate_index_file_exist,
 )
-from src.logger import LoggerSingleton
 
 graph_route = APIRouter(
     prefix="/graph",
@@ -44,7 +44,7 @@ async def get_graphml_file(index_name: str):
         )
     except Exception:
         logger = LoggerSingleton().get_instance()
-        logger.on_error("Could not retrieve graphml file")
+        logger.error("Could not retrieve graphml file")
         raise HTTPException(
             status_code=500,
             detail=f"Could not retrieve graphml file for index '{index_name}'.",

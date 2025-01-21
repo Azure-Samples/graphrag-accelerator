@@ -26,17 +26,17 @@ from graphrag.vector_stores.base import (
 )
 
 from src.api.azure_clients import AzureClientManager
-from src.api.common import (
-    sanitize_name,
-    validate_index_file_exist,
-)
 from src.logger import LoggerSingleton
-from src.models import (
+from src.typing.models import (
     GraphRequest,
     GraphResponse,
 )
 from src.typing.pipeline import PipelineJobState
-from src.utils import query as query_helper
+from src.utils.common import (
+    get_df,
+    sanitize_name,
+    validate_index_file_exist,
+)
 from src.utils.pipeline import PipelineJob
 
 query_route = APIRouter(
@@ -116,7 +116,7 @@ async def global_query(request: GraphRequest):
 
             # read the parquet files into DataFrames and add provenance information
             # note that nodes need to be set before communities so that max community id makes sense
-            nodes_df = query_helper.get_df(nodes_table_path)
+            nodes_df = get_df(nodes_table_path)
             for i in nodes_df["human_readable_id"]:
                 links["nodes"][i + max_vals["nodes"] + 1] = {
                     "index_name": sanitized_index_names_link[index_name],
@@ -134,7 +134,7 @@ async def global_query(request: GraphRequest):
             max_vals["nodes"] = nodes_df["human_readable_id"].max()
             nodes_dfs.append(nodes_df)
 
-            community_df = query_helper.get_df(community_report_table_path)
+            community_df = get_df(community_report_table_path)
             for i in community_df["community"].astype(int):
                 links["community"][i + max_vals["community"] + 1] = {
                     "index_name": sanitized_index_names_link[index_name],
@@ -146,7 +146,7 @@ async def global_query(request: GraphRequest):
             max_vals["community"] = community_df["community"].astype(int).max()
             community_dfs.append(community_df)
 
-            entities_df = query_helper.get_df(entities_table_path)
+            entities_df = get_df(entities_table_path)
             for i in entities_df["human_readable_id"]:
                 links["entities"][i + max_vals["entities"] + 1] = {
                     "index_name": sanitized_index_names_link[index_name],
@@ -197,7 +197,7 @@ async def global_query(request: GraphRequest):
         return GraphResponse(result=result[0], context_data=context_data)
     except Exception as e:
         logger = LoggerSingleton().get_instance()
-        logger.on_error(
+        logger.error(
             message="Could not perform global search.",
             cause=e,
             stack=traceback.format_exc(),
@@ -287,7 +287,7 @@ async def local_query(request: GraphRequest):
         # read the parquet files into DataFrames and add provenance information
 
         # note that nodes need to set before communities to that max community id makes sense
-        nodes_df = query_helper.get_df(nodes_table_path)
+        nodes_df = get_df(nodes_table_path)
         for i in nodes_df["human_readable_id"]:
             links["nodes"][i + max_vals["nodes"] + 1] = {
                 "index_name": sanitized_index_names_link[index_name],
@@ -306,7 +306,7 @@ async def local_query(request: GraphRequest):
         max_vals["nodes"] = nodes_df["human_readable_id"].max()
         nodes_dfs.append(nodes_df)
 
-        community_df = query_helper.get_df(community_report_table_path)
+        community_df = get_df(community_report_table_path)
         for i in community_df["community"].astype(int):
             links["community"][i + max_vals["community"] + 1] = {
                 "index_name": sanitized_index_names_link[index_name],
@@ -318,7 +318,7 @@ async def local_query(request: GraphRequest):
         max_vals["community"] = community_df["community"].astype(int).max()
         community_dfs.append(community_df)
 
-        entities_df = query_helper.get_df(entities_table_path)
+        entities_df = get_df(entities_table_path)
         for i in entities_df["human_readable_id"]:
             links["entities"][i + max_vals["entities"] + 1] = {
                 "index_name": sanitized_index_names_link[index_name],
@@ -334,7 +334,7 @@ async def local_query(request: GraphRequest):
         max_vals["entities"] = entities_df["human_readable_id"].max()
         entities_dfs.append(entities_df)
 
-        relationships_df = query_helper.get_df(relationships_table_path)
+        relationships_df = get_df(relationships_table_path)
         for i in relationships_df["human_readable_id"].astype(int):
             links["relationships"][i + max_vals["relationships"] + 1] = {
                 "index_name": sanitized_index_names_link[index_name],
@@ -361,13 +361,13 @@ async def local_query(request: GraphRequest):
         )
         relationships_dfs.append(relationships_df)
 
-        text_units_df = query_helper.get_df(text_units_table_path)
+        text_units_df = get_df(text_units_table_path)
         text_units_df["id"] = text_units_df["id"].apply(lambda x: f"{x}-{index_name}")
         text_units_dfs.append(text_units_df)
 
         index_container_client = blob_service_client.get_container_client(index_name)
         if index_container_client.get_blob_client(COVARIATES_TABLE).exists():
-            covariates_df = query_helper.get_df(covariates_table_path)
+            covariates_df = get_df(covariates_table_path)
             if i in covariates_df["human_readable_id"].astype(int):
                 links["covariates"][i + max_vals["covariates"] + 1] = {
                     "index_name": sanitized_index_names_link[index_name],

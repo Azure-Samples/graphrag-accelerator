@@ -1,28 +1,16 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import hashlib
 import logging
-import time
-
-# from dataclasses import asdict
 from typing import (
     Any,
     Dict,
     Optional,
 )
 
-from azure.monitor.opentelemetry.exporter import AzureMonitorLogExporter
+from azure.identity import DefaultAzureCredential
+from azure.monitor.opentelemetry import configure_azure_monitor
 from graphrag.callbacks.noop_workflow_callbacks import NoopWorkflowCallbacks
-from opentelemetry._logs import (
-    get_logger_provider,
-    set_logger_provider,
-)
-from opentelemetry.sdk._logs import (
-    LoggerProvider,
-    LoggingHandler,
-)
-from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 
 
 class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
@@ -31,7 +19,6 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
     _logger: logging.Logger
     _logger_name: str
     _logger_level: int
-    _logger_level_name: str
     _properties: Dict[str, Any]
     _workflow_name: str
     _index_name: str
@@ -40,9 +27,7 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
 
     def __init__(
         self,
-        connection_string: str,
-        logger_name: str | None = None,
-        logger_level: int = logging.INFO,
+        logger_name: str = "graphrag-accelerator",
         index_name: str = "",
         num_workflow_steps: int = 0,
         properties: Dict[str, Any] = {},
@@ -51,60 +36,31 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
         Initialize the AppInsightsReporter.
 
         Args:
-            connection_string (str): The connection string for the App Insights instance.
             logger_name (str | None, optional): The name of the logger. Defaults to None.
-            logger_level (int, optional): The logging level. Defaults to logging.INFO.
             index_name (str, optional): The name of an index. Defaults to "".
             num_workflow_steps (int): A list of workflow names ordered by their execution. Defaults to [].
             properties (Dict[str, Any], optional): Additional properties to be included in the log. Defaults to {}.
         """
         self._logger: logging.Logger
         self._logger_name = logger_name
-        self._logger_level = logger_level
-        self._logger_level_name: str = logging.getLevelName(logger_level)
-        self._properties = properties
-        self._workflow_name = "N/A"
         self._index_name = index_name
         self._num_workflow_steps = num_workflow_steps
-        self._processed_workflow_steps = []  # maintain a running list of workflow steps that get processed
-        """Create a new logger with an AppInsights handler."""
-        self.__init_logger(connection_string=connection_string)
+        self._properties = properties
+        self._workflow_name = "N/A"
+        self._processed_workflow_steps = []  # if logger is used in a pipeline job, maintain a running list of workflows that are processed
+        # initialize a new logger with an AppInsights handler
+        self.__init_logger()
 
-    def __init_logger(self, connection_string, max_logger_init_retries: int = 10):
-        max_retry = max_logger_init_retries
-        while not (hasattr(self, "_logger")):
-            if max_retry == 0:
-                raise Exception(
-                    "Failed to create logger. Could not disambiguate logger name."
-                )
-
-            # generate a unique logger name
-            current_time = str(time.time())
-            unique_hash = hashlib.sha256(current_time.encode()).hexdigest()
-            self._logger_name = f"{self.__class__.__name__}-{unique_hash}"
-            if self._logger_name not in logging.Logger.manager.loggerDict:
-                # attach azure monitor log exporter to logger provider
-                logger_provider = LoggerProvider()
-                set_logger_provider(logger_provider)
-                exporter = AzureMonitorLogExporter(connection_string=connection_string)
-                get_logger_provider().add_log_record_processor(
-                    BatchLogRecordProcessor(
-                        exporter=exporter,
-                        schedule_delay_millis=60000,
-                    )
-                )
-                # instantiate new logger
-                self._logger = logging.getLogger(self._logger_name)
-                self._logger.propagate = False
-                # remove any existing handlers
-                self._logger.handlers.clear()
-                # fetch handler from logger provider and attach to class
-                self._logger.addHandler(LoggingHandler())
-                # set logging level
-                self._logger.setLevel(logging.DEBUG)
-
-            # reduce sentinel counter value
-            max_retry -= 1
+    def __init_logger(self, max_logger_init_retries: int = 10):
+        # Configure OpenTelemetry to use Azure Monitor with the
+        # APPLICATIONINSIGHTS_CONNECTION_STRING environment variable
+        configure_azure_monitor(
+            logger_name=self._logger_name,
+            disable_offline_storage=True,
+            enable_live_metrics=True,
+            credential=DefaultAzureCredential(),
+        )
+        self._logger = logging.getLogger(self._logger_name)
 
     def _format_details(self, details: Dict[str, Any] | None = None) -> Dict[str, Any]:
         """

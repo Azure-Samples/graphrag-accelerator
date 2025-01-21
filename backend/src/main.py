@@ -23,7 +23,7 @@ from src.api.azure_clients import AzureClientManager
 from src.api.data import data_route
 from src.api.graph import graph_route
 from src.api.index import index_route
-from src.api.index_configuration import index_configuration_route
+from src.api.prompt_tuning import prompt_tuning_route
 from src.api.query import query_route
 from src.api.query_streaming import query_streaming_route
 from src.api.source import source_route
@@ -37,7 +37,7 @@ async def catch_all_exceptions_middleware(request: Request, call_next):
     except Exception as e:
         reporter = LoggerSingleton().get_instance()
         stack = traceback.format_exc()
-        reporter.on_error(
+        reporter.error(
             message="Unexpected internal server error",
             cause=e,
             stack=stack,
@@ -82,7 +82,7 @@ async def lifespan(app: FastAPI):
             name=pod_name, namespace=os.environ["AKS_NAMESPACE"]
         )
         # load the cronjob manifest template and update PLACEHOLDER values with correct values using the pod spec
-        with open("indexing-job-manager-template.yaml", "r") as f:
+        with open("index-job-manager.yaml", "r") as f:
             manifest = yaml.safe_load(f)
         manifest["spec"]["jobTemplate"]["spec"]["template"]["spec"]["containers"][0][
             "image"
@@ -104,7 +104,7 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print("Failed to create graphrag cronjob.")
         logger = LoggerSingleton().get_instance()
-        logger.on_error(
+        logger.error(
             message="Failed to create graphrag cronjob",
             cause=str(e),
             stack=traceback.format_exc(),
@@ -133,7 +133,7 @@ app.include_router(data_route)
 app.include_router(index_route)
 app.include_router(query_route)
 app.include_router(query_streaming_route)
-app.include_router(index_configuration_route)
+app.include_router(prompt_tuning_route)
 app.include_router(source_route)
 app.include_router(graph_route)
 

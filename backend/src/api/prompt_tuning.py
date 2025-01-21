@@ -14,17 +14,13 @@ from fastapi import (
 from graphrag.config.create_graphrag_config import create_graphrag_config
 
 from src.api.azure_clients import AzureClientManager
-from src.api.common import (
-    sanitize_name,
-)
 from src.logger import LoggerSingleton
+from src.utils.common import sanitize_name
 
-index_configuration_route = APIRouter(
-    prefix="/index/config", tags=["Index Configuration"]
-)
+prompt_tuning_route = APIRouter(prefix="/index/config", tags=["Index Configuration"])
 
 
-@index_configuration_route.get(
+@prompt_tuning_route.get(
     "/prompts",
     summary="Generate prompts from user-provided data.",
     description="Generating custom prompts from user-provided data may take several minutes to run based on the amount of data used.",
@@ -66,7 +62,7 @@ async def generate_prompts(storage_name: str, limit: int = 5):
         error_details = {
             "storage_name": storage_name,
         }
-        logger.on_error(
+        logger.error(
             message="Auto-prompt generation failed.",
             cause=e,
             stack=traceback.format_exc(),

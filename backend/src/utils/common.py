@@ -5,6 +5,7 @@ import hashlib
 import os
 import re
 
+import pandas as pd
 from azure.cosmos import exceptions
 from azure.identity import DefaultAzureCredential
 from fastapi import HTTPException
@@ -12,7 +13,17 @@ from fastapi import HTTPException
 from src.api.azure_clients import AzureClientManager
 
 
-def get_pandas_storage_options() -> dict:
+def get_df(
+    table_path: str,
+) -> pd.DataFrame:
+    df = pd.read_parquet(
+        table_path,
+        storage_options=pandas_storage_options(),
+    )
+    return df
+
+
+def pandas_storage_options() -> dict:
     """Generate the storage options required by pandas to read parquet files from Storage."""
     # For more information on the options available, see: https://github.com/fsspec/adlfs?tab=readme-ov-file#setting-credentials
     azure_client_manager = AzureClientManager()

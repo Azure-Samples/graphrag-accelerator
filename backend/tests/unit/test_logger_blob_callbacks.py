@@ -34,16 +34,16 @@ def workflow_callbacks(mock_blob_service_client):
 
 
 def test_on_workflow_start(workflow_callbacks):
-    workflow_callbacks.on_workflow_start("test_workflow", object())
+    workflow_callbacks.workflow_start("test_workflow", object())
     # check if blob workflow callbacks _write_log() method was called
     assert workflow_callbacks._blob_service_client.get_blob_client().append_block.called
 
 
 def test_on_workflow_end(workflow_callbacks):
-    workflow_callbacks.on_workflow_end("test_workflow", object())
+    workflow_callbacks.workflow_end("test_workflow", object())
     assert workflow_callbacks._blob_service_client.get_blob_client().append_block.called
 
 
 def test_on_error(workflow_callbacks):
-    workflow_callbacks.on_error("test_error", Exception("test_exception"))
+    workflow_callbacks.error("test_error", Exception("test_exception"))
     assert workflow_callbacks._blob_service_client.get_blob_client().append_block.called

@@ -14,16 +14,16 @@ from fastapi import (
 )
 
 from src.api.azure_clients import AzureClientManager
-from src.api.common import (
+from src.logger import LoggerSingleton
+from src.typing.models import (
+    BaseResponse,
+    StorageNameList,
+)
+from src.utils.common import (
     delete_blob_container,
     delete_cosmos_container_item,
     sanitize_name,
     validate_blob_container_name,
-)
-from src.logger import LoggerSingleton
-from src.models import (
-    BaseResponse,
-    StorageNameList,
 )
 
 data_route = APIRouter(
@@ -53,7 +53,7 @@ async def get_all_data_storage_containers():
                 items.append(item["human_readable_name"])
     except Exception:
         reporter = LoggerSingleton().get_instance()
-        reporter.on_error("Error getting list of blob containers.")
+        reporter.error("Error getting list of blob containers.")
         raise HTTPException(
             status_code=500, detail="Error getting list of blob containers."
         )
@@ -171,7 +171,7 @@ async def upload_files(
         return BaseResponse(status="File upload successful.")
     except Exception:
         logger = LoggerSingleton().get_instance()
-        logger.on_error("Error uploading files.", details={"files": files})
+        logger.error("Error uploading files.", details={"files": files})
         raise HTTPException(
             status_code=500,
             detail=f"Error uploading files to container '{storage_name}'.",
@@ -197,7 +197,7 @@ async def delete_files(storage_name: str):
         delete_cosmos_container_item("container-store", sanitized_storage_name)
     except Exception:
         logger = LoggerSingleton().get_instance()
-        logger.on_error(
+        logger.error(
             f"Error deleting container {storage_name}.",
             details={"Container": storage_name},
         )

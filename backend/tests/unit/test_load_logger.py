@@ -46,8 +46,8 @@ def test_load_pipeline_logger_with_console(
 ):
     """Test load_pipeline_logger."""
     loggers = load_pipeline_logger(
-        reporting_dir="logs",
-        reporters=["app_insights", "blob", "console", "file"],
+        logging_dir="logs",
+        loggers=["app_insights", "blob", "console", "file"],
         index_name="test-index",
         num_workflow_steps=4,
     )
