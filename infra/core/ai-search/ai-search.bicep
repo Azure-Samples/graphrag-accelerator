@@ -7,10 +7,7 @@ param name string
 @description('The location of the Managed Cluster resource.')
 param location string = resourceGroup().location
 
-@description('Array of objects with fields principalId, principalType, roleDefinitionId')
-param roleAssignments array = []
-
-@allowed([ 'enabled', 'disabled' ])
+@allowed(['enabled', 'disabled'])
 param publicNetworkAccess string = 'enabled'
 
 resource aiSearch 'Microsoft.Search/searchServices@2024-03-01-preview' = {
@@ -27,14 +24,6 @@ resource aiSearch 'Microsoft.Search/searchServices@2024-03-01-preview' = {
     semanticSearch: 'disabled'
   }
 }
-
-resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
-  for role in roleAssignments: {
-    name: guid('${role.principalId}-${role.principalType}-${role.roleDefinitionId}')
-    scope: resourceGroup()
-    properties: role
-  }
-]
 
 output name string = aiSearch.name
 output id string = aiSearch.id

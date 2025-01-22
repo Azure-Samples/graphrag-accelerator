@@ -72,22 +72,6 @@ var appUrl = 'http://${appHostname}'
 
 @description('Role definitions for various roles that will be assigned at deployment time. Learn more: https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles')
 var roles = {
-  storageBlobDataContributor: resourceId(
-    'Microsoft.Authorization/roleDefinitions',
-    'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
-  )
-  aiSearchContributor: resourceId(
-    'Microsoft.Authorization/roleDefinitions',
-    'b24988ac-6180-42a0-ab88-20f7382dd24c' // AI Search Contributor Role
-  )
-  aiSearchIndexDataContributor: resourceId(
-    'Microsoft.Authorization/roleDefinitions',
-    '8ebe5a00-799e-43f5-93ac-243d3dce84a7' // AI Search Index Data Contributor Role
-  )
-  aiSearchIndexDataReader: resourceId(
-    'Microsoft.Authorization/roleDefinitions',
-    '1407120a-92aa-4202-b7e9-c0e197c71c8f' // AI Search Index Data Reader Role
-  )
   privateDnsZoneContributor: resourceId(
     'Microsoft.Authorization/roleDefinitions',
     'b12aa53e-6015-4669-85d0-8515ebb3ae7f' // Private DNS Zone Contributor Role
@@ -95,10 +79,6 @@ var roles = {
   networkContributor: resourceId(
     'Microsoft.Authorization/roleDefinitions',
     '4d97b98b-1d4f-4787-a291-c67834d212e7' // Network Contributor Role
-  )
-  cognitiveServicesOpenaiContributor: resourceId(
-    'Microsoft.Authorization/roleDefinitions',
-    'a001fd3d-188f-4b5d-821b-7da978bf7442' // Cognitive Services OpenAI Contributor
   )
   acrPull: resourceId(
     'Microsoft.Authorization/roleDefinitions',
@@ -108,6 +88,14 @@ var roles = {
     'Microsoft.Authorization/roleDefinitions',
     '3913510d-42f4-4e42-8a64-420c390055eb' // Monitoring Metrics Publisher Role
   )
+}
+
+module workloadIdentityRBACAssignments 'core/workload-rbac.bicep' = {
+  name: 'workload-rbac-assignments'
+  params: {
+    principalId: workloadIdentity.outputs.principalId
+    principalType: 'ServicePrincipal'
+  }
 }
 
 module log 'core/log-analytics/log.bicep' = {
@@ -234,23 +222,23 @@ module aiSearch 'core/ai-search/ai-search.bicep' = {
     name: !empty(aiSearchName) ? aiSearchName : '${abbrs.searchSearchServices}${resourceBaseNameFinal}'
     location: location
     publicNetworkAccess: enablePrivateEndpoints ? 'disabled' : 'enabled'
-    roleAssignments: [
-      {
-        principalId: workloadIdentity.outputs.principalId
-        principalType: 'ServicePrincipal'
-        roleDefinitionId: roles.aiSearchContributor
-      }
-      {
-        principalId: workloadIdentity.outputs.principalId
-        principalType: 'ServicePrincipal'
-        roleDefinitionId: roles.aiSearchIndexDataContributor
-      }
-      {
-        principalId: workloadIdentity.outputs.principalId
-        principalType: 'ServicePrincipal'
-        roleDefinitionId: roles.aiSearchIndexDataReader
-      }
-    ]
+    // roleAssignments: [
+    //   {
+    //     principalId: workloadIdentity.outputs.principalId
+    //     principalType: 'ServicePrincipal'
+    //     roleDefinitionId: roles.aiSearchContributor
+    //   }
+    //   {
+    //     principalId: workloadIdentity.outputs.principalId
+    //     principalType: 'ServicePrincipal'
+    //     roleDefinitionId: roles.aiSearchIndexDataContributor
+    //   }
+    //   {
+    //     principalId: workloadIdentity.outputs.principalId
+    //     principalType: 'ServicePrincipal'
+    //     roleDefinitionId: roles.aiSearchIndexDataReader
+    //   }
+    // ]
   }
 }
 
@@ -263,13 +251,13 @@ module storage 'core/storage/storage.bicep' = {
     location: location
     publicNetworkAccess: enablePrivateEndpoints ? 'Disabled' : 'Enabled'
     tags: tags
-    roleAssignments: [
-      {
-        principalId: workloadIdentity.outputs.principalId
-        principalType: 'ServicePrincipal'
-        roleDefinitionId: roles.storageBlobDataContributor
-      }
-    ]
+    // roleAssignments: [
+    //   {
+    //     principalId: workloadIdentity.outputs.principalId
+    //     principalType: 'ServicePrincipal'
+    //     roleDefinitionId: roles.storageBlobDataContributor
+    //   }
+    // ]
     deleteRetentionPolicy: {
       enabled: true
       days: 5
@@ -285,13 +273,13 @@ module appInsights 'core/monitor/app-insights.bicep' = {
     location: location
     appInsightsPublicNetworkAccessForIngestion: enablePrivateEndpoints ? 'Disabled' : 'Enabled'
     logAnalyticsWorkspaceId: log.outputs.id
-    roleAssignments: [
-      {
-        principalId: workloadIdentity.outputs.principalId
-        principalType: 'ServicePrincipal'
-        roleDefinitionId: roles.monitoringMetricsPublisher
-      }
-    ]
+    // roleAssignments: [
+    //   {
+    //     principalId: workloadIdentity.outputs.principalId
+    //     principalType: 'ServicePrincipal'
+    //     roleDefinitionId: roles.monitoringMetricsPublisher
+    //   }
+    // ]
   }
 }
 

@@ -7,17 +7,14 @@ param name string
 @description('The location of the Storage Account resource.')
 param location string = resourceGroup().location
 
-@allowed([ 'Hot', 'Cool', 'Premium' ])
+@allowed(['Hot', 'Cool', 'Premium'])
 param accessTier string = 'Hot'
 
-@allowed([ 'AzureDnsZone', 'Standard' ])
+@allowed(['AzureDnsZone', 'Standard'])
 param dnsEndpointType string = 'Standard'
 
-@allowed([ 'Enabled', 'Disabled' ])
+@allowed(['Enabled', 'Disabled'])
 param publicNetworkAccess string = 'Disabled'
-
-@description('Array of objects with fields principalId, principalType, roleDefinitionId')
-param roleAssignments array = []
 
 param tags object = {}
 param allowBlobPublicAccess bool = false
@@ -28,7 +25,6 @@ param deleteRetentionPolicy object = {}
 param kind string = 'StorageV2'
 param minimumTlsVersion string = 'TLS1_2'
 param containers array = []
-
 
 resource storage 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   name: name
@@ -67,14 +63,6 @@ resource storage 'Microsoft.Storage/storageAccounts@2023-01-01' = {
     ]
   }
 }
-
-resource storageRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
-  for role in roleAssignments: {
-    name: guid('${role.principalId}-${role.principalType}-${role.roleDefinitionId}')
-    scope: resourceGroup()
-    properties: role
-  }
-]
 
 output name string = storage.name
 output id string = storage.id
