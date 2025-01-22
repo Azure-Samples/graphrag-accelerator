@@ -222,23 +222,6 @@ module aiSearch 'core/ai-search/ai-search.bicep' = {
     name: !empty(aiSearchName) ? aiSearchName : '${abbrs.searchSearchServices}${resourceBaseNameFinal}'
     location: location
     publicNetworkAccess: enablePrivateEndpoints ? 'disabled' : 'enabled'
-    // roleAssignments: [
-    //   {
-    //     principalId: workloadIdentity.outputs.principalId
-    //     principalType: 'ServicePrincipal'
-    //     roleDefinitionId: roles.aiSearchContributor
-    //   }
-    //   {
-    //     principalId: workloadIdentity.outputs.principalId
-    //     principalType: 'ServicePrincipal'
-    //     roleDefinitionId: roles.aiSearchIndexDataContributor
-    //   }
-    //   {
-    //     principalId: workloadIdentity.outputs.principalId
-    //     principalType: 'ServicePrincipal'
-    //     roleDefinitionId: roles.aiSearchIndexDataReader
-    //   }
-    // ]
   }
 }
 
@@ -251,13 +234,6 @@ module storage 'core/storage/storage.bicep' = {
     location: location
     publicNetworkAccess: enablePrivateEndpoints ? 'Disabled' : 'Enabled'
     tags: tags
-    // roleAssignments: [
-    //   {
-    //     principalId: workloadIdentity.outputs.principalId
-    //     principalType: 'ServicePrincipal'
-    //     roleDefinitionId: roles.storageBlobDataContributor
-    //   }
-    // ]
     deleteRetentionPolicy: {
       enabled: true
       days: 5
@@ -273,13 +249,6 @@ module appInsights 'core/monitor/app-insights.bicep' = {
     location: location
     appInsightsPublicNetworkAccessForIngestion: enablePrivateEndpoints ? 'Disabled' : 'Enabled'
     logAnalyticsWorkspaceId: log.outputs.id
-    // roleAssignments: [
-    //   {
-    //     principalId: workloadIdentity.outputs.principalId
-    //     principalType: 'ServicePrincipal'
-    //     roleDefinitionId: roles.monitoringMetricsPublisher
-    //   }
-    // ]
   }
 }
 
