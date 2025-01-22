@@ -117,9 +117,9 @@ resource aks 'Microsoft.ContainerService/managedClusters@2024-09-02-preview' = {
       }
     }
     networkProfile: {
-      serviceCidr: '10.3.0.0/16'  // must not overlap with any subnet IP ranges
-      dnsServiceIP: '10.3.0.10'   // must be within the range specified in serviceCidr
-      podCidr: '10.244.0.0/16'    // IP range from which to assign pod IPs
+      serviceCidr: '10.3.0.0/16' // must not overlap with any subnet IP ranges
+      dnsServiceIP: '10.3.0.10' // must be within the range specified in serviceCidr
+      podCidr: '10.244.0.0/16' // IP range from which to assign pod IPs
     }
     autoUpgradeProfile: autoUpgradeProfile
     oidcIssuerProfile: {
@@ -224,7 +224,7 @@ resource aksManagedNodeOSUpgradeSchedule 'Microsoft.ContainerService/managedClus
 // role assignment to ingress identity
 resource webAppRoutingPrivateDnsContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
   for role in ingressRoleAssignments: {
-    name: guid('${role.roleDefinitionId}-${privateDnsZone.id}')
+    name: guid(subscription().subscriptionId, resourceGroup().name, role.roleDefinitionId, privateDnsZone.id)
     scope: resourceGroup()
     properties: {
       principalId: aks.properties.ingressProfile.webAppRouting.identity.objectId
@@ -237,7 +237,7 @@ resource webAppRoutingPrivateDnsContributor 'Microsoft.Authorization/roleAssignm
 // role assignment to AKS system identity
 resource systemRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
   for role in systemRoleAssignments: {
-    name: guid('${role.roleDefinitionId}-${aks.id}')
+    name: guid(subscription().subscriptionId, resourceGroup().name, role.roleDefinitionId, aks.id)
     scope: resourceGroup()
     properties: {
       principalId: aks.identity.principalId

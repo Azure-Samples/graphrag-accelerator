@@ -24,7 +24,9 @@ param resourceGroup string
 
 @description('Unique name to append to each resource')
 param resourceBaseName string = ''
-var resourceBaseNameFinal = !empty(resourceBaseName) ? resourceBaseName : toLower(uniqueString('${subscription().id}/resourceGroups/${resourceGroup}'))
+var resourceBaseNameFinal = !empty(resourceBaseName)
+  ? resourceBaseName
+  : toLower(uniqueString('${subscription().id}/resourceGroups/${resourceGroup}'))
 
 @description('Cloud region for all resources')
 param location string = az.resourceGroup().location
@@ -76,37 +78,41 @@ var roles = {
   )
   aiSearchContributor: resourceId(
     'Microsoft.Authorization/roleDefinitions',
-    'b24988ac-6180-42a0-ab88-20f7382dd24c'  // AI Search Contributor Role
+    'b24988ac-6180-42a0-ab88-20f7382dd24c' // AI Search Contributor Role
   )
   aiSearchIndexDataContributor: resourceId(
     'Microsoft.Authorization/roleDefinitions',
-    '8ebe5a00-799e-43f5-93ac-243d3dce84a7'  // AI Search Index Data Contributor Role
+    '8ebe5a00-799e-43f5-93ac-243d3dce84a7' // AI Search Index Data Contributor Role
   )
   aiSearchIndexDataReader: resourceId(
     'Microsoft.Authorization/roleDefinitions',
-    '1407120a-92aa-4202-b7e9-c0e197c71c8f'  // AI Search Index Data Reader Role
+    '1407120a-92aa-4202-b7e9-c0e197c71c8f' // AI Search Index Data Reader Role
   )
   privateDnsZoneContributor: resourceId(
     'Microsoft.Authorization/roleDefinitions',
-    'b12aa53e-6015-4669-85d0-8515ebb3ae7f'  // Private DNS Zone Contributor Role
+    'b12aa53e-6015-4669-85d0-8515ebb3ae7f' // Private DNS Zone Contributor Role
   )
   networkContributor: resourceId(
     'Microsoft.Authorization/roleDefinitions',
-    '4d97b98b-1d4f-4787-a291-c67834d212e7'  // Network Contributor Role
+    '4d97b98b-1d4f-4787-a291-c67834d212e7' // Network Contributor Role
   )
   cognitiveServicesOpenaiContributor: resourceId(
     'Microsoft.Authorization/roleDefinitions',
-    'a001fd3d-188f-4b5d-821b-7da978bf7442'  // Cognitive Services OpenAI Contributor
+    'a001fd3d-188f-4b5d-821b-7da978bf7442' // Cognitive Services OpenAI Contributor
   )
   acrPull: resourceId(
     'Microsoft.Authorization/roleDefinitions',
-    '7f951dda-4ed3-4680-a7ca-43fe172d538d'  // ACR Pull Role
+    '7f951dda-4ed3-4680-a7ca-43fe172d538d' // ACR Pull Role
+  )
+  monitoringMetricsPublisher: resourceId(
+    'Microsoft.Authorization/roleDefinitions',
+    '3913510d-42f4-4e42-8a64-420c390055eb' // Monitoring Metrics Publisher Role
   )
 }
 
 module log 'core/log-analytics/log.bicep' = {
   name: 'log-analytics-deployment'
-  params:{
+  params: {
     name: '${abbrs.operationalInsightsWorkspaces}${resourceBaseNameFinal}'
     location: location
     publicNetworkAccessForIngestion: enablePrivateEndpoints ? 'Disabled' : 'Enabled'
@@ -138,14 +144,16 @@ resource vnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
           networkSecurityGroup: {
             id: nsg.outputs.id
           }
-          delegations: (apimTier=='Developer') ? [] : [
-            {
-              name: 'Microsoft.Web/serverFarms'
-              properties: {
-                serviceName: 'Microsoft.Web/serverFarms'
-              }
-            }
-          ]
+          delegations: (apimTier == 'Developer')
+            ? []
+            : [
+                {
+                  name: 'Microsoft.Web/serverFarms'
+                  properties: {
+                    serviceName: 'Microsoft.Web/serverFarms'
+                  }
+                }
+              ]
         }
       }
       {
@@ -186,11 +194,11 @@ module acr 'core/acr/acr.bicep' = {
 
 module aks 'core/aks/aks.bicep' = {
   name: 'aks-deployment'
-  params:{
+  params: {
     clusterName: '${abbrs.containerServiceManagedClusters}${resourceBaseNameFinal}'
     location: location
-    graphragVMSize: 'standard_d8s_v5'           // 8 vcpu, 32 GB memory
-    graphragIndexingVMSize: 'standard_e8s_v5'   // 8 vcpus, 64 GB memory
+    graphragVMSize: 'standard_d8s_v5' // 8 vcpu, 32 GB memory
+    graphragIndexingVMSize: 'standard_e8s_v5' // 8 vcpus, 64 GB memory
     clusterAdmins: !empty(deployerPrincipalId) ? ['${deployerPrincipalId}'] : null
     logAnalyticsWorkspaceId: log.outputs.id
     subnetId: vnet.properties.subnets[1].id // aks subnet
@@ -249,7 +257,9 @@ module aiSearch 'core/ai-search/ai-search.bicep' = {
 module storage 'core/storage/storage.bicep' = {
   name: 'storage-deployment'
   params: {
-    name: !empty(storageAccountName) ? storageAccountName : '${abbrs.storageStorageAccounts}${replace(resourceBaseNameFinal, '-', '')}'
+    name: !empty(storageAccountName)
+      ? storageAccountName
+      : '${abbrs.storageStorageAccounts}${replace(resourceBaseNameFinal, '-', '')}'
     location: location
     publicNetworkAccess: enablePrivateEndpoints ? 'Disabled' : 'Enabled'
     tags: tags
@@ -268,13 +278,30 @@ module storage 'core/storage/storage.bicep' = {
   }
 }
 
+module appInsights 'core/monitor/app-insights.bicep' = {
+  name: 'app-insights-deployment'
+  params: {
+    appInsightsName: '${abbrs.insightsComponents}${resourceBaseNameFinal}'
+    location: location
+    appInsightsPublicNetworkAccessForIngestion: enablePrivateEndpoints ? 'Disabled' : 'Enabled'
+    logAnalyticsWorkspaceId: log.outputs.id
+    roleAssignments: [
+      {
+        principalId: workloadIdentity.outputs.principalId
+        principalType: 'ServicePrincipal'
+        roleDefinitionId: roles.monitoringMetricsPublisher
+      }
+    ]
+  }
+}
+
 module apim 'core/apim/apim.bicep' = {
   name: 'apim-deployment'
   params: {
     apiManagementName: !empty(apimName) ? apimName : '${abbrs.apiManagementService}${resourceBaseNameFinal}'
     restoreAPIM: restoreAPIM
-    appInsightsName: '${abbrs.insightsComponents}${resourceBaseNameFinal}'
-    appInsightsPublicNetworkAccessForIngestion: enablePrivateEndpoints ? 'Disabled' : 'Enabled'
+    appInsightsId: appInsights.outputs.id
+    appInsightsInstrumentationKey: appInsights.outputs.instrumentationKey
     publicIpName: '${abbrs.networkPublicIPAddresses}${resourceBaseNameFinal}'
     location: location
     sku: apimTier
@@ -282,7 +309,6 @@ module apim 'core/apim/apim.bicep' = {
     availabilityZones: [] // TODO expose in param for premium sku
     publisherEmail: apiPublisherEmail
     publisherName: apiPublisherName
-    logAnalyticsWorkspaceId: log.outputs.id
     subnetId: vnet.properties.subnets[0].id // apim subnet
   }
 }
@@ -335,7 +361,7 @@ module azureMonitorPrivateLinkScope 'core/monitor/private-link-scope.bicep' = if
     privateLinkScopeName: 'pls-${resourceBaseNameFinal}'
     privateLinkScopedResources: [
       log.outputs.id
-      apim.outputs.appInsightsId
+      appInsights.outputs.id
     ]
   }
 }
@@ -402,7 +428,7 @@ output azure_storage_account_blob_url string = storage.outputs.primaryEndpoints.
 output azure_cosmosdb_endpoint string = cosmosdb.outputs.endpoint
 output azure_cosmosdb_name string = cosmosdb.outputs.name
 output azure_cosmosdb_id string = cosmosdb.outputs.id
-output azure_app_insights_connection_string string = apim.outputs.appInsightsConnectionString
+output azure_app_insights_connection_string string = appInsights.outputs.connectionString
 output azure_apim_name string = apim.outputs.name
 output azure_apim_gateway_url string = apim.outputs.apimGatewayUrl
 output azure_dns_zone_name string = privateDnsZone.outputs.name
@@ -411,7 +437,6 @@ output azure_app_url string = appUrl
 output azure_workload_identity_client_id string = workloadIdentity.outputs.clientId
 output azure_workload_identity_principal_id string = workloadIdentity.outputs.principalId
 output azure_workload_identity_name string = workloadIdentity.outputs.name
-output azure_private_dns_zones array = enablePrivateEndpoints ? union(
-  privatelinkPrivateDns.outputs.privateDnsZones,
-  [privateDnsZone.outputs.name]
-) : []
+output azure_private_dns_zones array = enablePrivateEndpoints
+  ? union(privatelinkPrivateDns.outputs.privateDnsZones, [privateDnsZone.outputs.name])
+  : []
