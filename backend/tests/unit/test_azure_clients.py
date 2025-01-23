@@ -5,7 +5,7 @@ from azure.cosmos import CosmosClient
 from azure.storage.blob import BlobServiceClient
 from azure.storage.blob.aio import BlobServiceClient as BlobServiceClientAsync
 
-from src.api.azure_clients import (
+from src.utils.azure_clients import (
     AzureClientManager,
     _BlobServiceClientSingleton,
     _BlobServiceClientSingletonAsync,
