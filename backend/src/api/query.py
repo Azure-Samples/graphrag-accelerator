@@ -25,13 +25,13 @@ from graphrag.vector_stores.base import (
     VectorStoreSearchResult,
 )
 
-from src.api.azure_clients import AzureClientManager
 from src.logger.load_logger import load_pipeline_logger
 from src.typing.models import (
     GraphRequest,
     GraphResponse,
 )
 from src.typing.pipeline import PipelineJobState
+from src.utils.azure_clients import AzureClientManager
 from src.utils.common import (
     get_df,
     sanitize_name,

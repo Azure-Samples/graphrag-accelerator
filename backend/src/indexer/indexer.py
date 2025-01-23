@@ -13,12 +13,12 @@ from graphrag.callbacks.workflow_callbacks import WorkflowCallbacks
 from graphrag.config.create_graphrag_config import create_graphrag_config
 from graphrag.index.create_pipeline_config import create_pipeline_config
 
-from src.api.azure_clients import AzureClientManager
 from src.logger import (
     PipelineJobUpdater,
     load_pipeline_logger,
 )
 from src.typing.pipeline import PipelineJobState
+from src.utils.azure_clients import AzureClientManager
 from src.utils.common import sanitize_name
 from src.utils.pipeline import PipelineJob
 

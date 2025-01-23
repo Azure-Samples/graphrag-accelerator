@@ -20,7 +20,6 @@ from kubernetes import (
     config,
 )
 
-from src.api.azure_clients import AzureClientManager
 from src.api.data import data_route
 from src.api.graph import graph_route
 from src.api.index import index_route
@@ -29,6 +28,7 @@ from src.api.query import query_route
 from src.api.query_streaming import query_streaming_route
 from src.api.source import source_route
 from src.logger.load_logger import load_pipeline_logger
+from src.utils.azure_clients import AzureClientManager
 
 
 async def catch_all_exceptions_middleware(request: Request, call_next):

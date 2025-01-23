@@ -21,10 +21,10 @@ from graphrag.api.query import (
 )
 from graphrag.config import create_graphrag_config
 
-from src.api.azure_clients import AzureClientManager
 from src.api.query import _is_index_complete
 from src.logger.load_logger import load_pipeline_logger
 from src.typing.models import GraphRequest
+from src.utils.azure_clients import AzureClientManager
 from src.utils.common import (
     get_df,
     sanitize_name,

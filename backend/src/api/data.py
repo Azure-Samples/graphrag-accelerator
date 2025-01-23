@@ -13,12 +13,12 @@ from fastapi import (
     UploadFile,
 )
 
-from src.api.azure_clients import AzureClientManager
 from src.logger.load_logger import load_pipeline_logger
 from src.typing.models import (
     BaseResponse,
     StorageNameList,
 )
+from src.utils.azure_clients import AzureClientManager
 from src.utils.common import (
     delete_blob_container,
     delete_cosmos_container_item,

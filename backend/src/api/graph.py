@@ -7,8 +7,8 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 
-from src.api.azure_clients import AzureClientManager
 from src.logger.load_logger import load_pipeline_logger
+from src.utils.azure_clients import AzureClientManager
 from src.utils.common import (
     sanitize_name,
     validate_index_file_exist,

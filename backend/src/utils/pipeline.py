@@ -8,8 +8,8 @@ from typing import (
 
 from azure.cosmos.exceptions import CosmosHttpResponseError
 
-from src.api.azure_clients import AzureClientManager
 from src.typing.pipeline import PipelineJobState
+from src.utils.azure_clients import AzureClientManager
 from src.utils.common import sanitize_name
 
 

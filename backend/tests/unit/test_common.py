@@ -47,15 +47,10 @@ def test_validate_index_file_exist(container_with_graphml_file):
     original_name = container_with_graphml_file
     sanitized_name = sanitize_name(original_name)
     # test with a valid index and valid file
-    assert (
-        validate_index_file_exist(sanitized_name, "output/summarized_graph.graphml")
-        is None
-    )
+    assert validate_index_file_exist(sanitized_name, "output/graph.graphml") is None
     # test with a valid index and non-existent file
     with pytest.raises(ValueError):
         validate_index_file_exist(sanitized_name, "non-existent-file")
     # test non-existent index and valid file
     with pytest.raises(ValueError):
-        validate_index_file_exist(
-            "nonexistent-index", "output/summarized_graph.graphml"
-        )
+        validate_index_file_exist("nonexistent-index", "output/graph.graphml")

@@ -18,7 +18,6 @@ from kubernetes import (
     config as kubernetes_config,
 )
 
-from src.api.azure_clients import AzureClientManager
 from src.logger.load_logger import load_pipeline_logger
 from src.typing.models import (
     BaseResponse,
@@ -26,6 +25,7 @@ from src.typing.models import (
     IndexStatusResponse,
 )
 from src.typing.pipeline import PipelineJobState
+from src.utils.azure_clients import AzureClientManager
 from src.utils.common import (
     delete_blob_container,
     sanitize_name,

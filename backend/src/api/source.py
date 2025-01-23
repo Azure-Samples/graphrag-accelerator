@@ -29,8 +29,8 @@ COMMUNITY_REPORT_TABLE = "output/create_final_community_reports.parquet"
 COVARIATES_TABLE = "output/create_final_covariates.parquet"
 ENTITY_EMBEDDING_TABLE = "output/create_final_entities.parquet"
 RELATIONSHIPS_TABLE = "output/create_final_relationships.parquet"
-TEXT_UNITS_TABLE = "output/create_base_text_units.parquet"
-DOCUMENTS_TABLE = "output/create_base_documents.parquet"
+TEXT_UNITS_TABLE = "output/create_final_text_units.parquet"
+DOCUMENTS_TABLE = "output/create_final_documents.parquet"
 
 
 @source_route.get(
@@ -39,7 +39,7 @@ DOCUMENTS_TABLE = "output/create_base_documents.parquet"
     response_model=ReportResponse,
     responses={200: {"model": ReportResponse}},
 )
-async def get_report_info(index_name: str, report_id: str):
+async def get_report_info(index_name: str, report_id: int):
     # check for existence of file the query relies on to validate the index is complete
     sanitized_index_name = sanitize_name(index_name)
     validate_index_file_exist(sanitized_index_name, COMMUNITY_REPORT_TABLE)
@@ -49,15 +49,15 @@ async def get_report_info(index_name: str, report_id: str):
             storage_options=pandas_storage_options(),
         )
         # check if report_id exists in the index
-        if not report_table["community"].isin([report_id]).any():
+        if not report_table["human_readable_id"].isin([report_id]).any():
             raise ValueError(f"Report '{report_id}' not found in index '{index_name}'.")
         # check if multiple reports with the same id exist (should not happen)
-        if len(report_table.loc[report_table["community"] == report_id]) > 1:
+        if len(report_table.loc[report_table["human_readable_id"] == report_id]) > 1:
             raise ValueError(
                 f"Multiple reports with id '{report_id}' found in index '{index_name}'."
             )
         report_content = report_table.loc[
-            report_table["community"] == report_id, "full_content"
+            report_table["human_readable_id"] == report_id, "full_content_json"
         ].to_numpy()[0]
         return ReportResponse(text=report_content)
     except Exception:
@@ -97,7 +97,7 @@ async def get_chunk_info(index_name: str, text_unit_id: str):
         text_units = text_units.explode("document_ids")
 
         # verify that text_unit_id exists in the index
-        if not text_units["chunk_id"].isin([text_unit_id]).any():
+        if not text_units["human_readable_id"].isin([text_unit_id]).any():
             raise ValueError(
                 f"Text unit '{text_unit_id}' not found in index '{index_name}'."
             )

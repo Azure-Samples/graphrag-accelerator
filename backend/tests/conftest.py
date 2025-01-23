@@ -63,7 +63,7 @@ def container_with_graphml_file(
     if not blob_service_client.get_container_client(sanitized_name).exists():
         blob_service_client.create_container(sanitized_name)
     blob_client = blob_service_client.get_blob_client(
-        sanitized_name, "output/summarized_graph.graphml"
+        sanitized_name, "output/graph.graphml"
     )
     blob_client.upload_blob(data="a fake graphml file", overwrite=True)
     # add an entry to the container-store table in cosmos db

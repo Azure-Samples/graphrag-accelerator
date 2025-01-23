@@ -9,13 +9,13 @@ from graphrag.callbacks.file_workflow_callbacks import FileWorkflowCallbacks
 from graphrag.callbacks.workflow_callbacks import WorkflowCallbacks
 from graphrag.callbacks.workflow_callbacks_manager import WorkflowCallbacksManager
 
-from src.api.azure_clients import AzureClientManager
 from src.logger.application_insights_workflow_callbacks import (
     ApplicationInsightsWorkflowCallbacks,
 )
 from src.logger.blob_workflow_callbacks import BlobWorkflowCallbacks
 from src.logger.console_workflow_callbacks import ConsoleWorkflowCallbacks
 from src.logger.typing import Logger
+from src.utils.azure_clients import AzureClientManager
 
 
 def load_pipeline_logger(
