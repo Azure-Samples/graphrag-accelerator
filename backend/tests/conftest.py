@@ -97,11 +97,12 @@ def container_with_index_files(
     )
     data_root = f"{this_directory}/data/synthetic-dataset/output"
     for file in [
-        "create_base_documents.parquet",
-        "create_final_entities.parquet",
-        "create_final_relationships.parquet",
         "create_final_community_reports.parquet",
-        "create_base_text_units.parquet",
+        "create_final_documents.parquet",
+        "create_final_entities.parquet",
+        "create_final_nodes.parquet",
+        "create_final_relationships.parquet",
+        "create_final_text_units.parquet",
     ]:
         blob_client = blob_service_client.get_blob_client(
             sanitized_name, f"output/{file}"
