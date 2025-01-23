@@ -6,6 +6,7 @@ import traceback
 from contextlib import asynccontextmanager
 
 import yaml
+from azure.cosmos import PartitionKey, ThroughputProperties
 from fastapi import (
     FastAPI,
     Request,
@@ -49,10 +50,18 @@ def intialize_cosmosdb_setup():
     """Initialise CosmosDB (if necessary) by setting up a database and containers that are expected at startup time."""
     azure_client_manager = AzureClientManager()
     client = azure_client_manager.get_cosmos_client()
-    client.create_database_if_not_exists("graphrag")
-    client.get_database_client("graphrag").create_container_if_not_exists("jobs", "/id")
-    client.get_database_client("graphrag").create_container_if_not_exists(
-        "container-store", "/id"
+    db_client = client.create_database_if_not_exists("graphrag")
+    # create containers with default settings
+    throughput = ThroughputProperties(
+        auto_scale_max_throughput=1000, auto_scale_increment_percent=1
+    )
+    db_client.create_container_if_not_exists(
+        id="jobs", partition_key=PartitionKey(path="/id"), offer_throughput=throughput
+    )
+    db_client.create_container_if_not_exists(
+        id="container-store",
+        partition_key=PartitionKey(path="/id"),
+        offer_throughput=throughput,
     )
 
 

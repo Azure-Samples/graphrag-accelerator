@@ -70,7 +70,7 @@ var dnsDomain = 'graphrag.io'
 var appHostname = 'graphrag.${dnsDomain}'
 var appUrl = 'http://${appHostname}'
 
-@description('Role definitions for various roles that will be assigned at deployment time. Learn more: https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles')
+@description('Role definitions for various RBAC roles that will be assigned at deployment time. Learn more: https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles')
 var roles = {
   privateDnsZoneContributor: resourceId(
     'Microsoft.Authorization/roleDefinitions',
@@ -84,17 +84,39 @@ var roles = {
     'Microsoft.Authorization/roleDefinitions',
     '7f951dda-4ed3-4680-a7ca-43fe172d538d' // ACR Pull Role
   )
-  monitoringMetricsPublisher: resourceId(
-    'Microsoft.Authorization/roleDefinitions',
-    '3913510d-42f4-4e42-8a64-420c390055eb' // Monitoring Metrics Publisher Role
-  )
 }
 
-module workloadIdentityRBACAssignments 'core/workload-rbac.bicep' = {
-  name: 'workload-rbac-assignments'
+// apply RBAC role assignments to the AKS workload identity
+module aksWorkloadIdentityRBAC 'core/rbac/workload-identity-rbac.bicep' = {
+  name: 'aks-workload-identity-rbac-assignments'
   params: {
     principalId: workloadIdentity.outputs.principalId
     principalType: 'ServicePrincipal'
+    cosmosDbName: cosmosdb.outputs.name
+  }
+}
+
+// apply necessary RBAC role assignments to the AKS service
+module aksRBAC 'core/rbac/aks-rbac.bicep' = {
+  name: 'aks-rbac-assignments'
+  params: {
+    roleAssignments: [
+      {
+        principalId: aks.outputs.kubeletPrincipalId
+        principalType: 'ServicePrincipal'
+        roleDefinitionId: roles.acrPull
+      }
+      {
+        principalId: aks.outputs.ingressWebAppIdentity
+        principalType: 'ServicePrincipal'
+        roleDefinitionId: roles.privateDnsZoneContributor
+      }
+      {
+        principalId: aks.outputs.systemIdentity
+        principalType: 'ServicePrincipal'
+        roleDefinitionId: roles.networkContributor
+      }
+    ]
   }
 }
 
@@ -170,13 +192,6 @@ module acr 'core/acr/acr.bicep' = {
   params: {
     registryName: !empty(acrName) ? acrName : '${abbrs.containerRegistryRegistries}${resourceBaseNameFinal}'
     location: location
-    roleAssignments: [
-      {
-        principalId: aks.outputs.kubeletPrincipalId
-        principalType: 'ServicePrincipal'
-        roleDefinitionId: roles.acrPull
-      }
-    ]
   }
 }
 
@@ -191,18 +206,6 @@ module aks 'core/aks/aks.bicep' = {
     logAnalyticsWorkspaceId: log.outputs.id
     subnetId: vnet.properties.subnets[1].id // aks subnet
     privateDnsZoneName: privateDnsZone.outputs.name
-    ingressRoleAssignments: [
-      {
-        principalType: 'ServicePrincipal'
-        roleDefinitionId: roles.privateDnsZoneContributor
-      }
-    ]
-    systemRoleAssignments: [
-      {
-        principalType: 'ServicePrincipal'
-        roleDefinitionId: roles.networkContributor
-      }
-    ]
   }
 }
 
@@ -212,7 +215,6 @@ module cosmosdb 'core/cosmosdb/cosmosdb.bicep' = {
     cosmosDbName: !empty(cosmosDbName) ? cosmosDbName : '${abbrs.documentDBDatabaseAccounts}${resourceBaseNameFinal}'
     location: location
     publicNetworkAccess: enablePrivateEndpoints ? 'Disabled' : 'Enabled'
-    principalId: workloadIdentity.outputs.principalId
   }
 }
 

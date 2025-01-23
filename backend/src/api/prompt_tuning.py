@@ -44,7 +44,7 @@ async def generate_prompts(storage_name: str, limit: int = 5):
     this_directory = os.path.dirname(
         os.path.abspath(inspect.getfile(inspect.currentframe()))
     )
-    data = yaml.safe_load(open(f"{this_directory}/pipeline-settings.yaml"))
+    data = yaml.safe_load(open(f"{this_directory}/../indexer/settings.yaml"))
     data["input"]["container_name"] = sanitized_storage_name
     graphrag_config = create_graphrag_config(values=data, root_dir=".")
 

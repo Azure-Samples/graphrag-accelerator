@@ -50,12 +50,6 @@ param subnetId string
 
 param privateDnsZoneName string
 
-@description('Array of objects with fields principalType, roleDefinitionId')
-param ingressRoleAssignments array = []
-
-@description('Array of objects with fields principalType, roleDefinitionId')
-param systemRoleAssignments array = []
-
 @description('Array of object ids that will have admin role of the cluster')
 param clusterAdmins array = []
 
@@ -221,35 +215,11 @@ resource aksManagedNodeOSUpgradeSchedule 'Microsoft.ContainerService/managedClus
   }
 }
 
-// role assignment to ingress identity
-resource webAppRoutingPrivateDnsContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
-  for role in ingressRoleAssignments: {
-    name: guid(subscription().subscriptionId, resourceGroup().name, role.roleDefinitionId, privateDnsZone.id)
-    scope: resourceGroup()
-    properties: {
-      principalId: aks.properties.ingressProfile.webAppRouting.identity.objectId
-      principalType: role.principalType
-      roleDefinitionId: role.roleDefinitionId
-    }
-  }
-]
-
-// role assignment to AKS system identity
-resource systemRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
-  for role in systemRoleAssignments: {
-    name: guid(subscription().subscriptionId, resourceGroup().name, role.roleDefinitionId, aks.id)
-    scope: resourceGroup()
-    properties: {
-      principalId: aks.identity.principalId
-      principalType: role.principalType
-      roleDefinitionId: role.roleDefinitionId
-    }
-  }
-]
-
 output name string = aks.name
 output id string = aks.id
 output managedResourceGroup string = aks.properties.nodeResourceGroup
 output controlPlaneFqdn string = aks.properties.fqdn
 output kubeletPrincipalId string = aks.properties.identityProfile.kubeletidentity.objectId
+output ingressWebAppIdentity string = aks.properties.ingressProfile.webAppRouting.identity.objectId
+output systemIdentity string = aks.identity.principalId
 output issuer string = aks.properties.oidcIssuerProfile.issuerURL
