@@ -5,7 +5,6 @@ param vnetId string
 param privateDnsZoneName string
 var vnet_id_hash = uniqueString(vnetId)
 
-
 resource dnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
   name: privateDnsZoneName
   location: 'global'
