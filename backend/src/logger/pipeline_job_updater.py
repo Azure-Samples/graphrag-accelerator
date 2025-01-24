@@ -21,14 +21,12 @@ class PipelineJobUpdater(NoopWorkflowCallbacks):
         """
         self._pipeline_job = pipeline_job
 
-    def on_workflow_start(self, name: str, instance: object) -> None:
+    def workflow_start(self, name: str, instance: object) -> None:
         """Execute this callback when a workflow starts."""
-        # if we are not already running, set the status to running
-        if self._pipeline_job.status != PipelineJobState.RUNNING:
-            self._pipeline_job.status = PipelineJobState.RUNNING
+        self._pipeline_job.status = PipelineJobState.RUNNING
         self._pipeline_job.progress = f"Workflow {name} started."
 
-    def on_workflow_end(self, name: str, instance: object) -> None:
+    def workflow_end(self, name: str, instance: object) -> None:
         """Execute this callback when a workflow ends."""
         self._pipeline_job.completed_workflows.append(name)
         self._pipeline_job.update_db()

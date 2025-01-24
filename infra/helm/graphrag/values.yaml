@@ -38,7 +38,7 @@ graphragConfig:
   COSMOS_URI_ENDPOINT: ""
   GRAPHRAG_API_BASE: ""
   GRAPHRAG_API_VERSION: ""
-  GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT: "https://cognitiveservices.azure.com/.default"
+  COGNITIVE_SERVICES_AUDIENCE: "https://cognitiveservices.azure.com/.default"
   GRAPHRAG_LLM_MODEL: ""
   GRAPHRAG_LLM_DEPLOYMENT_NAME: ""
   GRAPHRAG_EMBEDDING_MODEL: ""

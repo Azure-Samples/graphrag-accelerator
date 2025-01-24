@@ -12,18 +12,20 @@ import yaml
 from graphrag.callbacks.workflow_callbacks import WorkflowCallbacks
 from graphrag.config.create_graphrag_config import create_graphrag_config
 from graphrag.index.create_pipeline_config import create_pipeline_config
+from graphrag.index.typing import PipelineRunResult
 
-from src.logger import (
+from ...src.logger import (
     PipelineJobUpdater,
     load_pipeline_logger,
 )
-from src.typing.pipeline import PipelineJobState
-from src.utils.azure_clients import AzureClientManager
-from src.utils.common import sanitize_name
-from src.utils.pipeline import PipelineJob
+from ...src.typing.pipeline import PipelineJobState
+from ...src.utils.azure_clients import AzureClientManager
+from ...src.utils.common import sanitize_name
+from ...src.utils.pipeline import PipelineJob
 
 
 def start_indexing_job(index_name: str):
+    return 0
     print("Start indexing job...")
     # get sanitized name
     sanitized_index_name = sanitize_name(index_name)
@@ -73,20 +75,20 @@ def start_indexing_job(index_name: str):
     else:
         data.pop("entity_extraction")
 
-    # set prompt for summarize descriptions
-    if pipeline_job.summarize_descriptions_prompt:
-        fname = "summarize-descriptions-prompt.txt"
+    # set prompt for entity summarization
+    if pipeline_job.entity_summarization_prompt:
+        fname = "entity-summarization-prompt.txt"
         with open(fname, "w") as outfile:
-            outfile.write(pipeline_job.summarize_descriptions_prompt)
+            outfile.write(pipeline_job.entity_summarization_prompt)
         data["summarize_descriptions"]["prompt"] = fname
     else:
         data.pop("summarize_descriptions")
 
-    # set prompt for community report
-    if pipeline_job.community_report_prompt:
-        fname = "community-report-prompt.txt"
+    # set prompt for community summarization
+    if pipeline_job.community_summarization_prompt:
+        fname = "community-summarization-prompt.txt"
         with open(fname, "w") as outfile:
-            outfile.write(pipeline_job.community_report_prompt)
+            outfile.write(pipeline_job.community_summarization_prompt)
         data["community_reports"]["prompt"] = fname
     else:
         data.pop("community_reports")
@@ -101,7 +103,7 @@ def start_indexing_job(index_name: str):
     pipeline_job.failed_workflows = []
     pipeline_config = create_pipeline_config(parameters)
     for workflow in pipeline_config.workflows:
-        pipeline_job.all_workflows.append(workflow.name)
+        pipeline_job.all_workflows = pipeline_job.all_workflows.append(workflow.name)
 
     # create new loggers/callbacks just for this job
     print("Creating generic loggers...")
@@ -118,16 +120,27 @@ def start_indexing_job(index_name: str):
     # run the pipeline
     try:
         print("Building index...")
-        asyncio.run(
+        pipeline_results: list[PipelineRunResult] = asyncio.run(
             api.build_index(
                 config=parameters,
                 callbacks=[logger, pipeline_job_updater],
             )
         )
-        print("Index building complete")
-        # if job is done, check if any pipeline steps failed
+
+        # once indexing job is done, check if any pipeline steps failed
+        for result in pipeline_results:
+            if result.errors:
+                pipeline_job.failed_workflows = pipeline_job.failed_workflows.append(
+                    result.workflow
+                )
+            else:
+                pipeline_job.completed_workflows = (
+                    pipeline_job.completed_workflows.append(result.workflow)
+                )
+        print("Indexing complete")
+
         if len(pipeline_job.failed_workflows) > 0:
-            print("Indexing pipeline encountered error.")
+            print("Indexing pipeline encountered errors.")
             pipeline_job.status = PipelineJobState.FAILED
             logger.error(
                 message=f"Indexing pipeline encountered error for index'{index_name}'.",
@@ -158,12 +171,10 @@ def start_indexing_job(index_name: str):
             exit(1)  # signal to AKS that indexing job failed
     except Exception as e:
         pipeline_job.status = PipelineJobState.FAILED
-        # update failed state in cosmos db
         error_details = {
             "index": index_name,
             "storage_name": storage_name,
         }
-        # log error in local index directory logs
         logger.error(
             message=f"Indexing pipeline failed for index '{index_name}'.",
             cause=e,
@@ -177,8 +188,4 @@ if __name__ == "__main__":
     parser.add_argument("-i", "--index-name", required=True)
     args = parser.parse_args()
 
-    asyncio.run(
-        start_indexing_job(
-            index_name=args.index_name,
-        )
-    )
+    start_indexing_job(index_name=args.index_name)

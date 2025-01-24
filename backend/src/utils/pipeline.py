@@ -27,15 +27,18 @@ class PipelineJob:
     _sanitized_index_name: str = field(default=None, init=False)
     _human_readable_storage_name: str = field(default=None, init=False)
     _sanitized_storage_name: str = field(default=None, init=False)
-    _entity_extraction_prompt: str = field(default=None, init=False)
-    _community_report_prompt: str = field(default=None, init=False)
-    _summarize_descriptions_prompt: str = field(default=None, init=False)
+
     _all_workflows: List[str] = field(default_factory=list, init=False)
     _completed_workflows: List[str] = field(default_factory=list, init=False)
     _failed_workflows: List[str] = field(default_factory=list, init=False)
+
     _status: PipelineJobState = field(default=None, init=False)
     _percent_complete: float = field(default=0, init=False)
     _progress: str = field(default="", init=False)
+
+    _entity_extraction_prompt: str = field(default=None, init=False)
+    _entity_summarization_prompt: str = field(default=None, init=False)
+    _community_summarization_prompt: str = field(default=None, init=False)
 
     @staticmethod
     def _jobs_container():
@@ -51,8 +54,8 @@ class PipelineJob:
         human_readable_index_name: str,
         human_readable_storage_name: str,
         entity_extraction_prompt: str | None = None,
-        community_report_prompt: str | None = None,
-        summarize_descriptions_prompt: str | None = None,
+        entity_summarization_prompt: str | None = None,
+        community_summarization_prompt: str | None = None,
         **kwargs,
     ) -> "PipelineJob":
         """
@@ -95,17 +98,20 @@ class PipelineJob:
         instance._sanitized_index_name = sanitize_name(human_readable_index_name)
         instance._human_readable_storage_name = human_readable_storage_name
         instance._sanitized_storage_name = sanitize_name(human_readable_storage_name)
-        instance._entity_extraction_prompt = entity_extraction_prompt
-        instance._community_report_prompt = community_report_prompt
-        instance._summarize_descriptions_prompt = summarize_descriptions_prompt
+
         instance._all_workflows = kwargs.get("all_workflows", [])
         instance._completed_workflows = kwargs.get("completed_workflows", [])
         instance._failed_workflows = kwargs.get("failed_workflows", [])
+
         instance._status = PipelineJobState(
             kwargs.get("status", PipelineJobState.SCHEDULED.value)
         )
         instance._percent_complete = kwargs.get("percent_complete", 0.0)
         instance._progress = kwargs.get("progress", "")
+
+        instance._entity_extraction_prompt = entity_extraction_prompt
+        instance._entity_summarization_prompt = entity_summarization_prompt
+        instance._community_summarization_prompt = community_summarization_prompt
 
         # Create the item in the database
         instance.update_db()
@@ -140,17 +146,22 @@ class PipelineJob:
             "human_readable_storage_name"
         )
         instance._sanitized_storage_name = db_item.get("sanitized_storage_name")
-        instance._entity_extraction_prompt = db_item.get("entity_extraction_prompt")
-        instance._community_report_prompt = db_item.get("community_report_prompt")
-        instance._summarize_descriptions_prompt = db_item.get(
-            "summarize_descriptions_prompt"
-        )
+
         instance._all_workflows = db_item.get("all_workflows", [])
         instance._completed_workflows = db_item.get("completed_workflows", [])
         instance._failed_workflows = db_item.get("failed_workflows", [])
+
         instance._status = PipelineJobState(db_item.get("status"))
         instance._percent_complete = db_item.get("percent_complete", 0.0)
         instance._progress = db_item.get("progress", "")
+
+        instance._entity_extraction_prompt = db_item.get("entity_extraction_prompt")
+        instance._entity_summarization_prompt = db_item.get(
+            "entity_summarization_prompt"
+        )
+        instance._community_summarization_prompt = db_item.get(
+            "community_summarization_prompt"
+        )
         return instance
 
     @staticmethod
@@ -191,10 +202,12 @@ class PipelineJob:
         }
         if self._entity_extraction_prompt:
             model["entity_extraction_prompt"] = self._entity_extraction_prompt
-        if self._community_report_prompt:
-            model["community_report_prompt"] = self._community_report_prompt
-        if self._summarize_descriptions_prompt:
-            model["summarize_descriptions_prompt"] = self._summarize_descriptions_prompt
+        if self._entity_summarization_prompt:
+            model["entity_summarization_prompt"] = self._entity_summarization_prompt
+        if self._community_summarization_prompt:
+            model["community_summarization_prompt"] = (
+                self._community_summarization_prompt
+            )
         return model
 
     def update_db(self):
@@ -268,21 +281,23 @@ class PipelineJob:
         self.update_db()
 
     @property
-    def community_report_prompt(self) -> str:
-        return self._community_report_prompt
+    def entity_summarization_prompt(self) -> str:
+        return self._entity_summarization_prompt
 
-    @community_report_prompt.setter
-    def community_report_prompt(self, community_report_prompt: str) -> None:
-        self._community_report_prompt = community_report_prompt
+    @entity_summarization_prompt.setter
+    def entity_summarization_prompt(self, entity_summarization_prompt: str) -> None:
+        self._entity_summarization_prompt = entity_summarization_prompt
         self.update_db()
 
     @property
-    def summarize_descriptions_prompt(self) -> str:
-        return self._summarize_descriptions_prompt
+    def community_summarization_prompt(self) -> str:
+        return self._community_summarization_prompt
 
-    @summarize_descriptions_prompt.setter
-    def summarize_descriptions_prompt(self, summarize_descriptions_prompt: str) -> None:
-        self._summarize_descriptions_prompt = summarize_descriptions_prompt
+    @community_summarization_prompt.setter
+    def community_summarization_prompt(
+        self, community_summarization_prompt: str
+    ) -> None:
+        self._community_summarization_prompt = community_summarization_prompt
         self.update_db()
 
     @property

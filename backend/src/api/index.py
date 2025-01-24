@@ -49,8 +49,8 @@ async def schedule_indexing_job(
     storage_name: str,
     index_name: str,
     entity_extraction_prompt: UploadFile | None = None,
-    community_report_prompt: UploadFile | None = None,
-    summarize_descriptions_prompt: UploadFile | None = None,
+    entity_summarization_prompt: UploadFile | None = None,
+    community_summarization_prompt: UploadFile | None = None,
 ):
     azure_client_manager = AzureClientManager()
     blob_service_client = azure_client_manager.get_blob_service_client()
@@ -80,14 +80,14 @@ async def schedule_indexing_job(
         if entity_extraction_prompt
         else None
     )
-    community_report_prompt_content = (
-        community_report_prompt.file.read().decode("utf-8")
-        if community_report_prompt
+    entity_summarization_prompt_content = (
+        entity_summarization_prompt.file.read().decode("utf-8")
+        if entity_summarization_prompt
         else None
     )
-    summarize_descriptions_prompt_content = (
-        summarize_descriptions_prompt.file.read().decode("utf-8")
-        if summarize_descriptions_prompt
+    community_summarization_prompt_content = (
+        community_summarization_prompt.file.read().decode("utf-8")
+        if community_summarization_prompt
         else None
     )
 
@@ -116,9 +116,9 @@ async def schedule_indexing_job(
             existing_job._failed_workflows
         ) = []
         existing_job._entity_extraction_prompt = entity_extraction_prompt_content
-        existing_job._community_report_prompt = community_report_prompt_content
-        existing_job._summarize_descriptions_prompt = (
-            summarize_descriptions_prompt_content
+        existing_job._entity_summarization_prompt = entity_summarization_prompt_content
+        existing_job._community_summarization_prompt = (
+            community_summarization_prompt_content
         )
         existing_job._epoch_request_time = int(time())
         existing_job.update_db()
@@ -128,8 +128,8 @@ async def schedule_indexing_job(
             human_readable_index_name=index_name,
             human_readable_storage_name=storage_name,
             entity_extraction_prompt=entity_extraction_prompt_content,
-            community_report_prompt=community_report_prompt_content,
-            summarize_descriptions_prompt=summarize_descriptions_prompt_content,
+            entity_summarization_prompt=entity_summarization_prompt_content,
+            community_summarization_prompt=community_summarization_prompt_content,
             status=PipelineJobState.SCHEDULED,
         )
 
