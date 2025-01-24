@@ -16,7 +16,7 @@ GRAPHRAG_IMAGE=""
 PUBLISHER_EMAIL=""
 PUBLISHER_NAME=""
 RESOURCE_BASE_NAME=""
-GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT=""
+COGNITIVE_SERVICES_AUDIENCE=""
 CONTAINER_REGISTRY_NAME=""
 
 requiredParams=(
@@ -239,9 +239,9 @@ populateOptionalParams () {
     if [ ! -z "$RESOURCE_BASE_NAME" ]; then
         printf "\tsetting RESOURCE_BASE_NAME=$RESOURCE_BASE_NAME\n"
     fi
-    if [ -z "$GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT" ]; then
-        GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT="https://cognitiveservices.azure.com/.default"
-        printf "\tsetting GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT=$GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT\n"
+    if [ -z "$COGNITIVE_SERVICES_AUDIENCE" ]; then
+        COGNITIVE_SERVICES_AUDIENCE="https://cognitiveservices.azure.com/.default"
+        printf "\tsetting COGNITIVE_SERVICES_AUDIENCE=$COGNITIVE_SERVICES_AUDIENCE\n"
     fi
     if [ -z "$GRAPHRAG_IMAGE" ]; then
         GRAPHRAG_IMAGE="graphrag:backend"
@@ -455,7 +455,7 @@ installGraphRAGHelmChart () {
         --set "graphragConfig.COSMOS_URI_ENDPOINT=$cosmosEndpoint" \
         --set "graphragConfig.GRAPHRAG_API_BASE=$GRAPHRAG_API_BASE" \
         --set "graphragConfig.GRAPHRAG_API_VERSION=$GRAPHRAG_API_VERSION" \
-        --set "graphragConfig.GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT=$GRAPHRAG_COGNITIVE_SERVICES_ENDPOINT" \
+        --set "graphragConfig.COGNITIVE_SERVICES_AUDIENCE=$COGNITIVE_SERVICES_AUDIENCE" \
         --set "graphragConfig.GRAPHRAG_LLM_MODEL=$GRAPHRAG_LLM_MODEL" \
         --set "graphragConfig.GRAPHRAG_LLM_DEPLOYMENT_NAME=$GRAPHRAG_LLM_DEPLOYMENT_NAME" \
         --set "graphragConfig.GRAPHRAG_EMBEDDING_MODEL=$GRAPHRAG_EMBEDDING_MODEL" \
