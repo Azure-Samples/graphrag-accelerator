@@ -10,8 +10,8 @@ from azure.cosmos import CosmosClient, PartitionKey
 from azure.storage.blob import BlobServiceClient
 from fastapi.testclient import TestClient
 
-from src.main import app
-from src.utils.common import sanitize_name
+from graphrag_app.main import app
+from graphrag_app.utils.common import sanitize_name
 
 
 @pytest.fixture(scope="session")

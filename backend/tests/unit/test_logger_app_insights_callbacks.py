@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.logger.application_insights_workflow_callbacks import (
+from graphrag_app.logger.application_insights_workflow_callbacks import (
     ApplicationInsightsWorkflowCallbacks,
 )
 
@@ -14,7 +14,7 @@ from src.logger.application_insights_workflow_callbacks import (
 @pytest.fixture
 def mock_logger():
     with patch(
-        "src.logger.application_insights_workflow_callbacks.logging.getLogger"
+        "graphrag_app.logger.application_insights_workflow_callbacks.logging.getLogger"
     ) as mock_get_logger:
         mock_logger_instance = MagicMock(spec=logging.Logger)
         mock_get_logger.return_value = mock_logger_instance
@@ -24,7 +24,7 @@ def mock_logger():
 @pytest.fixture
 def workflow_callbacks(mock_logger):
     with patch(
-        "src.logger.application_insights_workflow_callbacks.ApplicationInsightsWorkflowCallbacks.__init__",
+        "graphrag_app.logger.application_insights_workflow_callbacks.ApplicationInsightsWorkflowCallbacks.__init__",
         return_value=None,
     ):
         instance = ApplicationInsightsWorkflowCallbacks()

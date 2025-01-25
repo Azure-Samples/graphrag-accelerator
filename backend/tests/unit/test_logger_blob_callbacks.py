@@ -5,13 +5,13 @@ from unittest.mock import patch
 
 import pytest
 
-from src.logger.blob_workflow_callbacks import BlobWorkflowCallbacks
+from graphrag_app.logger.blob_workflow_callbacks import BlobWorkflowCallbacks
 
 
 @pytest.fixture
 def mock_blob_service_client():
     with patch(
-        "src.logger.blob_workflow_callbacks.BlobServiceClient"
+        "graphrag_app.logger.blob_workflow_callbacks.BlobServiceClient"
     ) as mock_blob_service_client:
         yield mock_blob_service_client
 
@@ -19,7 +19,7 @@ def mock_blob_service_client():
 @pytest.fixture
 def workflow_callbacks(mock_blob_service_client):
     with patch(
-        "src.logger.blob_workflow_callbacks.BlobWorkflowCallbacks.__init__",
+        "graphrag_app.logger.blob_workflow_callbacks.BlobWorkflowCallbacks.__init__",
         return_value=None,
     ):
         instance = BlobWorkflowCallbacks()

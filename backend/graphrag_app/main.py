@@ -4,6 +4,7 @@
 import os
 import traceback
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import yaml
 from azure.cosmos import PartitionKey, ThroughputProperties
@@ -20,15 +21,15 @@ from kubernetes import (
     config,
 )
 
-from src.api.data import data_route
-from src.api.graph import graph_route
-from src.api.index import index_route
-from src.api.prompt_tuning import prompt_tuning_route
-from src.api.query import query_route
-from src.api.query_streaming import query_streaming_route
-from src.api.source import source_route
-from src.logger.load_logger import load_pipeline_logger
-from src.utils.azure_clients import AzureClientManager
+from graphrag_app.api.data import data_route
+from graphrag_app.api.graph import graph_route
+from graphrag_app.api.index import index_route
+from graphrag_app.api.prompt_tuning import prompt_tuning_route
+from graphrag_app.api.query import query_route
+from graphrag_app.api.query_streaming import query_streaming_route
+from graphrag_app.api.source import source_route
+from graphrag_app.logger.load_logger import load_pipeline_logger
+from graphrag_app.utils.azure_clients import AzureClientManager
 
 
 async def catch_all_exceptions_middleware(request: Request, call_next):
@@ -91,7 +92,8 @@ async def lifespan(app: FastAPI):
             name=pod_name, namespace=os.environ["AKS_NAMESPACE"]
         )
         # load the cronjob manifest template and update PLACEHOLDER values with correct values using the pod spec
-        with open("index-job-manager.yaml", "r") as f:
+        SCRIPT_DIR = Path(__file__).resolve().parent
+        with (SCRIPT_DIR / "config/index-cronjob-manager.yaml").open("r") as f:
             manifest = yaml.safe_load(f)
         manifest["spec"]["jobTemplate"]["spec"]["template"]["spec"]["containers"][0][
             "image"

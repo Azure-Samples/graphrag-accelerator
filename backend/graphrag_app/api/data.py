@@ -13,13 +13,13 @@ from fastapi import (
     UploadFile,
 )
 
-from src.logger.load_logger import load_pipeline_logger
-from src.typing.models import (
+from graphrag_app.logger.load_logger import load_pipeline_logger
+from graphrag_app.typing.models import (
     BaseResponse,
     StorageNameList,
 )
-from src.utils.azure_clients import AzureClientManager
-from src.utils.common import (
+from graphrag_app.utils.azure_clients import AzureClientManager
+from graphrag_app.utils.common import (
     delete_blob_container,
     delete_cosmos_container_item,
     sanitize_name,

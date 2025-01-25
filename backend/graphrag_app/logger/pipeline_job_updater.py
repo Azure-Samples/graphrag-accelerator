@@ -3,8 +3,8 @@
 
 from graphrag.callbacks.noop_workflow_callbacks import NoopWorkflowCallbacks
 
-from src.typing.pipeline import PipelineJobState
-from src.utils.pipeline import PipelineJob
+from graphrag_app.typing.pipeline import PipelineJobState
+from graphrag_app.utils.pipeline import PipelineJob
 
 
 class PipelineJobUpdater(NoopWorkflowCallbacks):

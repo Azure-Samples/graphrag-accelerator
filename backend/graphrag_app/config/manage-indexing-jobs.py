@@ -9,6 +9,7 @@ to schedule graphrag indexing jobs on a first-come-first-serve basis (based on e
 """
 
 import os
+from pathlib import Path
 
 import pandas as pd
 import yaml
@@ -17,11 +18,11 @@ from kubernetes import (
     config,
 )
 
-from src.logger.load_logger import load_pipeline_logger
-from src.typing.pipeline import PipelineJobState
-from src.utils.azure_clients import AzureClientManager
-from src.utils.common import sanitize_name
-from src.utils.pipeline import PipelineJob
+from graphrag_app.logger.load_logger import load_pipeline_logger
+from graphrag_app.typing.pipeline import PipelineJobState
+from graphrag_app.utils.azure_clients import AzureClientManager
+from graphrag_app.utils.common import sanitize_name
+from graphrag_app.utils.pipeline import PipelineJob
 
 
 def schedule_indexing_job(index_name: str):
@@ -68,14 +69,15 @@ def _generate_aks_job_manifest(
     The manifest must be valid YAML with certain values replaced by the provided arguments.
     """
     # NOTE: this file location is relative to the WORKDIR set in Dockerfile-backend
-    with open("index-job.yaml", "r") as f:
+    SCRIPT_DIR = Path(__file__).resolve().parent
+    with (SCRIPT_DIR / "config/index-job.yaml").open("r") as f:
         manifest = yaml.safe_load(f)
     manifest["metadata"]["name"] = f"indexing-job-{sanitize_name(index_name)}"
     manifest["spec"]["template"]["spec"]["serviceAccountName"] = service_account_name
     manifest["spec"]["template"]["spec"]["containers"][0]["image"] = docker_image_name
     manifest["spec"]["template"]["spec"]["containers"][0]["command"] = [
         "python",
-        "src/indexer/indexer.py",
+        "tools/indexer.py",
         f"-i={index_name}",
     ]
     return manifest

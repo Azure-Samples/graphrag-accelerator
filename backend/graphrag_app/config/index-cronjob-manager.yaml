@@ -22,6 +22,7 @@ spec:
           containers:
             - name: index-job-manager
               image: PLACEHOLDER
+              workingDir: /backend/graphrag_app/config
               imagePullPolicy: Always
               resources:
                 requests:

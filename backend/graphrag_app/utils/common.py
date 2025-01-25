@@ -10,7 +10,7 @@ from azure.cosmos import exceptions
 from azure.identity import DefaultAzureCredential
 from fastapi import HTTPException
 
-from src.utils.azure_clients import AzureClientManager
+from graphrag_app.utils.azure_clients import AzureClientManager
 
 
 def get_df(

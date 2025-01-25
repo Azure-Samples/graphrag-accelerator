@@ -21,11 +21,11 @@ from graphrag.api.query import (
 )
 from graphrag.config import create_graphrag_config
 
-from src.api.query import _is_index_complete
-from src.logger.load_logger import load_pipeline_logger
-from src.typing.models import GraphRequest
-from src.utils.azure_clients import AzureClientManager
-from src.utils.common import (
+from graphrag_app.api.query import _is_index_complete
+from graphrag_app.logger.load_logger import load_pipeline_logger
+from graphrag_app.typing.models import GraphRequest
+from graphrag_app.utils.azure_clients import AzureClientManager
+from graphrag_app.utils.common import (
     get_df,
     sanitize_name,
     validate_index_file_exist,
@@ -45,7 +45,7 @@ query_streaming_route = APIRouter(
     description="The global query method generates answers by searching over all AI-generated community reports in a map-reduce fashion. This is a resource-intensive method, but often gives good responses for questions that require an understanding of the dataset as a whole.",
 )
 async def global_search_streaming(request: GraphRequest):
-    # this is a slightly modified version of src.api.query.global_query() method
+    # this is a slightly modified version of graphrag_app.api.query.global_query() method
     if isinstance(request.index_name, str):
         index_names = [request.index_name]
     else:
@@ -202,7 +202,7 @@ async def global_search_streaming(request: GraphRequest):
     description="The local query method generates answers by combining relevant data from the AI-extracted knowledge-graph with text chunks of the raw documents. This method is suitable for questions that require an understanding of specific entities mentioned in the documents (e.g. What are the healing properties of chamomile?).",
 )
 async def local_search_streaming(request: GraphRequest):
-    # this is a slightly modified version of src.api.query.local_query() method
+    # this is a slightly modified version of graphrag_app.api.query.local_query() method
     if isinstance(request.index_name, str):
         index_names = [request.index_name]
     else:

@@ -8,9 +8,9 @@ from typing import (
 
 from azure.cosmos.exceptions import CosmosHttpResponseError
 
-from src.typing.pipeline import PipelineJobState
-from src.utils.azure_clients import AzureClientManager
-from src.utils.common import sanitize_name
+from graphrag_app.typing.pipeline import PipelineJobState
+from graphrag_app.utils.azure_clients import AzureClientManager
+from graphrag_app.utils.common import sanitize_name
 
 
 @dataclass

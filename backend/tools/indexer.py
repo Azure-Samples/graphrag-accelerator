@@ -14,18 +14,17 @@ from graphrag.config.create_graphrag_config import create_graphrag_config
 from graphrag.index.create_pipeline_config import create_pipeline_config
 from graphrag.index.typing import PipelineRunResult
 
-from ...src.logger import (
+from graphrag_app.logger import (
     PipelineJobUpdater,
     load_pipeline_logger,
 )
-from ...src.typing.pipeline import PipelineJobState
-from ...src.utils.azure_clients import AzureClientManager
-from ...src.utils.common import sanitize_name
-from ...src.utils.pipeline import PipelineJob
+from graphrag_app.typing.pipeline import PipelineJobState
+from graphrag_app.utils.azure_clients import AzureClientManager
+from graphrag_app.utils.common import sanitize_name
+from graphrag_app.utils.pipeline import PipelineJob
 
 
 def start_indexing_job(index_name: str):
-    return 0
     print("Start indexing job...")
     # get sanitized name
     sanitized_index_name = sanitize_name(index_name)

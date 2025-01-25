@@ -5,15 +5,15 @@
 import pandas as pd
 from fastapi import APIRouter, HTTPException
 
-from src.logger.load_logger import load_pipeline_logger
-from src.typing.models import (
+from graphrag_app.logger.load_logger import load_pipeline_logger
+from graphrag_app.typing.models import (
     ClaimResponse,
     EntityResponse,
     RelationshipResponse,
     ReportResponse,
     TextUnitResponse,
 )
-from src.utils.common import (
+from graphrag_app.utils.common import (
     pandas_storage_options,
     sanitize_name,
     validate_index_file_exist,

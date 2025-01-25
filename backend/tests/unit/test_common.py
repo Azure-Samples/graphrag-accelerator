@@ -3,7 +3,7 @@
 
 import pytest
 
-from src.utils.common import (
+from graphrag_app.utils.common import (
     retrieve_original_blob_container_name,
     sanitize_name,
     validate_blob_container_name,
@@ -12,7 +12,7 @@ from src.utils.common import (
 
 
 def test_validate_blob_container_name():
-    """Test the src.utils.common.validate_blob_container_name function."""
+    """Test the graphrag_app.utils.common.validate_blob_container_name function."""
     # test valid container name
     assert validate_blob_container_name("validcontainername") is None
     # test invalid container name
@@ -33,7 +33,7 @@ def test_validate_blob_container_name():
 
 
 def test_retrieve_original_blob_container_name(container_with_graphml_file):
-    """Test the src.utils.common.retrieve_original_blob_container_name function."""
+    """Test the graphrag_app.utils.common.retrieve_original_blob_container_name function."""
     # test retrieving a valid container name
     original_name = container_with_graphml_file
     sanitized_name = sanitize_name(original_name)
@@ -43,7 +43,7 @@ def test_retrieve_original_blob_container_name(container_with_graphml_file):
 
 
 def test_validate_index_file_exist(container_with_graphml_file):
-    """Test the src.utils.common.validate_index_file_exist function."""
+    """Test the graphrag_app.utils.common.validate_index_file_exist function."""
     original_name = container_with_graphml_file
     sanitized_name = sanitize_name(original_name)
     # test with a valid index and valid file

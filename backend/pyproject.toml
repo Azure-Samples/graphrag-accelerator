@@ -9,11 +9,10 @@ authors = [
     "Shane Solomon <shane.solomon@microsoft.com>",
     "Kenny Zhang <zhangken@microsoft.com>",
 ]
-description = ""
+description = "A web API wrapper around the official GraphRAG library."
 license = "MIT"
-name = "graphrag-solution-accelerator"
-package-mode = false
-version = "1.0.1"
+name = "graphrag-app"
+version = "1.2.0"
 
 [tool.poetry.dependencies]
 python = "~3.10"

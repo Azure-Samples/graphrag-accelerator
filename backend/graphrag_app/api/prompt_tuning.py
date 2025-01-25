@@ -13,9 +13,9 @@ from fastapi import (
 )
 from graphrag.config.create_graphrag_config import create_graphrag_config
 
-from src.logger.load_logger import load_pipeline_logger
-from src.utils.azure_clients import AzureClientManager
-from src.utils.common import sanitize_name
+from graphrag_app.logger.load_logger import load_pipeline_logger
+from graphrag_app.utils.azure_clients import AzureClientManager
+from graphrag_app.utils.common import sanitize_name
 
 prompt_tuning_route = APIRouter(prefix="/index/config", tags=["Index Configuration"])
 

@@ -8,8 +8,8 @@ from typing import Generator
 
 import pytest
 
-from src.typing.pipeline import PipelineJobState
-from src.utils.pipeline import PipelineJob
+from graphrag_app.typing.pipeline import PipelineJobState
+from graphrag_app.utils.pipeline import PipelineJob
 
 
 @pytest.fixture()
@@ -42,7 +42,7 @@ def cosmos_index_job_entry(cosmos_client) -> Generator[str, None, None]:
 
 
 def test_pipeline_job_interface(cosmos_index_job_entry):
-    """Test the src.utils.pipeline.PipelineJob class interface."""
+    """Test the graphrag_app.utils.pipeline.PipelineJob class interface."""
     pipeline_job = PipelineJob()
 
     # test creating a new entry

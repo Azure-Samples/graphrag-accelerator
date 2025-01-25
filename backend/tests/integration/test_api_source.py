@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 
 def test_get_report(container_with_index_files: str, client: TestClient):
-    """Test retrieving a report via the src.api.source.get_report_info() function."""
+    """Test retrieving a report via the graphrag_app.api.source.get_report_info() function."""
     # retrieve a report that exists
     response = client.get(f"/source/report/{container_with_index_files}/1")
     assert response.status_code == 200

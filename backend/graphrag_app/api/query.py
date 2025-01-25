@@ -25,19 +25,19 @@ from graphrag.vector_stores.base import (
     VectorStoreSearchResult,
 )
 
-from src.logger.load_logger import load_pipeline_logger
-from src.typing.models import (
+from graphrag_app.logger.load_logger import load_pipeline_logger
+from graphrag_app.typing.models import (
     GraphRequest,
     GraphResponse,
 )
-from src.typing.pipeline import PipelineJobState
-from src.utils.azure_clients import AzureClientManager
-from src.utils.common import (
+from graphrag_app.typing.pipeline import PipelineJobState
+from graphrag_app.utils.azure_clients import AzureClientManager
+from graphrag_app.utils.common import (
     get_df,
     sanitize_name,
     validate_index_file_exist,
 )
-from src.utils.pipeline import PipelineJob
+from graphrag_app.utils.pipeline import PipelineJob
 
 query_route = APIRouter(
     prefix="/query",

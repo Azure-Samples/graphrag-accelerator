@@ -18,20 +18,20 @@ from kubernetes import (
     config as kubernetes_config,
 )
 
-from src.logger.load_logger import load_pipeline_logger
-from src.typing.models import (
+from graphrag_app.logger.load_logger import load_pipeline_logger
+from graphrag_app.typing.models import (
     BaseResponse,
     IndexNameList,
     IndexStatusResponse,
 )
-from src.typing.pipeline import PipelineJobState
-from src.utils.azure_clients import AzureClientManager
-from src.utils.common import (
+from graphrag_app.typing.pipeline import PipelineJobState
+from graphrag_app.utils.azure_clients import AzureClientManager
+from graphrag_app.utils.common import (
     delete_blob_container,
     sanitize_name,
     validate_blob_container_name,
 )
-from src.utils.pipeline import PipelineJob
+from graphrag_app.utils.pipeline import PipelineJob
 
 index_route = APIRouter(
     prefix="/index",
