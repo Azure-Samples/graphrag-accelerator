@@ -3,9 +3,8 @@
 
 import argparse
 import asyncio
-import inspect
-import os
 import traceback
+from pathlib import Path
 
 import graphrag.api as api
 import yaml
@@ -51,10 +50,9 @@ def start_indexing_job(index_name: str):
     storage_name = pipeline_job.human_readable_index_name
 
     # load custom pipeline settings
-    this_directory = os.path.dirname(
-        os.path.abspath(inspect.getfile(inspect.currentframe()))
-    )
-    data = yaml.safe_load(open(f"{this_directory}/settings.yaml"))
+    SCRIPT_DIR = Path(__file__).resolve().parent
+    with (SCRIPT_DIR / "settings.yaml").open("r") as f:
+        data = yaml.safe_load(f)
     # dynamically set some values
     data["input"]["container_name"] = sanitized_storage_name
     data["storage"]["container_name"] = sanitized_index_name
@@ -97,12 +95,12 @@ def start_indexing_job(index_name: str):
 
     # reset pipeline job details
     pipeline_job.status = PipelineJobState.RUNNING
-    pipeline_job.all_workflows = []
+    pipeline_config = create_pipeline_config(parameters)
+    pipeline_job.all_workflows = [
+        workflow.name for workflow in pipeline_config.workflows
+    ]
     pipeline_job.completed_workflows = []
     pipeline_job.failed_workflows = []
-    pipeline_config = create_pipeline_config(parameters)
-    for workflow in pipeline_config.workflows:
-        pipeline_job.all_workflows = pipeline_job.all_workflows.append(workflow.name)
 
     # create new loggers/callbacks just for this job
     print("Creating generic loggers...")
@@ -129,13 +127,7 @@ def start_indexing_job(index_name: str):
         # once indexing job is done, check if any pipeline steps failed
         for result in pipeline_results:
             if result.errors:
-                pipeline_job.failed_workflows = pipeline_job.failed_workflows.append(
-                    result.workflow
-                )
-            else:
-                pipeline_job.completed_workflows = (
-                    pipeline_job.completed_workflows.append(result.workflow)
-                )
+                pipeline_job.failed_workflows.append(result.workflow)
         print("Indexing complete")
 
         if len(pipeline_job.failed_workflows) > 0:

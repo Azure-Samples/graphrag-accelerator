@@ -12,6 +12,7 @@ spec:
   schedule: "*/5 * * * *"
   jobTemplate:
     spec:
+      ttlSecondsAfterFinished: 180
       template:
         metadata:
           labels:
@@ -22,7 +23,8 @@ spec:
           containers:
             - name: index-job-manager
               image: PLACEHOLDER
-              workingDir: /backend/graphrag_app/config
+              # override default WORKDIR with absolute path to the scripts directory
+              workingDir: "/backend/scripts"
               imagePullPolicy: Always
               resources:
                 requests:
@@ -36,4 +38,4 @@ spec:
                     name: graphrag
               command:
                 - python
-                - "manage-indexing-jobs.py"
+                - "job-scheduler.py"

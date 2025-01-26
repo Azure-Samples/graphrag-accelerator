@@ -68,16 +68,15 @@ def _generate_aks_job_manifest(
 
     The manifest must be valid YAML with certain values replaced by the provided arguments.
     """
-    # NOTE: this file location is relative to the WORKDIR set in Dockerfile-backend
-    SCRIPT_DIR = Path(__file__).resolve().parent
-    with (SCRIPT_DIR / "config/index-job.yaml").open("r") as f:
+    ROOT_DIR = Path(__file__).resolve().parent.parent
+    with (ROOT_DIR / "manifests/job.yaml").open("r") as f:
         manifest = yaml.safe_load(f)
     manifest["metadata"]["name"] = f"indexing-job-{sanitize_name(index_name)}"
     manifest["spec"]["template"]["spec"]["serviceAccountName"] = service_account_name
     manifest["spec"]["template"]["spec"]["containers"][0]["image"] = docker_image_name
     manifest["spec"]["template"]["spec"]["containers"][0]["command"] = [
         "python",
-        "tools/indexer.py",
+        "indexer.py",
         f"-i={index_name}",
     ]
     return manifest

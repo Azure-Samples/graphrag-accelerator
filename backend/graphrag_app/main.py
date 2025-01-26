@@ -91,9 +91,9 @@ async def lifespan(app: FastAPI):
         pod = core_v1.read_namespaced_pod(
             name=pod_name, namespace=os.environ["AKS_NAMESPACE"]
         )
-        # load the cronjob manifest template and update PLACEHOLDER values with correct values using the pod spec
-        SCRIPT_DIR = Path(__file__).resolve().parent
-        with (SCRIPT_DIR / "config/index-cronjob-manager.yaml").open("r") as f:
+        # load the k8s cronjob template and update PLACEHOLDER values with correct values based on the running pod spec
+        ROOT_DIR = Path(__file__).resolve().parent.parent
+        with (ROOT_DIR / "manifests/cronjob.yaml").open("r") as f:
             manifest = yaml.safe_load(f)
         manifest["spec"]["jobTemplate"]["spec"]["template"]["spec"]["containers"][0][
             "image"
