@@ -88,7 +88,7 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
         """
         if not isinstance(details, dict) or (details is None):
             return {}
-        return {"custom_dimensions": {**self._properties, **unwrap_dict(details)}}
+        return {**self._properties, **unwrap_dict(details)}
 
     def workflow_start(self, name: str, instance: object) -> None:
         """Execute this callback when a workflow starts."""
@@ -101,10 +101,7 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
             else ""
         )  # will take the form "(1/4)"
         message += f"Workflow{workflow_progress}: {name} started."
-        details = {
-            "workflow_name": name,
-            # "workflow_instance": str(instance),
-        }
+        details = {"workflow_name": name}
         if self._index_name:
             details["index_name"] = self._index_name
         self._logger.info(
@@ -120,10 +117,7 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
             else ""
         )  # will take the form "(1/4)"
         message += f"Workflow{workflow_progress}: {name} complete."
-        details = {
-            "workflow_name": name,
-            # "workflow_instance": str(instance),
-        }
+        details = {"workflow_name": name}
         if self._index_name:
             details["index_name"] = self._index_name
         self._logger.info(
@@ -135,10 +129,9 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
         message: str,
         cause: Optional[BaseException] = None,
         stack: Optional[str] = None,
-        details: Optional[dict] = None,
+        details: Optional[dict] = {},
     ) -> None:
         """A call back handler for when an error occurs."""
-        details = {} if details is None else details
         details = {"cause": str(cause), "stack": stack, **details}
         self._logger.error(
             message,
@@ -162,7 +155,7 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
 
 def unwrap_dict(input_dict, parent_key="", sep="_"):
     """
-    Recursively unwraps a nested dictionary by flattening it into a single-level dictionary.
+    Recursively unwrap/flatten a dictionary.
 
     Args:
         input_dict (dict): The input dictionary to be unwrapped.
