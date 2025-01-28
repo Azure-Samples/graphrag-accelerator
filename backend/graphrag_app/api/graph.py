@@ -3,6 +3,7 @@
 
 from fastapi import (
     APIRouter,
+    Depends,
     HTTPException,
 )
 from fastapi.responses import StreamingResponse
@@ -10,6 +11,7 @@ from fastapi.responses import StreamingResponse
 from graphrag_app.logger.load_logger import load_pipeline_logger
 from graphrag_app.utils.azure_clients import AzureClientManager
 from graphrag_app.utils.common import (
+    desanitize_name,
     sanitize_name,
     validate_index_file_exist,
 )
@@ -25,16 +27,15 @@ graph_route = APIRouter(
     summary="Retrieve a GraphML file of the knowledge graph",
     response_description="GraphML file successfully downloaded",
 )
-async def get_graphml_file(index_name: str):
-    # validate index_name and graphml file existence
+async def get_graphml_file(sanitized_container_name: str = Depends(sanitize_name)):
+    # validate graphml file existence
     azure_client_manager = AzureClientManager()
-    sanitized_index_name = sanitize_name(index_name)
     graphml_filename = "graph.graphml"
     blob_filepath = f"output/{graphml_filename}"  # expected file location of the graph based on the workflow
-    validate_index_file_exist(sanitized_index_name, blob_filepath)
+    validate_index_file_exist(sanitized_container_name, blob_filepath)
     try:
         blob_client = azure_client_manager.get_blob_service_client().get_blob_client(
-            container=sanitized_index_name, blob=blob_filepath
+            container=sanitized_container_name, blob=blob_filepath
         )
         blob_stream = blob_client.download_blob().chunks()
         return StreamingResponse(
@@ -44,8 +45,9 @@ async def get_graphml_file(index_name: str):
         )
     except Exception:
         logger = load_pipeline_logger()
-        logger.error("Could not retrieve graphml file")
+        original_container_name = desanitize_name(sanitized_container_name)
+        logger.error("Could not fetch graphml file")
         raise HTTPException(
             status_code=500,
-            detail=f"Could not retrieve graphml file for index '{index_name}'.",
+            detail=f"Could not fetch graphml file for '{original_container_name}'.",
         )

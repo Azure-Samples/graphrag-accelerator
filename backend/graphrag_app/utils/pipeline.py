@@ -18,6 +18,7 @@ class PipelineJob:
     """Indexing Pipeline Job metadata
 
     This is a custom class where the attributes are stored/retrieved in cosmosdb.
+    # TODO: fix the class so initiliazation is not required
     """
 
     _id: str = field(default=None, init=False)

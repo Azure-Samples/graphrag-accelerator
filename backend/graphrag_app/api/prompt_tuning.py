@@ -1,9 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import inspect
-import os
 import traceback
+from pathlib import Path
 
 import graphrag.api as api
 import yaml
@@ -17,7 +16,7 @@ from graphrag_app.logger.load_logger import load_pipeline_logger
 from graphrag_app.utils.azure_clients import AzureClientManager
 from graphrag_app.utils.common import sanitize_name
 
-prompt_tuning_route = APIRouter(prefix="/index/config", tags=["Index Configuration"])
+prompt_tuning_route = APIRouter(prefix="/index/config", tags=["Prompt Tuning"])
 
 
 @prompt_tuning_route.get(
@@ -41,10 +40,9 @@ async def generate_prompts(storage_name: str, limit: int = 5):
         )
 
     # load pipeline configuration file (settings.yaml) for input data and other settings
-    this_directory = os.path.dirname(
-        os.path.abspath(inspect.getfile(inspect.currentframe()))
-    )
-    data = yaml.safe_load(open(f"{this_directory}/../indexer/settings.yaml"))
+    ROOT_DIR = Path(__file__).resolve().parent.parent.parent
+    with (ROOT_DIR / "scripts/settings.yaml").open("r") as f:
+        data = yaml.safe_load(f)
     data["input"]["container_name"] = sanitized_storage_name
     graphrag_config = create_graphrag_config(values=data, root_dir=".")
 
@@ -73,9 +71,9 @@ async def generate_prompts(storage_name: str, limit: int = 5):
             detail=f"Error generating prompts for data in '{storage_name}'. Please try a lower limit.",
         )
 
-    content = {
+    prompt_content = {
         "entity_extraction_prompt": prompts[0],
         "entity_summarization_prompt": prompts[1],
         "community_summarization_prompt": prompts[2],
     }
-    return content  # return a fastapi.responses.JSONResponse object
+    return prompt_content  # returns a fastapi.responses.JSONResponse object

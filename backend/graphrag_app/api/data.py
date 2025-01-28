@@ -9,6 +9,7 @@ from typing import List
 from azure.storage.blob import ContainerClient
 from fastapi import (
     APIRouter,
+    Depends,
     HTTPException,
     UploadFile,
 )
@@ -18,12 +19,13 @@ from graphrag_app.typing.models import (
     BaseResponse,
     StorageNameList,
 )
-from graphrag_app.utils.azure_clients import AzureClientManager
 from graphrag_app.utils.common import (
     delete_blob_container,
     delete_cosmos_container_item,
+    desanitize_name,
+    get_blob_container_client,
+    get_cosmos_container_store_client,
     sanitize_name,
-    validate_blob_container_name,
 )
 
 data_route = APIRouter(
@@ -34,20 +36,17 @@ data_route = APIRouter(
 
 @data_route.get(
     "",
-    summary="Get all data storage containers.",
+    summary="Get list of data containers.",
     response_model=StorageNameList,
     responses={200: {"model": StorageNameList}},
 )
-async def get_all_data_storage_containers():
+async def get_all_data_containers():
     """
-    Retrieve a list of all data storage containers.
+    Retrieve a list of all data containers.
     """
-    azure_client_manager = AzureClientManager()
     items = []
     try:
-        container_store_client = azure_client_manager.get_cosmos_container_client(
-            database="graphrag", container="container-store"
-        )
+        container_store_client = get_cosmos_container_store_client()
         for item in container_store_client.read_all_items():
             if item["type"] == "data":
                 items.append(item["human_readable_name"])
@@ -112,7 +111,9 @@ class Cleaner:
     responses={200: {"model": BaseResponse}},
 )
 async def upload_files(
-    files: List[UploadFile], storage_name: str, overwrite: bool = True
+    files: List[UploadFile],
+    sanitized_container_name: str = Depends(sanitize_name),
+    overwrite: bool = True,
 ):
     """
     Create a data storage container in Azure and upload files to it.
@@ -128,44 +129,28 @@ async def upload_files(
     Raises:
         HTTPException: If the container name is invalid or if any error occurs during the upload process.
     """
-    sanitized_storage_name = sanitize_name(storage_name)
-    # ensure container name follows Azure Blob Storage naming conventions
+    original_container_name = desanitize_name(sanitized_container_name)
     try:
-        validate_blob_container_name(sanitized_storage_name)
-    except ValueError:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Invalid blob container name: '{storage_name}'. Please try a different name.",
-        )
-    try:
-        azure_client_manager = AzureClientManager()
-        blob_service_client = azure_client_manager.get_blob_service_client_async()
-        container_client = blob_service_client.get_container_client(
-            sanitized_storage_name
-        )
-        if not await container_client.exists():
-            await container_client.create_container()
-
         # clean files - remove illegal XML characters
         files = [UploadFile(Cleaner(f.file), filename=f.filename) for f in files]
 
         # upload files in batches of 1000 to avoid exceeding Azure Storage API limits
+        blob_container_client = get_blob_container_client(sanitized_container_name)
         batch_size = 1000
         batches = ceil(len(files) / batch_size)
         for i in range(batches):
             batch_files = files[i * batch_size : (i + 1) * batch_size]
             tasks = [
-                upload_file_async(file, container_client, overwrite)
+                upload_file_async(file, blob_container_client, overwrite)
                 for file in batch_files
             ]
             await asyncio.gather(*tasks)
-        # update container-store in cosmosDB since upload process was successful
-        container_store_client = azure_client_manager.get_cosmos_container_client(
-            database="graphrag", container="container-store"
-        )
-        container_store_client.upsert_item({
-            "id": sanitized_storage_name,
-            "human_readable_name": storage_name,
+
+        # update container-store entry in cosmosDB once upload process is successful
+        cosmos_container_store_client = get_cosmos_container_store_client()
+        cosmos_container_store_client.upsert_item({
+            "id": sanitized_container_name,
+            "human_readable_name": original_container_name,
             "type": "data",
         })
         return BaseResponse(status="File upload successful.")
@@ -174,7 +159,7 @@ async def upload_files(
         logger.error("Error uploading files.", details={"files": files})
         raise HTTPException(
             status_code=500,
-            detail=f"Error uploading files to container '{storage_name}'.",
+            detail=f"Error uploading files to container '{original_container_name}'.",
         )
 
 
@@ -184,24 +169,24 @@ async def upload_files(
     response_model=BaseResponse,
     responses={200: {"model": BaseResponse}},
 )
-async def delete_files(storage_name: str):
+async def delete_files(container_name: str):
     """
     Delete a specified data storage container.
     """
-    # azure_client_manager = AzureClientManager()
-    sanitized_storage_name = sanitize_name(storage_name)
+    sanitized_container_name = sanitize_name(container_name)
     try:
         # delete container in Azure Storage
-        delete_blob_container(sanitized_storage_name)
+        delete_blob_container(sanitized_container_name)
         # delete entry from container-store in cosmosDB
-        delete_cosmos_container_item("container-store", sanitized_storage_name)
+        delete_cosmos_container_item("container-store", sanitized_container_name)
     except Exception:
         logger = load_pipeline_logger()
         logger.error(
-            f"Error deleting container {storage_name}.",
-            details={"Container": storage_name},
+            f"Error deleting container {container_name}.",
+            details={"Container": container_name},
         )
         raise HTTPException(
-            status_code=500, detail=f"Error deleting container '{storage_name}'."
+            status_code=500,
+            detail=f"Error deleting container '{container_name}'.",
         )
     return BaseResponse(status="Success")
