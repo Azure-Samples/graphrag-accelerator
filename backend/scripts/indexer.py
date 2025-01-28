@@ -19,7 +19,7 @@ from graphrag_app.logger import (
 )
 from graphrag_app.typing.pipeline import PipelineJobState
 from graphrag_app.utils.azure_clients import AzureClientManager
-from graphrag_app.utils.common import sanitize_name
+from graphrag_app.utils.common import get_cosmos_container_store_client, sanitize_name
 from graphrag_app.utils.pipeline import PipelineJob
 
 
@@ -34,9 +34,7 @@ def start_indexing_job(index_name: str):
     if not blob_service_client.get_container_client(sanitized_index_name).exists():
         blob_service_client.create_container(sanitized_index_name)
 
-    cosmos_container_client = azure_client_manager.get_cosmos_container_client(
-        database="graphrag", container="container-store"
-    )
+    cosmos_container_client = get_cosmos_container_store_client()
     cosmos_container_client.upsert_item({
         "id": sanitized_index_name,
         "human_readable_name": index_name,

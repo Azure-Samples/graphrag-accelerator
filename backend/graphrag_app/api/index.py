@@ -28,6 +28,7 @@ from graphrag_app.typing.pipeline import PipelineJobState
 from graphrag_app.utils.azure_clients import AzureClientManager
 from graphrag_app.utils.common import (
     delete_blob_container,
+    get_cosmos_container_store_client,
     sanitize_name,
     validate_blob_container_name,
 )
@@ -148,10 +149,7 @@ async def get_all_indexes():
     """
     items = []
     try:
-        azure_client_manager = AzureClientManager()
-        container_store_client = azure_client_manager.get_cosmos_container_client(
-            database="graphrag", container="container-store"
-        )
+        container_store_client = get_cosmos_container_store_client()
         for item in container_store_client.read_all_items():
             if item["type"] == "index":
                 items.append(item["human_readable_name"])
@@ -231,9 +229,7 @@ async def delete_index(index_name: str):
 
         # update container-store in cosmosDB
         try:
-            container_store_client = azure_client_manager.get_cosmos_container_client(
-                database="graphrag", container="container-store"
-            )
+            container_store_client = get_cosmos_container_store_client()
             container_store_client.delete_item(
                 item=sanitized_index_name, partition_key=sanitized_index_name
             )

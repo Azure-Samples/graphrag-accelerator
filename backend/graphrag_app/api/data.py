@@ -22,8 +22,8 @@ from graphrag_app.utils.azure_clients import AzureClientManager
 from graphrag_app.utils.common import (
     delete_blob_container,
     delete_cosmos_container_item,
+    get_cosmos_container_store_client,
     sanitize_name,
-    validate_blob_container_name,
 )
 
 data_route = APIRouter(
@@ -34,20 +34,17 @@ data_route = APIRouter(
 
 @data_route.get(
     "",
-    summary="Get all data storage containers.",
+    summary="Get list of data containers.",
     response_model=StorageNameList,
     responses={200: {"model": StorageNameList}},
 )
-async def get_all_data_storage_containers():
+async def get_all_data_containers():
     """
-    Retrieve a list of all data storage containers.
+    Retrieve a list of all data containers.
     """
-    azure_client_manager = AzureClientManager()
     items = []
     try:
-        container_store_client = azure_client_manager.get_cosmos_container_client(
-            database="graphrag", container="container-store"
-        )
+        container_store_client = get_cosmos_container_store_client()
         for item in container_store_client.read_all_items():
             if item["type"] == "data":
                 items.append(item["human_readable_name"])
@@ -115,7 +112,7 @@ async def upload_files(
     files: List[UploadFile], storage_name: str, overwrite: bool = True
 ):
     """
-    Create a data storage container in Azure and upload files to it.
+    Create a Azure Storage container and upload files to it.
 
     Args:
         files (List[UploadFile]): A list of files to be uploaded.
@@ -129,14 +126,6 @@ async def upload_files(
         HTTPException: If the container name is invalid or if any error occurs during the upload process.
     """
     sanitized_storage_name = sanitize_name(storage_name)
-    # ensure container name follows Azure Blob Storage naming conventions
-    try:
-        validate_blob_container_name(sanitized_storage_name)
-    except ValueError:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Invalid blob container name: '{storage_name}'. Please try a different name.",
-        )
     try:
         azure_client_manager = AzureClientManager()
         blob_service_client = azure_client_manager.get_blob_service_client_async()
@@ -160,9 +149,7 @@ async def upload_files(
             ]
             await asyncio.gather(*tasks)
         # update container-store in cosmosDB since upload process was successful
-        container_store_client = azure_client_manager.get_cosmos_container_client(
-            database="graphrag", container="container-store"
-        )
+        container_store_client = get_cosmos_container_store_client()
         container_store_client.upsert_item({
             "id": sanitized_storage_name,
             "human_readable_name": storage_name,

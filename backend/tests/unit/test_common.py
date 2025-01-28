@@ -4,7 +4,7 @@
 import pytest
 
 from graphrag_app.utils.common import (
-    retrieve_original_blob_container_name,
+    desanitize_name,
     sanitize_name,
     validate_blob_container_name,
     validate_index_file_exist,
@@ -33,13 +33,13 @@ def test_validate_blob_container_name():
 
 
 def test_retrieve_original_blob_container_name(container_with_graphml_file):
-    """Test the graphrag_app.utils.common.retrieve_original_blob_container_name function."""
+    """Test the graphrag_app.utils.common.desanitize_name function."""
     # test retrieving a valid container name
     original_name = container_with_graphml_file
     sanitized_name = sanitize_name(original_name)
-    assert retrieve_original_blob_container_name(sanitized_name) == original_name
+    assert desanitize_name(sanitized_name) == original_name
     # test retrieving an invalid container name
-    assert retrieve_original_blob_container_name("nonexistent-container") is None
+    assert desanitize_name("nonexistent-container") is None
 
 
 def test_validate_index_file_exist(container_with_graphml_file):
