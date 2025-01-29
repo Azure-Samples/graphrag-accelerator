@@ -3,7 +3,6 @@
 
 import hashlib
 import os
-import re
 
 import pandas as pd
 from azure.core.exceptions import ResourceNotFoundError
@@ -41,7 +40,7 @@ def pandas_storage_options() -> dict:
     return options
 
 
-def delete_blob_container(container_name: str):
+def delete_storage_container_if_exist(container_name: str):
     """
     Delete a blob container. If it does not exist, do nothing.
     If exception is raised, the calling function should catch it.
@@ -55,7 +54,7 @@ def delete_blob_container(container_name: str):
         pass
 
 
-def delete_cosmos_container_item(container: str, item_id: str):
+def delete_cosmos_container_item_if_exist(container: str, item_id: str):
     """
     Delete an item from a cosmosdb container. If it does not exist, do nothing.
     If exception is raised, the calling function should catch it.
@@ -106,55 +105,6 @@ def validate_index_file_exist(sanitized_container_name: str, file_name: str):
     if not index_container_client.get_blob_client(file_name).exists():
         raise ValueError(
             f"File {file_name} unavailable for container {original_container_name}."
-        )
-
-
-def validate_blob_container_name(container_name: str):
-    """
-    Check if container name is valid based on Azure resource naming rules.
-
-        - A blob container name must be between 3 and 63 characters in length.
-        - Start with a letter or number
-        - All letters used in blob container names must be lowercase.
-        - Contain only letters, numbers, or the hyphen.
-        - Consecutive hyphens are not permitted.
-        - Cannot end with a hyphen.
-
-    Args:
-    -----
-    container_name (str)
-        The blob container name to be validated.
-
-    Raises: ValueError
-    """
-    # Check the length of the name
-    if len(container_name) < 3 or len(container_name) > 63:
-        raise ValueError(
-            f"Container name must be between 3 and 63 characters in length. Name provided was {len(container_name)} characters long."
-        )
-
-    # Check if the name starts with a letter or number
-    if not container_name[0].isalnum():
-        raise ValueError(
-            f"Container name must start with a letter or number. Starting character was {container_name[0]}."
-        )
-
-    # Check for valid characters (letters, numbers, hyphen) and lowercase letters
-    if not re.match("^[a-z0-9-]+$", container_name):
-        raise ValueError(
-            f"Container name must only contain:\n- lowercase letters\n- numbers\n- or hyphens\nName provided was {container_name}."
-        )
-
-    # Check for consecutive hyphens
-    if "--" in container_name:
-        raise ValueError(
-            f"Container name cannot contain consecutive hyphens. Name provided was {container_name}."
-        )
-
-    # Check for hyphens at the end of the name
-    if container_name[-1] == "-":
-        raise ValueError(
-            f"Container name cannot end with a hyphen. Name provided was {container_name}."
         )
 
 

@@ -28,12 +28,11 @@ from graphrag_app.typing.models import (
 from graphrag_app.typing.pipeline import PipelineJobState
 from graphrag_app.utils.azure_clients import AzureClientManager
 from graphrag_app.utils.common import (
-    delete_blob_container,
-    delete_cosmos_container_item,
+    delete_cosmos_container_item_if_exist,
+    delete_storage_container_if_exist,
     desanitize_name,
     get_cosmos_container_store_client,
     sanitize_name,
-    validate_blob_container_name,
 )
 from graphrag_app.utils.pipeline import PipelineJob
 
@@ -50,8 +49,8 @@ index_route = APIRouter(
     responses={200: {"model": BaseResponse}},
 )
 async def schedule_index_job(
-    storage_name: str,
-    index_name: str,
+    storage_container_name: str,
+    index_container_name: str,
     entity_extraction_prompt: UploadFile | None = None,
     entity_summarization_prompt: UploadFile | None = None,
     community_summarization_prompt: UploadFile | None = None,
@@ -61,21 +60,16 @@ async def schedule_index_job(
     pipelinejob = PipelineJob()
 
     # validate index name against blob container naming rules
-    sanitized_index_name = sanitize_name(index_name)
-    try:
-        validate_blob_container_name(sanitized_index_name)
-    except ValueError:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Invalid index name: {index_name}",
-        )
+    sanitized_index_container_name = sanitize_name(index_container_name)
 
     # check for data container existence
-    sanitized_storage_name = sanitize_name(storage_name)
-    if not blob_service_client.get_container_client(sanitized_storage_name).exists():
+    sanitized_storage_container_name = sanitize_name(storage_container_name)
+    if not blob_service_client.get_container_client(
+        sanitized_storage_container_name
+    ).exists():
         raise HTTPException(
             status_code=500,
-            detail=f"Storage blob container {storage_name} does not exist",
+            detail=f"Storage container '{storage_container_name}' does not exist",
         )
 
     # check for prompts
@@ -98,19 +92,20 @@ async def schedule_index_job(
     # check for existing index job
     # it is okay if job doesn't exist, but if it does,
     # it must not be scheduled or running
-    if pipelinejob.item_exist(sanitized_index_name):
-        existing_job = pipelinejob.load_item(sanitized_index_name)
+    if pipelinejob.item_exist(sanitized_index_container_name):
+        existing_job = pipelinejob.load_item(sanitized_index_container_name)
         if (PipelineJobState(existing_job.status) == PipelineJobState.SCHEDULED) or (
             PipelineJobState(existing_job.status) == PipelineJobState.RUNNING
         ):
             raise HTTPException(
                 status_code=202,  # request has been accepted for processing but is not complete.
-                detail=f"Index '{index_name}' already exists and has not finished building.",
+                detail=f"Index '{index_container_name}' already exists and has not finished building.",
             )
         # if indexing job is in a failed state, delete the associated K8s job and pod to allow for a new job to be scheduled
         if PipelineJobState(existing_job.status) == PipelineJobState.FAILED:
             _delete_k8s_job(
-                f"indexing-job-{sanitized_index_name}", os.environ["AKS_NAMESPACE"]
+                f"indexing-job-{sanitized_index_container_name}",
+                os.environ["AKS_NAMESPACE"],
             )
         # reset the pipeline job details
         existing_job._status = PipelineJobState.SCHEDULED
@@ -128,9 +123,9 @@ async def schedule_index_job(
         existing_job.update_db()
     else:
         pipelinejob.create_item(
-            id=sanitized_index_name,
-            human_readable_index_name=index_name,
-            human_readable_storage_name=storage_name,
+            id=sanitized_index_container_name,
+            human_readable_index_name=index_container_name,
+            human_readable_storage_name=storage_container_name,
             entity_extraction_prompt=entity_extraction_prompt_content,
             entity_summarization_prompt=entity_summarization_prompt_content,
             community_summarization_prompt=community_summarization_prompt_content,
@@ -218,22 +213,20 @@ async def delete_index(
     sanitized_container_name: str = Depends(sanitize_name),
 ):
     """
-    Delete a specified index.
+    Delete a specified index and all associated metadata.
     """
     try:
         # kill indexing job if it is running
         if os.getenv("KUBERNETES_SERVICE_HOST"):  # only found if in AKS
             _delete_k8s_job(f"indexing-job-{sanitized_container_name}", "graphrag")
 
-        # delete blob container
-        delete_blob_container(sanitized_container_name)
+        delete_storage_container_if_exist(sanitized_container_name)
+        delete_cosmos_container_item_if_exist(
+            "container-store", sanitized_container_name
+        )
+        delete_cosmos_container_item_if_exist("jobs", sanitized_container_name)
 
-        # delete entry from "container-store" container in cosmosDB
-        delete_cosmos_container_item("container-store", sanitized_container_name)
-
-        # delete entry from "jobs" container in cosmosDB
-        delete_cosmos_container_item("jobs", sanitized_container_name)
-
+        # delete associated AI Search index
         index_client = SearchIndexClient(
             endpoint=os.environ["AI_SEARCH_URL"],
             credential=DefaultAzureCredential(),
@@ -263,7 +256,7 @@ async def delete_index(
     summary="Track the status of an indexing job",
     response_model=IndexStatusResponse,
 )
-async def get_index_job_status(sanitized_container_name: str = Depends(sanitize_name)):
+async def get_index_status(sanitized_container_name: str = Depends(sanitize_name)):
     pipelinejob = PipelineJob()
     if pipelinejob.item_exist(sanitized_container_name):
         pipeline_job = pipelinejob.load_item(sanitized_container_name)

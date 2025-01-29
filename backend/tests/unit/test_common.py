@@ -6,30 +6,8 @@ import pytest
 from graphrag_app.utils.common import (
     desanitize_name,
     sanitize_name,
-    validate_blob_container_name,
     validate_index_file_exist,
 )
-
-
-def test_validate_blob_container_name():
-    """Test the graphrag_app.utils.common.validate_blob_container_name function."""
-    # test valid container name
-    assert validate_blob_container_name("validcontainername") is None
-    # test invalid container name
-    with pytest.raises(ValueError):
-        validate_blob_container_name("invalidContainerName")
-    with pytest.raises(ValueError):
-        validate_blob_container_name(
-            "invalidcontainernameinvalidcontainernameinvalidcontainerinvalids"
-        )
-    with pytest.raises(ValueError):
-        validate_blob_container_name("*invalidContainerName")
-    with pytest.raises(ValueError):
-        validate_blob_container_name("invalid+ContainerName")
-    with pytest.raises(ValueError):
-        validate_blob_container_name("invalid--containername")
-    with pytest.raises(ValueError):
-        validate_blob_container_name("invalidcontainername-")
 
 
 def test_desanitize_name(container_with_graphml_file):

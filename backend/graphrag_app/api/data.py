@@ -20,8 +20,8 @@ from graphrag_app.typing.models import (
     StorageNameList,
 )
 from graphrag_app.utils.common import (
-    delete_blob_container,
-    delete_cosmos_container_item,
+    delete_cosmos_container_item_if_exist,
+    delete_storage_container_if_exist,
     desanitize_name,
     get_blob_container_client,
     get_cosmos_container_store_client,
@@ -178,10 +178,10 @@ async def delete_files(sanitized_container_name: str = Depends(sanitize_name)):
     # sanitized_container_name = sanitize_name(container_name)
     original_container_name = desanitize_name(sanitized_container_name)
     try:
-        # delete container in Azure Storage
-        delete_blob_container(sanitized_container_name)
-        # delete entry from container-store in cosmosDB
-        delete_cosmos_container_item("container-store", sanitized_container_name)
+        delete_storage_container_if_exist(sanitized_container_name)
+        delete_cosmos_container_item_if_exist(
+            "container-store", sanitized_container_name
+        )
     except Exception:
         logger = load_pipeline_logger()
         logger.error(
