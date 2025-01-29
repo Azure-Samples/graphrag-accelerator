@@ -32,7 +32,7 @@ def test_validate_blob_container_name():
         validate_blob_container_name("invalidcontainername-")
 
 
-def test_retrieve_original_blob_container_name(container_with_graphml_file):
+def test_desanitize_name(container_with_graphml_file):
     """Test the graphrag_app.utils.common.desanitize_name function."""
     # test retrieving a valid container name
     original_name = container_with_graphml_file

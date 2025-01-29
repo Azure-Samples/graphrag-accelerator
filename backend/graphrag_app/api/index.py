@@ -8,6 +8,7 @@ from azure.identity import DefaultAzureCredential
 from azure.search.documents.indexes import SearchIndexClient
 from fastapi import (
     APIRouter,
+    Depends,
     HTTPException,
     UploadFile,
 )
@@ -28,6 +29,8 @@ from graphrag_app.typing.pipeline import PipelineJobState
 from graphrag_app.utils.azure_clients import AzureClientManager
 from graphrag_app.utils.common import (
     delete_blob_container,
+    delete_cosmos_container_item,
+    desanitize_name,
     get_cosmos_container_store_client,
     sanitize_name,
     validate_blob_container_name,
@@ -46,7 +49,7 @@ index_route = APIRouter(
     response_model=BaseResponse,
     responses={200: {"model": BaseResponse}},
 )
-async def schedule_indexing_job(
+async def schedule_index_job(
     storage_name: str,
     index_name: str,
     entity_extraction_prompt: UploadFile | None = None,
@@ -139,23 +142,24 @@ async def schedule_indexing_job(
 
 @index_route.get(
     "",
-    summary="Get all indexes",
+    summary="Get all index names",
     response_model=IndexNameList,
     responses={200: {"model": IndexNameList}},
 )
-async def get_all_indexes():
+async def get_all_index_names(
+    container_store_client=Depends(get_cosmos_container_store_client),
+):
     """
     Retrieve a list of all index names.
     """
     items = []
     try:
-        container_store_client = get_cosmos_container_store_client()
         for item in container_store_client.read_all_items():
             if item["type"] == "index":
                 items.append(item["human_readable_name"])
     except Exception:
         logger = load_pipeline_logger()
-        logger.error("Error retrieving index names")
+        logger.error("Error fetching index list")
     return IndexNameList(index_name=items)
 
 
@@ -205,81 +209,64 @@ def _delete_k8s_job(job_name: str, namespace: str) -> None:
 
 
 @index_route.delete(
-    "/{index_name}",
+    "/{container_name}",
     summary="Delete a specified index",
     response_model=BaseResponse,
     responses={200: {"model": BaseResponse}},
 )
-async def delete_index(index_name: str):
+async def delete_index(
+    sanitized_container_name: str = Depends(sanitize_name),
+):
     """
     Delete a specified index.
     """
-    sanitized_index_name = sanitize_name(index_name)
-    azure_client_manager = AzureClientManager()
     try:
         # kill indexing job if it is running
         if os.getenv("KUBERNETES_SERVICE_HOST"):  # only found if in AKS
-            _delete_k8s_job(f"indexing-job-{sanitized_index_name}", "graphrag")
+            _delete_k8s_job(f"indexing-job-{sanitized_container_name}", "graphrag")
 
-        # remove blob container and all associated entries in cosmos db
-        try:
-            delete_blob_container(sanitized_index_name)
-        except Exception:
-            pass
+        # delete blob container
+        delete_blob_container(sanitized_container_name)
 
-        # update container-store in cosmosDB
-        try:
-            container_store_client = get_cosmos_container_store_client()
-            container_store_client.delete_item(
-                item=sanitized_index_name, partition_key=sanitized_index_name
-            )
-        except Exception:
-            pass
+        # delete entry from "container-store" container in cosmosDB
+        delete_cosmos_container_item("container-store", sanitized_container_name)
 
-        # update jobs database in cosmosDB
-        try:
-            jobs_container = azure_client_manager.get_cosmos_container_client(
-                database="graphrag", container="jobs"
-            )
-            jobs_container.delete_item(
-                item=sanitized_index_name, partition_key=sanitized_index_name
-            )
-        except Exception:
-            pass
+        # delete entry from "jobs" container in cosmosDB
+        delete_cosmos_container_item("jobs", sanitized_container_name)
 
         index_client = SearchIndexClient(
             endpoint=os.environ["AI_SEARCH_URL"],
             credential=DefaultAzureCredential(),
             audience=os.environ["AI_SEARCH_AUDIENCE"],
         )
-        ai_search_index_name = f"{sanitized_index_name}_description_embedding"
+        ai_search_index_name = f"{sanitized_container_name}_description_embedding"
         if ai_search_index_name in index_client.list_index_names():
             index_client.delete_index(ai_search_index_name)
 
     except Exception:
         logger = load_pipeline_logger()
+        original_container_name = desanitize_name(sanitized_container_name)
         logger.error(
-            message=f"Error encountered while deleting all data for index {index_name}.",
+            message=f"Error encountered while deleting all data for {original_container_name}.",
             stack=None,
-            details={"container": index_name},
+            details={"container": original_container_name},
         )
         raise HTTPException(
-            status_code=500, detail=f"Error deleting index '{index_name}'."
+            status_code=500, detail=f"Error deleting '{original_container_name}'."
         )
 
     return BaseResponse(status="Success")
 
 
 @index_route.get(
-    "/status/{index_name}",
+    "/status/{container_name}",
     summary="Track the status of an indexing job",
     response_model=IndexStatusResponse,
 )
-async def get_index_job_status(index_name: str):
-    pipelinejob = PipelineJob()  # TODO: fix class so initiliazation is not required
-    sanitized_index_name = sanitize_name(index_name)
-    if pipelinejob.item_exist(sanitized_index_name):
-        pipeline_job = pipelinejob.load_item(sanitized_index_name)
+async def get_index_job_status(sanitized_container_name: str = Depends(sanitize_name)):
+    pipelinejob = PipelineJob()
+    if pipelinejob.item_exist(sanitized_container_name):
+        pipeline_job = pipelinejob.load_item(sanitized_container_name)
         return IndexStatusResponse(
             status_code=200,
             index_name=pipeline_job.human_readable_index_name,
@@ -288,4 +275,8 @@ async def get_index_job_status(index_name: str):
             percent_complete=pipeline_job.percent_complete,
             progress=pipeline_job.progress,
         )
-    raise HTTPException(status_code=404, detail=f"Index '{index_name}' does not exist.")
+    else:
+        original_container_name = desanitize_name(sanitized_container_name)
+        raise HTTPException(
+            status_code=404, detail=f"'{original_container_name}' does not exist."
+        )

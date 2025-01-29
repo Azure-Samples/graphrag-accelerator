@@ -19,7 +19,7 @@ def test_upload_files(cosmos_client: CosmosClient, client):
         response = client.post(
             "/data",
             files={"files": ("test.txt", f)},
-            params={"storage_name": "testContainer"},
+            params={"container_name": "testContainer"},
         )
     # check the response
     assert response.status_code == 200
