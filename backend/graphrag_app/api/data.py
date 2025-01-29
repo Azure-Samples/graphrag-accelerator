@@ -6,7 +6,7 @@ import re
 from math import ceil
 from typing import List
 
-from azure.storage.blob import ContainerClient
+from azure.storage.blob.aio import ContainerClient
 from fastapi import (
     APIRouter,
     Depends,
@@ -135,10 +135,12 @@ async def upload_files(
         files = [UploadFile(Cleaner(f.file), filename=f.filename) for f in files]
 
         # upload files in batches of 1000 to avoid exceeding Azure Storage API limits
-        blob_container_client = get_blob_container_client(sanitized_container_name)
+        blob_container_client = await get_blob_container_client(
+            sanitized_container_name
+        )
         batch_size = 1000
-        batches = ceil(len(files) / batch_size)
-        for i in range(batches):
+        num_batches = ceil(len(files) / batch_size)
+        for i in range(num_batches):
             batch_files = files[i * batch_size : (i + 1) * batch_size]
             tasks = [
                 upload_file_async(file, blob_container_client, overwrite)
@@ -164,16 +166,17 @@ async def upload_files(
 
 
 @data_route.delete(
-    "/{storage_name}",
+    "/{container_name}",
     summary="Delete a data storage container",
     response_model=BaseResponse,
     responses={200: {"model": BaseResponse}},
 )
-async def delete_files(container_name: str):
+async def delete_files(sanitized_container_name: str = Depends(sanitize_name)):
     """
     Delete a specified data storage container.
     """
-    sanitized_container_name = sanitize_name(container_name)
+    # sanitized_container_name = sanitize_name(container_name)
+    original_container_name = desanitize_name(sanitized_container_name)
     try:
         # delete container in Azure Storage
         delete_blob_container(sanitized_container_name)
@@ -182,11 +185,11 @@ async def delete_files(container_name: str):
     except Exception:
         logger = load_pipeline_logger()
         logger.error(
-            f"Error deleting container {container_name}.",
-            details={"Container": container_name},
+            f"Error deleting container {original_container_name}.",
+            details={"Container": original_container_name},
         )
         raise HTTPException(
             status_code=500,
-            detail=f"Error deleting container '{container_name}'.",
+            detail=f"Error deleting container '{original_container_name}'.",
         )
     return BaseResponse(status="Success")

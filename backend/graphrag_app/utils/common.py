@@ -7,8 +7,9 @@ import re
 
 import pandas as pd
 from azure.core.exceptions import ResourceNotFoundError
-from azure.cosmos import exceptions
+from azure.cosmos import ContainerProxy, exceptions
 from azure.identity import DefaultAzureCredential
+from azure.storage.blob.aio import ContainerClient
 from fastapi import HTTPException
 
 from graphrag_app.logger.load_logger import load_pipeline_logger
@@ -157,7 +158,7 @@ def validate_blob_container_name(container_name: str):
         )
 
 
-def get_cosmos_container_store_client():
+def get_cosmos_container_store_client() -> ContainerProxy:
     try:
         azure_client_manager = AzureClientManager()
         return azure_client_manager.get_cosmos_container_client(
@@ -169,7 +170,7 @@ def get_cosmos_container_store_client():
         raise HTTPException(status_code=500, detail="Error fetching cosmosdb client.")
 
 
-async def get_blob_container_client(name: str):
+async def get_blob_container_client(name: str) -> ContainerClient:
     try:
         azure_client_manager = AzureClientManager()
         blob_service_client = azure_client_manager.get_blob_service_client_async()
@@ -183,7 +184,7 @@ async def get_blob_container_client(name: str):
         raise HTTPException(status_code=500, detail="Error fetching storage client.")
 
 
-def sanitize_name(container_name: str | None) -> str | None:
+def sanitize_name(container_name: str) -> str:
     """
     Sanitize a user-provided string to be used as an Azure Storage container name.
     Convert the string to a SHA256 hash, then truncate to 128 bit length to ensure
@@ -199,8 +200,6 @@ def sanitize_name(container_name: str | None) -> str | None:
     Returns: str
         The sanitized name.
     """
-    if not container_name:
-        return None
     container_name = container_name.encode()
     hashed_name = hashlib.sha256(container_name)
     truncated_hash = hashed_name.digest()[:16]  # get the first 16 bytes (128 bits)

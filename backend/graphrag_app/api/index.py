@@ -209,7 +209,7 @@ def _delete_k8s_job(job_name: str, namespace: str) -> None:
 
 
 @index_route.delete(
-    "/{index_name}",
+    "/{container_name}",
     summary="Delete a specified index",
     response_model=BaseResponse,
     responses={200: {"model": BaseResponse}},
@@ -259,7 +259,7 @@ async def delete_index(
 
 
 @index_route.get(
-    "/status/{index_name}",
+    "/status/{container_name}",
     summary="Track the status of an indexing job",
     response_model=IndexStatusResponse,
 )

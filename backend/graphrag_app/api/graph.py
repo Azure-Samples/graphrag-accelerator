@@ -23,7 +23,7 @@ graph_route = APIRouter(
 
 
 @graph_route.get(
-    "/graphml/{index_name}",
+    "/graphml/{container_name}",
     summary="Retrieve a GraphML file of the knowledge graph",
     response_description="GraphML file successfully downloaded",
 )
