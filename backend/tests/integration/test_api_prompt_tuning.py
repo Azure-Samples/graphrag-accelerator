@@ -28,6 +28,6 @@ def test_generate_prompts(
     """Test generating prompts."""
     response = client.get(
         "/index/config/prompts",
-        params={"storage_name": blob_with_data_container_name},
+        params={"container_name": blob_with_data_container_name},
     )
     assert response.status_code == 200
