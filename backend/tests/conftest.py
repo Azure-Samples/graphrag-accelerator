@@ -1,8 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import inspect
 import os
+from pathlib import Path
 from typing import Generator
 
 import pytest
@@ -91,23 +91,14 @@ def container_with_index_files(
     if not blob_service_client.get_container_client(sanitized_name).exists():
         blob_service_client.create_container(sanitized_name)
 
-    # upload data/aliens-dataset/output folder to the container
-    this_directory = os.path.dirname(
-        os.path.abspath(inspect.getfile(inspect.currentframe()))
-    )
-    data_root = f"{this_directory}/data/synthetic-dataset/output"
-    for file in [
-        "create_final_community_reports.parquet",
-        "create_final_documents.parquet",
-        "create_final_entities.parquet",
-        "create_final_nodes.parquet",
-        "create_final_relationships.parquet",
-        "create_final_text_units.parquet",
-    ]:
+    # upload synthetic index to a container
+    data_root = Path(__file__).parent / "data/synthetic-dataset/output"
+    for file in data_root.iterdir():
+        # upload each file in the output folder
         blob_client = blob_service_client.get_blob_client(
-            sanitized_name, f"output/{file}"
+            sanitized_name, f"output/{file.name}"
         )
-        local_file = f"{data_root}/{file}"
+        local_file = f"{data_root}/{file.name}"
         with open(local_file, "rb") as data:
             blob_client.upload_blob(data, overwrite=True)
 

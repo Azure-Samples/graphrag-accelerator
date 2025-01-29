@@ -20,7 +20,7 @@ def test_get_report(container_with_index_files: str, client: TestClient):
 def test_get_chunk_info(container_with_index_files: str, client: TestClient):
     """Test retrieving a text chunk."""
     response = client.get(
-        f"/source/text/{container_with_index_files}/5b2d21ec6fc171c30bdda343f128f5a6"
+        f"/source/text/{container_with_index_files}/c4197a012ea9e7d2618450cbb197852dec47c40883d4a69e0ea473a8111319c80d608ae5fa66acc2d3f95cd845277b3acd8186d7fa326803dde09681da29790c"
     )
     assert response.status_code == 200
 

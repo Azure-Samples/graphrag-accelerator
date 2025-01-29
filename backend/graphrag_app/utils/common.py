@@ -87,13 +87,13 @@ def validate_index_file_exist(sanitized_container_name: str, file_name: str):
     Raises: ValueError
     """
     azure_client_manager = AzureClientManager()
+    original_container_name = desanitize_name(sanitized_container_name)
     try:
         cosmos_container_client = get_cosmos_container_store_client()
         cosmos_container_client.read_item(
             sanitized_container_name, sanitized_container_name
         )
     except Exception:
-        original_container_name = desanitize_name(sanitized_container_name)
         raise ValueError(f"{original_container_name} is not a valid index.")
     # check for file existence
     index_container_client = (
@@ -158,18 +158,6 @@ def validate_blob_container_name(container_name: str):
         )
 
 
-def get_cosmos_container_store_client():
-    try:
-        azure_client_manager = AzureClientManager()
-        return azure_client_manager.get_cosmos_container_client(
-            database="graphrag", container="container-store"
-        )
-    except Exception:
-        logger = load_pipeline_logger()
-        logger.error("Error fetching cosmosdb client.")
-        raise HTTPException(status_code=500, detail="Error fetching cosmosdb client.")
-
-
 def get_cosmos_container_store_client() -> ContainerProxy:
     try:
         azure_client_manager = AzureClientManager()
@@ -220,7 +208,7 @@ def sanitize_name(container_name: str) -> str:
 
 def desanitize_name(sanitized_container_name: str) -> str | None:
     """
-    Retrieve the original user-provided name of a sanitized container name.
+    Reverse the sanitization process by retrieving the original user-provided name.
 
     Args:
     -----

@@ -3,7 +3,7 @@
 
 
 import pandas as pd
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from graphrag_app.logger.load_logger import load_pipeline_logger
 from graphrag_app.typing.models import (
@@ -14,6 +14,7 @@ from graphrag_app.typing.models import (
     TextUnitResponse,
 )
 from graphrag_app.utils.common import (
+    desanitize_name,
     pandas_storage_options,
     sanitize_name,
     validate_index_file_exist,
@@ -34,27 +35,31 @@ DOCUMENTS_TABLE = "output/create_final_documents.parquet"
 
 
 @source_route.get(
-    "/report/{index_name}/{report_id}",
+    "/report/{container_name}/{report_id}",
     summary="Return a single community report.",
     response_model=ReportResponse,
     responses={200: {"model": ReportResponse}},
 )
-async def get_report_info(index_name: str, report_id: int):
+async def get_report_info(
+    report_id: int, sanitized_container_name: str = Depends(sanitize_name)
+):
     # check for existence of file the query relies on to validate the index is complete
-    sanitized_index_name = sanitize_name(index_name)
-    validate_index_file_exist(sanitized_index_name, COMMUNITY_REPORT_TABLE)
+    original_container_name = desanitize_name(sanitized_container_name)
+    validate_index_file_exist(sanitized_container_name, COMMUNITY_REPORT_TABLE)
     try:
         report_table = pd.read_parquet(
-            f"abfs://{sanitized_index_name}/{COMMUNITY_REPORT_TABLE}",
+            f"abfs://{sanitized_container_name}/{COMMUNITY_REPORT_TABLE}",
             storage_options=pandas_storage_options(),
         )
         # check if report_id exists in the index
         if not report_table["human_readable_id"].isin([report_id]).any():
-            raise ValueError(f"Report '{report_id}' not found in index '{index_name}'.")
+            raise ValueError(
+                f"Report '{report_id}' not found in index '{original_container_name}'."
+            )
         # check if multiple reports with the same id exist (should not happen)
         if len(report_table.loc[report_table["human_readable_id"] == report_id]) > 1:
             raise ValueError(
-                f"Multiple reports with id '{report_id}' found in index '{index_name}'."
+                f"Multiple reports with id '{report_id}' found in index '{original_container_name}'."
             )
         report_content = report_table.loc[
             report_table["human_readable_id"] == report_id, "full_content_json"
@@ -70,23 +75,25 @@ async def get_report_info(index_name: str, report_id: int):
 
 
 @source_route.get(
-    "/text/{index_name}/{text_unit_id}",
+    "/text/{container_name}/{text_unit_id}",
     summary="Return a single base text unit.",
     response_model=TextUnitResponse,
     responses={200: {"model": TextUnitResponse}},
 )
-async def get_chunk_info(index_name: str, text_unit_id: str):
+async def get_chunk_info(
+    text_unit_id: str, sanitized_container_name: str = Depends(sanitize_name)
+):
     # check for existence of file the query relies on to validate the index is complete
-    sanitized_index_name = sanitize_name(index_name)
-    validate_index_file_exist(sanitized_index_name, TEXT_UNITS_TABLE)
-    validate_index_file_exist(sanitized_index_name, DOCUMENTS_TABLE)
+    original_container_name = desanitize_name(sanitized_container_name)
+    validate_index_file_exist(sanitized_container_name, TEXT_UNITS_TABLE)
+    validate_index_file_exist(sanitized_container_name, DOCUMENTS_TABLE)
     try:
         text_units = pd.read_parquet(
-            f"abfs://{sanitized_index_name}/{TEXT_UNITS_TABLE}",
+            f"abfs://{sanitized_container_name}/{TEXT_UNITS_TABLE}",
             storage_options=pandas_storage_options(),
         )
         docs = pd.read_parquet(
-            f"abfs://{sanitized_index_name}/{DOCUMENTS_TABLE}",
+            f"abfs://{sanitized_container_name}/{DOCUMENTS_TABLE}",
             storage_options=pandas_storage_options(),
         )
         # rename columns for easy joining
@@ -97,9 +104,9 @@ async def get_chunk_info(index_name: str, text_unit_id: str):
         text_units = text_units.explode("document_ids")
 
         # verify that text_unit_id exists in the index
-        if not text_units["human_readable_id"].isin([text_unit_id]).any():
+        if not text_units["id"].isin([text_unit_id]).any():
             raise ValueError(
-                f"Text unit '{text_unit_id}' not found in index '{index_name}'."
+                f"Text unit '{text_unit_id}' not found in index '{original_container_name}'."
             )
 
         # combine tables to create a (chunk_id -> source_document) mapping
@@ -107,10 +114,10 @@ async def get_chunk_info(index_name: str, text_unit_id: str):
             docs, left_on="document_ids", right_on="document_id", how="left"
         )
         row = merged_table.loc[
-            merged_table["chunk_id"] == text_unit_id, ["chunk", "source_document"]
+            merged_table["id"] == text_unit_id, ["id", "source_document"]
         ]
         return TextUnitResponse(
-            text=row["chunk"].to_numpy()[0],
+            text=row["id"].to_numpy()[0],
             source_document=row["source_document"].to_numpy()[0],
         )
     except Exception:
@@ -118,31 +125,35 @@ async def get_chunk_info(index_name: str, text_unit_id: str):
         logger.error("Could not get text chunk.")
         raise HTTPException(
             status_code=500,
-            detail=f"Error retrieving text chunk '{text_unit_id}' from index '{index_name}'.",
+            detail=f"Error retrieving text chunk '{text_unit_id}' from index '{original_container_name}'.",
         )
 
 
 @source_route.get(
-    "/entity/{index_name}/{entity_id}",
+    "/entity/{container_name}/{entity_id}",
     summary="Return a single entity.",
     response_model=EntityResponse,
     responses={200: {"model": EntityResponse}},
 )
-async def get_entity_info(index_name: str, entity_id: int):
+async def get_entity_info(
+    entity_id: int, sanitized_container_name: str = Depends(sanitize_name)
+):
     # check for existence of file the query relies on to validate the index is complete
-    sanitized_index_name = sanitize_name(index_name)
-    validate_index_file_exist(sanitized_index_name, ENTITY_EMBEDDING_TABLE)
+    original_container_name = desanitize_name(sanitized_container_name)
+    validate_index_file_exist(sanitized_container_name, ENTITY_EMBEDDING_TABLE)
     try:
         entity_table = pd.read_parquet(
-            f"abfs://{sanitized_index_name}/{ENTITY_EMBEDDING_TABLE}",
+            f"abfs://{sanitized_container_name}/{ENTITY_EMBEDDING_TABLE}",
             storage_options=pandas_storage_options(),
         )
         # check if entity_id exists in the index
         if not entity_table["human_readable_id"].isin([entity_id]).any():
-            raise ValueError(f"Entity '{entity_id}' not found in index '{index_name}'.")
+            raise ValueError(
+                f"Entity '{entity_id}' not found in index '{original_container_name}'."
+            )
         row = entity_table[entity_table["human_readable_id"] == entity_id]
         return EntityResponse(
-            name=row["name"].to_numpy()[0],
+            name=row["title"].to_numpy()[0],
             description=row["description"].to_numpy()[0],
             text_units=row["text_unit_ids"].to_numpy()[0].tolist(),
         )
@@ -151,30 +162,32 @@ async def get_entity_info(index_name: str, entity_id: int):
         logger.error("Could not get entity")
         raise HTTPException(
             status_code=500,
-            detail=f"Error retrieving entity '{entity_id}' from index '{index_name}'.",
+            detail=f"Error retrieving entity '{entity_id}' from index '{original_container_name}'.",
         )
 
 
 @source_route.get(
-    "/claim/{index_name}/{claim_id}",
+    "/claim/{container_name}/{claim_id}",
     summary="Return a single claim.",
     response_model=ClaimResponse,
     responses={200: {"model": ClaimResponse}},
 )
-async def get_claim_info(index_name: str, claim_id: int):
+async def get_claim_info(
+    claim_id: int, sanitized_container_name: str = Depends(sanitize_name)
+):
     # check for existence of file the query relies on to validate the index is complete
     # claims is optional in graphrag
-    sanitized_index_name = sanitize_name(index_name)
+    original_container_name = desanitize_name(sanitized_container_name)
     try:
-        validate_index_file_exist(sanitized_index_name, COVARIATES_TABLE)
+        validate_index_file_exist(sanitized_container_name, COVARIATES_TABLE)
     except ValueError:
         raise HTTPException(
             status_code=500,
-            detail=f"Claim data unavailable for index '{index_name}'.",
+            detail=f"Claim data unavailable for index '{original_container_name}'.",
         )
     try:
         claims_table = pd.read_parquet(
-            f"abfs://{sanitized_index_name}/{COVARIATES_TABLE}",
+            f"abfs://{sanitized_container_name}/{COVARIATES_TABLE}",
             storage_options=pandas_storage_options(),
         )
         claims_table.human_readable_id = claims_table.human_readable_id.astype(
@@ -196,41 +209,43 @@ async def get_claim_info(index_name: str, claim_id: int):
         logger.error("Could not get claim.")
         raise HTTPException(
             status_code=500,
-            detail=f"Error retrieving claim '{claim_id}' from index '{index_name}'.",
+            detail=f"Error retrieving claim '{claim_id}' for index '{original_container_name}'.",
         )
 
 
 @source_route.get(
-    "/relationship/{index_name}/{relationship_id}",
+    "/relationship/{container_name}/{relationship_id}",
     summary="Return a single relationship.",
     response_model=RelationshipResponse,
     responses={200: {"model": RelationshipResponse}},
 )
-async def get_relationship_info(index_name: str, relationship_id: int):
+async def get_relationship_info(
+    relationship_id: int, sanitized_container_name: str = Depends(sanitize_name)
+):
     # check for existence of file the query relies on to validate the index is complete
-    sanitized_index_name = sanitize_name(index_name)
-    validate_index_file_exist(sanitized_index_name, RELATIONSHIPS_TABLE)
-    validate_index_file_exist(sanitized_index_name, ENTITY_EMBEDDING_TABLE)
+    original_container_name = desanitize_name(sanitized_container_name)
+    validate_index_file_exist(sanitized_container_name, RELATIONSHIPS_TABLE)
+    validate_index_file_exist(sanitized_container_name, ENTITY_EMBEDDING_TABLE)
     try:
         relationship_table = pd.read_parquet(
-            f"abfs://{sanitized_index_name}/{RELATIONSHIPS_TABLE}",
+            f"abfs://{sanitized_container_name}/{RELATIONSHIPS_TABLE}",
             storage_options=pandas_storage_options(),
         )
         entity_table = pd.read_parquet(
-            f"abfs://{sanitized_index_name}/{ENTITY_EMBEDDING_TABLE}",
+            f"abfs://{sanitized_container_name}/{ENTITY_EMBEDDING_TABLE}",
             storage_options=pandas_storage_options(),
         )
         row = relationship_table[
-            relationship_table.human_readable_id == str(relationship_id)
+            relationship_table.human_readable_id == relationship_id
         ]
         return RelationshipResponse(
             source=row["source"].values[0],
             source_id=entity_table[
-                entity_table.name == row["source"].values[0]
+                entity_table.title == row["source"].values[0]
             ].human_readable_id.values[0],
             target=row["target"].values[0],
             target_id=entity_table[
-                entity_table.name == row["target"].values[0]
+                entity_table.title == row["target"].values[0]
             ].human_readable_id.values[0],
             description=row["description"].values[0],
             text_units=[
@@ -242,5 +257,5 @@ async def get_relationship_info(index_name: str, relationship_id: int):
         logger.error("Could not get relationship.")
         raise HTTPException(
             status_code=500,
-            detail=f"Error retrieving relationship '{relationship_id}' from index '{index_name}'.",
+            detail=f"Error retrieving relationship '{relationship_id}' from index '{original_container_name}'.",
         )
