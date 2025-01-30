@@ -137,53 +137,14 @@ module nsg 'core/vnet/nsg.bicep' = {
   }
 }
 
-resource vnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
-  name: '${abbrs.networkVirtualNetworks}${resourceBaseNameFinal}-deployment'
-  location: location
-  properties: {
-    addressSpace: {
-      addressPrefixes: [
-        '10.1.0.0/16'
-      ]
-    }
-    subnets: [
-      {
-        name: '${abbrs.networkVirtualNetworksSubnets}apim'
-        properties: {
-          addressPrefix: '10.1.0.0/24'
-          networkSecurityGroup: {
-            id: nsg.outputs.id
-          }
-          delegations: (apimTier == 'Developer')
-            ? []
-            : [
-                {
-                  name: 'Microsoft.Web/serverFarms'
-                  properties: {
-                    serviceName: 'Microsoft.Web/serverFarms'
-                  }
-                }
-              ]
-        }
-      }
-      {
-        name: '${abbrs.networkVirtualNetworksSubnets}aks'
-        properties: {
-          addressPrefix: '10.1.1.0/24'
-          serviceEndpoints: [
-            {
-              service: 'Microsoft.Storage'
-            }
-            {
-              service: 'Microsoft.Sql'
-            }
-            {
-              service: 'Microsoft.EventHub'
-            }
-          ]
-        }
-      }
-    ]
+module vnet 'core/vnet/vnet.bicep' = {
+  name: 'vnet-deployment'
+  params: {
+    vnetName: '${abbrs.networkVirtualNetworks}${resourceBaseNameFinal}'
+    location: location
+    subnetPrefix: abbrs.networkVirtualNetworksSubnets
+    apimTier: apimTier
+    nsgID: nsg.outputs.id
   }
 }
 
@@ -204,7 +165,7 @@ module aks 'core/aks/aks.bicep' = {
     graphragIndexingVMSize: 'standard_e8s_v5' // 8 vcpus, 64 GB memory
     clusterAdmins: !empty(deployerPrincipalId) ? ['${deployerPrincipalId}'] : null
     logAnalyticsWorkspaceId: log.outputs.id
-    subnetId: vnet.properties.subnets[1].id // aks subnet
+    subnetId: vnet.outputs.aksSubnetId
     privateDnsZoneName: privateDnsZone.outputs.name
   }
 }
@@ -268,7 +229,7 @@ module apim 'core/apim/apim.bicep' = {
     availabilityZones: [] // TODO expose in param for premium sku
     publisherEmail: apiPublisherEmail
     publisherName: apiPublisherName
-    subnetId: vnet.properties.subnets[0].id // apim subnet
+    subnetId: vnet.outputs.apimSubnetId
   }
 }
 
@@ -300,7 +261,7 @@ module privateDnsZone 'core/vnet/private-dns-zone.bicep' = {
   params: {
     name: dnsDomain
     vnetNames: [
-      vnet.name
+      vnet.outputs.vnetName // name
     ]
   }
 }
@@ -309,7 +270,7 @@ module privatelinkPrivateDns 'core/vnet/privatelink-private-dns-zones.bicep' = i
   name: 'privatelink-private-dns-zones-deployment'
   params: {
     linkedVnetIds: [
-      vnet.id
+      vnet.outputs.vnetId // id
     ]
   }
 }
@@ -331,7 +292,7 @@ module cosmosDbPrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePr
     privateEndpointName: '${abbrs.privateEndpoint}cosmos-${cosmosdb.outputs.name}'
     location: location
     privateLinkServiceId: cosmosdb.outputs.id
-    subnetId: vnet.properties.subnets[1].id // aks subnet
+    subnetId: vnet.outputs.aksSubnetId
     groupId: 'Sql'
     privateDnsZoneConfigs: enablePrivateEndpoints ? privatelinkPrivateDns.outputs.cosmosDbPrivateDnsZoneConfigs : []
   }
@@ -343,7 +304,7 @@ module blobStoragePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enabl
     privateEndpointName: '${abbrs.privateEndpoint}blob-${storage.outputs.name}'
     location: location
     privateLinkServiceId: storage.outputs.id
-    subnetId: vnet.properties.subnets[1].id // aks subnet
+    subnetId: vnet.outputs.aksSubnetId
     groupId: 'blob'
     privateDnsZoneConfigs: enablePrivateEndpoints ? privatelinkPrivateDns.outputs.blobStoragePrivateDnsZoneConfigs : []
   }
@@ -355,7 +316,7 @@ module aiSearchPrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (enablePr
     privateEndpointName: '${abbrs.privateEndpoint}search-${aiSearch.outputs.name}'
     location: location
     privateLinkServiceId: aiSearch.outputs.id
-    subnetId: vnet.properties.subnets[1].id // aks subnet
+    subnetId: vnet.outputs.aksSubnetId
     groupId: 'searchService'
     privateDnsZoneConfigs: enablePrivateEndpoints ? privatelinkPrivateDns.outputs.aiSearchPrivateDnsZoneConfigs : []
   }
@@ -367,7 +328,7 @@ module privateLinkScopePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (
     privateEndpointName: '${abbrs.privateEndpoint}pls-${resourceBaseNameFinal}'
     location: location
     privateLinkServiceId: enablePrivateEndpoints ? azureMonitorPrivateLinkScope.outputs.id : ''
-    subnetId: vnet.properties.subnets[1].id // aks subnet
+    subnetId: vnet.outputs.aksSubnetId
     groupId: 'azuremonitor'
     privateDnsZoneConfigs: enablePrivateEndpoints ? privatelinkPrivateDns.outputs.azureMonitorPrivateDnsZoneConfigs : []
   }
