@@ -22,11 +22,11 @@ param sku string = 'Developer'
 @description('The instance size of this API Management service. This should be a multiple of the number of availability zones getting deployed.')
 param skuCount int = 1
 
-@description('Application Insights resource name')
-param appInsightsName string = 'apim-appi'
+@description('Application Insights resource ID')
+param appInsightsId string
 
-@description('Application Insights public network access for ingestion')
-param appInsightsPublicNetworkAccessForIngestion string = 'Disabled'
+@description('Application Insights instrumentation key')
+param appInsightsInstrumentationKey string
 
 @description('Azure region where the resources will be deployed')
 param location string = resourceGroup().location
@@ -54,9 +54,6 @@ param publicIPAllocationMethod string = 'Static'
 
 @description('Unique DNS name for the public IP address used to access the API management service.')
 param dnsLabelPrefix string = toLower('${publicIpName}-${uniqueString(resourceGroup().id)}')
-
-@description('The workspace id of the Log Analytics resource.')
-param logAnalyticsWorkspaceId string
 
 param restoreAPIM bool = false
 param subnetId string
@@ -113,16 +110,16 @@ resource apiManagementService 'Microsoft.ApiManagement/service@2023-09-01-previe
   }
 }
 
-resource apimLogger 'Microsoft.ApiManagement/service/loggers@2023-09-01-preview' = {
-  name: appInsights.name
+resource apimLogger 'Microsoft.ApiManagement/service/loggers@2024-06-01-preview' = {
+  name: 'apimLogger'
   parent: apiManagementService
   properties: {
-    resourceId: appInsights.id
+    credentials: {
+      instrumentationKey: appInsightsInstrumentationKey
+    }
     description: 'Application Insights for APIM'
     loggerType: 'applicationInsights'
-    credentials: {
-      instrumentationKey: appInsights.properties.InstrumentationKey
-    }
+    resourceId: appInsightsId
   }
 }
 
@@ -140,20 +137,6 @@ resource apimDiagnostics 'Microsoft.ApiManagement/service/diagnostics@2023-09-01
   }
 }
 
-resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
-  name: appInsightsName
-  location: location
-  kind: 'web'
-  properties: {
-    Application_Type: 'web'
-    WorkspaceResourceId: logAnalyticsWorkspaceId
-    publicNetworkAccessForIngestion: appInsightsPublicNetworkAccessForIngestion
-    publicNetworkAccessForQuery: 'Enabled'
-  }
-}
-
 output name string = apiManagementService.name
 output id string = apiManagementService.id
 output apimGatewayUrl string = apiManagementService.properties.gatewayUrl
-output appInsightsId string = appInsights.id
-output appInsightsConnectionString string = appInsights.properties.ConnectionString

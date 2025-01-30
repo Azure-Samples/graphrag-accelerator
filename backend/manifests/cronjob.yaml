@@ -1,0 +1,41 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+# NOTE: the location of this file is important as it gets referenced by the src/main.py script
+# and depends on the relative path to this file when uvicorn is run
+
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: graphrag-index-manager
+spec:
+  schedule: "*/5 * * * *"
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 180
+      template:
+        metadata:
+          labels:
+            azure.workload.identity/use: "true"
+        spec:
+          serviceAccountName: PLACEHOLDER
+          restartPolicy: OnFailure
+          containers:
+            - name: index-job-manager
+              image: PLACEHOLDER
+              # override default WORKDIR with absolute path to the scripts directory
+              workingDir: "/backend/scripts"
+              imagePullPolicy: Always
+              resources:
+                requests:
+                  cpu: "0.5"
+                  memory: "0.5Gi"
+                limits:
+                  cpu: "1"
+                  memory: "1Gi"
+              envFrom:
+                - configMapRef:
+                    name: graphrag
+              command:
+                - python
+                - "job-scheduler.py"

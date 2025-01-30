@@ -1,0 +1,137 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+# this yaml file serves as a configuration template for the graphrag indexing jobs
+# some values are hardcoded while others denoted by PLACEHOLDER will be dynamically set
+
+######################  LLM settings  ######################
+encoding_model: cl100k_base # this needs to be matched to your model!
+
+llm:
+  type: azure_openai_chat
+  api_base: $GRAPHRAG_API_BASE
+  api_version: $GRAPHRAG_API_VERSION
+  model: $GRAPHRAG_LLM_MODEL
+  deployment_name: $GRAPHRAG_LLM_DEPLOYMENT_NAME
+  cognitive_services_endpoint: $COGNITIVE_SERVICES_AUDIENCE
+  model_supports_json: True
+  tokens_per_minute: 80_000
+  requests_per_minute: 480
+  concurrent_requests: 25
+  max_retries: 250
+  max_retry_wait: 60.0
+  sleep_on_rate_limit_recommendation: True
+
+parallelization:
+  num_threads: 10
+  stagger: 0.25
+
+async_mode: threaded # or asyncio
+
+embeddings:
+  vector_store:
+    type: azure_ai_search
+    collection_name: PLACEHOLDER
+    title_column: name
+    overwrite: True
+    url: $AI_SEARCH_URL
+    audience: $AI_SEARCH_AUDIENCE
+  llm:
+    type: azure_openai_embedding
+    api_base: $GRAPHRAG_API_BASE
+    api_version: $GRAPHRAG_API_VERSION
+    batch_size: 10
+    model: $GRAPHRAG_EMBEDDING_MODEL
+    deployment_name: $GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME
+    cognitive_services_endpoint: $COGNITIVE_SERVICES_AUDIENCE
+    tokens_per_minute: 350_000
+    requests_per_minute: 2_100
+
+######################  Input settings  ######################
+input:
+  type: blob
+  file_type: text
+  base_dir: .
+  file_encoding: utf-8
+  file_pattern: .*\.txt$
+  storage_account_blob_url: $STORAGE_ACCOUNT_BLOB_URL
+  container_name: PLACEHOLDER
+
+chunks:
+  size: 1_200
+  overlap: 100
+  group_by_columns: [id]
+
+######################  Storage settings  ######################
+cache:
+  type: blob
+  storage_account_blob_url: $STORAGE_ACCOUNT_BLOB_URL
+  container_name: PLACEHOLDER
+  base_dir: cache
+
+reporting:
+  type: blob
+  storage_account_blob_url: $STORAGE_ACCOUNT_BLOB_URL
+  container_name: PLACEHOLDER
+  base_dir: logs
+
+storage:
+  type: blob
+  storage_account_blob_url: $STORAGE_ACCOUNT_BLOB_URL
+  container_name: PLACEHOLDER
+  base_dir: output
+
+######################  Workflow settings  ######################
+skip_workflows: []
+
+entity_extraction:
+  prompt: PLACEHOLDER
+  entity_types: [organization, person, geo, event]
+  max_gleanings: 1
+
+summarize_descriptions:
+  prompt: PLACEHOLDER
+  max_length: 500
+
+claim_extraction:
+  enabled: false
+  prompt: "prompts/claim_extraction.txt"
+  description: "Any claims or facts that could be relevant to information discovery."
+  max_gleanings: 1
+
+community_reports:
+  prompt: PLACEHOLDER
+  max_length: 2_000
+  max_input_length: 8_000
+
+cluster_graph:
+  max_cluster_size: 10
+
+embed_graph:
+  enabled: false
+
+umap:
+  enabled: false
+
+snapshots:
+  graphml: True
+  embeddings: false
+  transient: false
+
+######################  Query settings  ######################
+## The prompt locations are required here, but each search method has a number of optional knobs that can be tuned.
+## See the config docs: https://microsoft.github.io/graphrag/config/yaml/#query
+local_search:
+  prompt: PLACEHOLDER
+
+global_search:
+  map_prompt: PLACEHOLDER
+  reduce_prompt: PLACEHOLDER
+  knowledge_prompt: PLACEHOLDER
+
+drift_search:
+  prompt: PLACEHOLDER
+  reduce_prompt: PLACEHOLDER
+
+basic_search:
+  prompt: PLACEHOLDER
