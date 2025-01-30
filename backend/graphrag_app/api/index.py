@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 
 import os
+import traceback
 from time import time
 
 from azure.identity import DefaultAzureCredential
@@ -30,7 +31,6 @@ from graphrag_app.utils.azure_clients import AzureClientManager
 from graphrag_app.utils.common import (
     delete_cosmos_container_item_if_exist,
     delete_storage_container_if_exist,
-    desanitize_name,
     get_cosmos_container_store_client,
     sanitize_name,
 )
@@ -152,9 +152,13 @@ async def get_all_index_names(
         for item in container_store_client.read_all_items():
             if item["type"] == "index":
                 items.append(item["human_readable_name"])
-    except Exception:
+    except Exception as e:
         logger = load_pipeline_logger()
-        logger.error("Error fetching index list")
+        logger.error(
+            message="Error fetching index list",
+            cause=e,
+            stack=traceback.format_exc(),
+        )
     return IndexNameList(index_name=items)
 
 
@@ -184,9 +188,11 @@ def _delete_k8s_job(job_name: str, namespace: str) -> None:
     try:
         batch_v1 = kubernetes_client.BatchV1Api()
         batch_v1.delete_namespaced_job(name=job_name, namespace=namespace)
-    except Exception:
+    except Exception as e:
         logger.error(
             message=f"Error deleting k8s job {job_name}.",
+            cause=e,
+            stack=traceback.format_exc(),
             details={"container": job_name},
         )
         pass
@@ -195,9 +201,11 @@ def _delete_k8s_job(job_name: str, namespace: str) -> None:
         job_pod = _get_pod_name(job_name, os.environ["AKS_NAMESPACE"])
         if job_pod:
             core_v1.delete_namespaced_pod(job_pod, namespace=namespace)
-    except Exception:
+    except Exception as e:
         logger.error(
             message=f"Error deleting k8s pod for job {job_name}.",
+            cause=e,
+            stack=traceback.format_exc(),
             details={"container": job_name},
         )
         pass
@@ -210,6 +218,7 @@ def _delete_k8s_job(job_name: str, namespace: str) -> None:
     responses={200: {"model": BaseResponse}},
 )
 async def delete_index(
+    container_name: str,
     sanitized_container_name: str = Depends(sanitize_name),
 ):
     """
@@ -236,16 +245,16 @@ async def delete_index(
         if ai_search_index_name in index_client.list_index_names():
             index_client.delete_index(ai_search_index_name)
 
-    except Exception:
+    except Exception as e:
         logger = load_pipeline_logger()
-        original_container_name = desanitize_name(sanitized_container_name)
         logger.error(
-            message=f"Error encountered while deleting all data for {original_container_name}.",
-            stack=None,
-            details={"container": original_container_name},
+            message=f"Error encountered while deleting all data for {container_name}.",
+            cause=e,
+            stack=traceback.format_exc(),
+            details={"container": container_name},
         )
         raise HTTPException(
-            status_code=500, detail=f"Error deleting '{original_container_name}'."
+            status_code=500, detail=f"Error deleting '{container_name}'."
         )
 
     return BaseResponse(status="Success")
@@ -256,7 +265,9 @@ async def delete_index(
     summary="Track the status of an indexing job",
     response_model=IndexStatusResponse,
 )
-async def get_index_status(sanitized_container_name: str = Depends(sanitize_name)):
+async def get_index_status(
+    container_name: str, sanitized_container_name: str = Depends(sanitize_name)
+):
     pipelinejob = PipelineJob()
     if pipelinejob.item_exist(sanitized_container_name):
         pipeline_job = pipelinejob.load_item(sanitized_container_name)
@@ -269,7 +280,6 @@ async def get_index_status(sanitized_container_name: str = Depends(sanitize_name
             progress=pipeline_job.progress,
         )
     else:
-        original_container_name = desanitize_name(sanitized_container_name)
         raise HTTPException(
-            status_code=404, detail=f"'{original_container_name}' does not exist."
+            status_code=404, detail=f"'{container_name}' does not exist."
         )

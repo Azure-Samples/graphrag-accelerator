@@ -15,7 +15,7 @@ from graphrag.config.create_graphrag_config import create_graphrag_config
 
 from graphrag_app.logger.load_logger import load_pipeline_logger
 from graphrag_app.utils.azure_clients import AzureClientManager
-from graphrag_app.utils.common import desanitize_name, sanitize_name
+from graphrag_app.utils.common import sanitize_name
 
 prompt_tuning_route = APIRouter(prefix="/index/config", tags=["Prompt Tuning"])
 
@@ -26,6 +26,7 @@ prompt_tuning_route = APIRouter(prefix="/index/config", tags=["Prompt Tuning"])
     description="Generating custom prompts from user-provided data may take several minutes to run based on the amount of data used.",
 )
 async def generate_prompts(
+    container_name: str,
     limit: int = 5,
     sanitized_container_name: str = Depends(sanitize_name),
 ):
@@ -36,11 +37,10 @@ async def generate_prompts(
     # check for storage container existence
     azure_client_manager = AzureClientManager()
     blob_service_client = azure_client_manager.get_blob_service_client()
-    original_container_name = desanitize_name(sanitized_container_name)
     if not blob_service_client.get_container_client(sanitized_container_name).exists():
         raise HTTPException(
             status_code=500,
-            detail=f"Storage container '{original_container_name}' does not exist.",
+            detail=f"Storage container '{container_name}' does not exist.",
         )
 
     # load pipeline configuration file (settings.yaml) for input data and other settings
@@ -61,7 +61,7 @@ async def generate_prompts(
     except Exception as e:
         logger = load_pipeline_logger()
         error_details = {
-            "storage_name": original_container_name,
+            "storage_name": container_name,
         }
         logger.error(
             message="Auto-prompt generation failed.",
@@ -71,7 +71,7 @@ async def generate_prompts(
         )
         raise HTTPException(
             status_code=500,
-            detail=f"Error generating prompts for data in '{original_container_name}'. Please try a lower limit.",
+            detail=f"Error generating prompts for data in '{container_name}'. Please try a lower limit.",
         )
 
     prompt_content = {

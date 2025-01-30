@@ -3,6 +3,7 @@
 
 import hashlib
 import os
+import traceback
 
 import pandas as pd
 from azure.core.exceptions import ResourceNotFoundError
@@ -114,9 +115,13 @@ def get_cosmos_container_store_client() -> ContainerProxy:
         return azure_client_manager.get_cosmos_container_client(
             database="graphrag", container="container-store"
         )
-    except Exception:
+    except Exception as e:
         logger = load_pipeline_logger()
-        logger.error("Error fetching cosmosdb client.")
+        logger.error(
+            message="Error fetching cosmosdb client.",
+            cause=e,
+            stack=traceback.format_exc(),
+        )
         raise HTTPException(status_code=500, detail="Error fetching cosmosdb client.")
 
 
@@ -128,9 +133,13 @@ async def get_blob_container_client(name: str) -> ContainerClient:
         if not await container_client.exists():
             await container_client.create_container()
         return container_client
-    except Exception:
+    except Exception as e:
         logger = load_pipeline_logger()
-        logger.error("Error fetching storage client.")
+        logger.error(
+            message="Error fetching storage client.",
+            cause=e,
+            stack=traceback.format_exc(),
+        )
         raise HTTPException(status_code=500, detail="Error fetching storage client.")
 
 
@@ -165,8 +174,8 @@ def desanitize_name(sanitized_container_name: str) -> str | None:
     sanitized_name (str)
         The sanitized name to be converted back to the original name.
 
-    Returns: str
-        The original human-readable name.
+    Returns: str | None
+        The original human-readable name or None if it does not exist.
     """
     try:
         container_store_client = get_cosmos_container_store_client()

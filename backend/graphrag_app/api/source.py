@@ -2,6 +2,8 @@
 # Licensed under the MIT License.
 
 
+import traceback
+
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -14,7 +16,6 @@ from graphrag_app.typing.models import (
     TextUnitResponse,
 )
 from graphrag_app.utils.common import (
-    desanitize_name,
     pandas_storage_options,
     sanitize_name,
     validate_index_file_exist,
@@ -41,10 +42,11 @@ DOCUMENTS_TABLE = "output/create_final_documents.parquet"
     responses={200: {"model": ReportResponse}},
 )
 async def get_report_info(
-    report_id: int, sanitized_container_name: str = Depends(sanitize_name)
+    report_id: int,
+    container_name: str,
+    sanitized_container_name: str = Depends(sanitize_name),
 ):
     # check for existence of file the query relies on to validate the index is complete
-    original_container_name = desanitize_name(sanitized_container_name)
     validate_index_file_exist(sanitized_container_name, COMMUNITY_REPORT_TABLE)
     try:
         report_table = pd.read_parquet(
@@ -54,23 +56,27 @@ async def get_report_info(
         # check if report_id exists in the index
         if not report_table["human_readable_id"].isin([report_id]).any():
             raise ValueError(
-                f"Report '{report_id}' not found in index '{original_container_name}'."
+                f"Report '{report_id}' not found in index '{container_name}'."
             )
         # check if multiple reports with the same id exist (should not happen)
         if len(report_table.loc[report_table["human_readable_id"] == report_id]) > 1:
             raise ValueError(
-                f"Multiple reports with id '{report_id}' found in index '{original_container_name}'."
+                f"Multiple reports with id '{report_id}' found in index '{container_name}'."
             )
         report_content = report_table.loc[
             report_table["human_readable_id"] == report_id, "full_content_json"
         ].to_numpy()[0]
         return ReportResponse(text=report_content)
-    except Exception:
+    except Exception as e:
         logger = load_pipeline_logger()
-        logger.error("Could not get report.")
+        logger.error(
+            message="Could not get report.",
+            cause=e,
+            stack=traceback.format_exc(),
+        )
         raise HTTPException(
             status_code=500,
-            detail=f"Error retrieving report '{report_id}' from index '{index_name}'.",
+            detail=f"Error retrieving report '{report_id}' from index '{container_name}'.",
         )
 
 
@@ -81,10 +87,11 @@ async def get_report_info(
     responses={200: {"model": TextUnitResponse}},
 )
 async def get_chunk_info(
-    text_unit_id: str, sanitized_container_name: str = Depends(sanitize_name)
+    text_unit_id: str,
+    container_name: str,
+    sanitized_container_name: str = Depends(sanitize_name),
 ):
     # check for existence of file the query relies on to validate the index is complete
-    original_container_name = desanitize_name(sanitized_container_name)
     validate_index_file_exist(sanitized_container_name, TEXT_UNITS_TABLE)
     validate_index_file_exist(sanitized_container_name, DOCUMENTS_TABLE)
     try:
@@ -106,7 +113,7 @@ async def get_chunk_info(
         # verify that text_unit_id exists in the index
         if not text_units["id"].isin([text_unit_id]).any():
             raise ValueError(
-                f"Text unit '{text_unit_id}' not found in index '{original_container_name}'."
+                f"Text unit '{text_unit_id}' not found in index '{container_name}'."
             )
 
         # combine tables to create a (chunk_id -> source_document) mapping
@@ -120,12 +127,16 @@ async def get_chunk_info(
             text=row["id"].to_numpy()[0],
             source_document=row["source_document"].to_numpy()[0],
         )
-    except Exception:
+    except Exception as e:
         logger = load_pipeline_logger()
-        logger.error("Could not get text chunk.")
+        logger.error(
+            message="Could not get text chunk.",
+            cause=e,
+            stack=traceback.format_exc(),
+        )
         raise HTTPException(
             status_code=500,
-            detail=f"Error retrieving text chunk '{text_unit_id}' from index '{original_container_name}'.",
+            detail=f"Error retrieving text chunk '{text_unit_id}' from index '{container_name}'.",
         )
 
 
@@ -136,10 +147,11 @@ async def get_chunk_info(
     responses={200: {"model": EntityResponse}},
 )
 async def get_entity_info(
-    entity_id: int, sanitized_container_name: str = Depends(sanitize_name)
+    entity_id: int,
+    container_name: str,
+    sanitized_container_name: str = Depends(sanitize_name),
 ):
     # check for existence of file the query relies on to validate the index is complete
-    original_container_name = desanitize_name(sanitized_container_name)
     validate_index_file_exist(sanitized_container_name, ENTITY_EMBEDDING_TABLE)
     try:
         entity_table = pd.read_parquet(
@@ -149,7 +161,7 @@ async def get_entity_info(
         # check if entity_id exists in the index
         if not entity_table["human_readable_id"].isin([entity_id]).any():
             raise ValueError(
-                f"Entity '{entity_id}' not found in index '{original_container_name}'."
+                f"Entity '{entity_id}' not found in index '{container_name}'."
             )
         row = entity_table[entity_table["human_readable_id"] == entity_id]
         return EntityResponse(
@@ -157,12 +169,16 @@ async def get_entity_info(
             description=row["description"].to_numpy()[0],
             text_units=row["text_unit_ids"].to_numpy()[0].tolist(),
         )
-    except Exception:
+    except Exception as e:
         logger = load_pipeline_logger()
-        logger.error("Could not get entity")
+        logger.error(
+            message="Could not get entity",
+            cause=e,
+            stack=traceback.format_exc(),
+        )
         raise HTTPException(
             status_code=500,
-            detail=f"Error retrieving entity '{entity_id}' from index '{original_container_name}'.",
+            detail=f"Error retrieving entity '{entity_id}' from index '{container_name}'.",
         )
 
 
@@ -173,17 +189,18 @@ async def get_entity_info(
     responses={200: {"model": ClaimResponse}},
 )
 async def get_claim_info(
-    claim_id: int, sanitized_container_name: str = Depends(sanitize_name)
+    claim_id: int,
+    container_name: str,
+    sanitized_container_name: str = Depends(sanitize_name),
 ):
     # check for existence of file the query relies on to validate the index is complete
     # claims is optional in graphrag
-    original_container_name = desanitize_name(sanitized_container_name)
     try:
         validate_index_file_exist(sanitized_container_name, COVARIATES_TABLE)
     except ValueError:
         raise HTTPException(
             status_code=500,
-            detail=f"Claim data unavailable for index '{original_container_name}'.",
+            detail=f"Claim data unavailable for index '{container_name}'.",
         )
     try:
         claims_table = pd.read_parquet(
@@ -204,12 +221,14 @@ async def get_claim_info(
             text_unit_id=row["text_unit_id"].values[0],
             document_ids=row["document_ids"].values[0].tolist(),
         )
-    except Exception:
+    except Exception as e:
         logger = load_pipeline_logger()
-        logger.error("Could not get claim.")
+        logger.error(
+            message="Could not get claim.", cause=e, stack=traceback.format_exc()
+        )
         raise HTTPException(
             status_code=500,
-            detail=f"Error retrieving claim '{claim_id}' for index '{original_container_name}'.",
+            detail=f"Error retrieving claim '{claim_id}' for index '{container_name}'.",
         )
 
 
@@ -220,10 +239,11 @@ async def get_claim_info(
     responses={200: {"model": RelationshipResponse}},
 )
 async def get_relationship_info(
-    relationship_id: int, sanitized_container_name: str = Depends(sanitize_name)
+    relationship_id: int,
+    container_name: str,
+    sanitized_container_name: str = Depends(sanitize_name),
 ):
     # check for existence of file the query relies on to validate the index is complete
-    original_container_name = desanitize_name(sanitized_container_name)
     validate_index_file_exist(sanitized_container_name, RELATIONSHIPS_TABLE)
     validate_index_file_exist(sanitized_container_name, ENTITY_EMBEDDING_TABLE)
     try:
@@ -252,10 +272,12 @@ async def get_relationship_info(
                 x[0] for x in row["text_unit_ids"].to_list()
             ],  # extract text_unit_ids from a list of panda series
         )
-    except Exception:
+    except Exception as e:
         logger = load_pipeline_logger()
-        logger.error("Could not get relationship.")
+        logger.error(
+            message="Could not get relationship.", cause=e, stack=traceback.format_exc()
+        )
         raise HTTPException(
             status_code=500,
-            detail=f"Error retrieving relationship '{relationship_id}' from index '{original_container_name}'.",
+            detail=f"Error retrieving relationship '{relationship_id}' from index '{container_name}'.",
         )

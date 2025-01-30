@@ -9,6 +9,7 @@ to schedule graphrag indexing jobs on a first-come-first-serve basis (based on e
 """
 
 import os
+import traceback
 from pathlib import Path
 
 import pandas as pd
@@ -47,10 +48,12 @@ def schedule_indexing_job(index_name: str):
         batch_v1.create_namespaced_job(
             body=job_manifest, namespace=os.environ["AKS_NAMESPACE"]
         )
-    except Exception:
+    except Exception as e:
         reporter = load_pipeline_logger()
         reporter.error(
-            "Index job manager encountered error scheduling indexing job",
+            message="Index job manager encountered error scheduling indexing job",
+            cause=e,
+            stack=traceback.format_exc(),
         )
         # In the event of a catastrophic scheduling failure, something in k8s or the job manifest is likely broken.
         # Set job status to failed to prevent an infinite loop of re-scheduling

@@ -3,6 +3,7 @@
 
 import asyncio
 import re
+import traceback
 from math import ceil
 from typing import List
 
@@ -22,7 +23,6 @@ from graphrag_app.typing.models import (
 from graphrag_app.utils.common import (
     delete_cosmos_container_item_if_exist,
     delete_storage_container_if_exist,
-    desanitize_name,
     get_blob_container_client,
     get_cosmos_container_store_client,
     sanitize_name,
@@ -50,9 +50,13 @@ async def get_all_data_containers():
         for item in container_store_client.read_all_items():
             if item["type"] == "data":
                 items.append(item["human_readable_name"])
-    except Exception:
+    except Exception as e:
         reporter = load_pipeline_logger()
-        reporter.error("Error getting list of blob containers.")
+        reporter.error(
+            message="Error getting list of blob containers.",
+            cause=e,
+            stack=traceback.format_exc(),
+        )
         raise HTTPException(
             status_code=500, detail="Error getting list of blob containers."
         )
@@ -112,6 +116,7 @@ class Cleaner:
 )
 async def upload_files(
     files: List[UploadFile],
+    container_name: str,
     sanitized_container_name: str = Depends(sanitize_name),
     overwrite: bool = True,
 ):
@@ -129,7 +134,6 @@ async def upload_files(
     Raises:
         HTTPException: If the container name is invalid or if any error occurs during the upload process.
     """
-    original_container_name = desanitize_name(sanitized_container_name)
     try:
         # clean files - remove illegal XML characters
         files = [UploadFile(Cleaner(f.file), filename=f.filename) for f in files]
@@ -152,16 +156,21 @@ async def upload_files(
         cosmos_container_store_client = get_cosmos_container_store_client()
         cosmos_container_store_client.upsert_item({
             "id": sanitized_container_name,
-            "human_readable_name": original_container_name,
+            "human_readable_name": container_name,
             "type": "data",
         })
         return BaseResponse(status="File upload successful.")
-    except Exception:
+    except Exception as e:
         logger = load_pipeline_logger()
-        logger.error("Error uploading files.", details={"files": files})
+        logger.error(
+            message="Error uploading files.",
+            cause=e,
+            stack=traceback.format_exc(),
+            details={"files": [f.filename for f in files]},
+        )
         raise HTTPException(
             status_code=500,
-            detail=f"Error uploading files to container '{original_container_name}'.",
+            detail=f"Error uploading files to container '{container_name}'.",
         )
 
 
@@ -171,25 +180,27 @@ async def upload_files(
     response_model=BaseResponse,
     responses={200: {"model": BaseResponse}},
 )
-async def delete_files(sanitized_container_name: str = Depends(sanitize_name)):
+async def delete_files(
+    container_name: str, sanitized_container_name: str = Depends(sanitize_name)
+):
     """
     Delete a specified data storage container.
     """
-    # sanitized_container_name = sanitize_name(container_name)
-    original_container_name = desanitize_name(sanitized_container_name)
     try:
         delete_storage_container_if_exist(sanitized_container_name)
         delete_cosmos_container_item_if_exist(
             "container-store", sanitized_container_name
         )
-    except Exception:
+    except Exception as e:
         logger = load_pipeline_logger()
         logger.error(
-            f"Error deleting container {original_container_name}.",
-            details={"Container": original_container_name},
+            message=f"Error deleting container {container_name}.",
+            cause=e,
+            stack=traceback.format_exc(),
+            details={"Container": container_name},
         )
         raise HTTPException(
             status_code=500,
-            detail=f"Error deleting container '{original_container_name}'.",
+            detail=f"Error deleting container '{container_name}'.",
         )
     return BaseResponse(status="Success")

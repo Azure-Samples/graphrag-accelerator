@@ -14,7 +14,7 @@ from graphrag.callbacks.noop_workflow_callbacks import NoopWorkflowCallbacks
 
 
 class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
-    """A logger that writes to an AppInsights Workspace."""
+    """A singleton class logger that writes to an AppInsights Workspace."""
 
     _logger: logging.Logger
     _logger_name: str
@@ -75,7 +75,7 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
         self._logger = logging.getLogger(self._logger_name)
         self._logger.setLevel(logging.INFO)
 
-    def _format_details(self, details: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    def _format_details(self, details: Dict[str, Any] = {}) -> Dict[str, Any]:
         """
         Format the details dictionary to comply with the Application Insights structured
         logging Property column standard.
@@ -86,9 +86,13 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
         Returns:
             Dict[str, Any]: The formatted details dictionary with custom dimensions.
         """
-        if not isinstance(details, dict) or (details is None):
+        if not isinstance(details, dict):
             return {}
-        return {**self._properties, **unwrap_dict(details)}
+        extra_details = {**unwrap_dict(details)}
+        return {
+            **(self._properties if self._properties else {}),
+            **(extra_details if extra_details else {}),
+        }
 
     def workflow_start(self, name: str, instance: object) -> None:
         """Execute this callback when a workflow starts."""

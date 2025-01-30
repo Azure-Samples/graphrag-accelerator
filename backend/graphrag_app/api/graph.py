@@ -1,6 +1,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+import traceback
+
 from fastapi import (
     APIRouter,
     Depends,
@@ -11,7 +13,6 @@ from fastapi.responses import StreamingResponse
 from graphrag_app.logger.load_logger import load_pipeline_logger
 from graphrag_app.utils.azure_clients import AzureClientManager
 from graphrag_app.utils.common import (
-    desanitize_name,
     sanitize_name,
     validate_index_file_exist,
 )
@@ -27,7 +28,9 @@ graph_route = APIRouter(
     summary="Retrieve a GraphML file of the knowledge graph",
     response_description="GraphML file successfully downloaded",
 )
-async def get_graphml_file(sanitized_container_name: str = Depends(sanitize_name)):
+async def get_graphml_file(
+    container_name, sanitized_container_name: str = Depends(sanitize_name)
+):
     # validate graphml file existence
     azure_client_manager = AzureClientManager()
     graphml_filename = "graph.graphml"
@@ -43,11 +46,14 @@ async def get_graphml_file(sanitized_container_name: str = Depends(sanitize_name
             media_type="application/octet-stream",
             headers={"Content-Disposition": f"attachment; filename={graphml_filename}"},
         )
-    except Exception:
+    except Exception as e:
         logger = load_pipeline_logger()
-        original_container_name = desanitize_name(sanitized_container_name)
-        logger.error("Could not fetch graphml file")
+        logger.error(
+            message="Could not fetch graphml file",
+            cause=e,
+            stack=traceback.format_exc(),
+        )
         raise HTTPException(
             status_code=500,
-            detail=f"Could not fetch graphml file for '{original_container_name}'.",
+            detail=f"Could not fetch graphml file for '{container_name}'.",
         )

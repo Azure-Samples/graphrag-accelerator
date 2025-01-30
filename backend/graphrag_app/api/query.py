@@ -1,10 +1,10 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-import inspect
 import json
 import os
 import traceback
+from pathlib import Path
 from typing import Any
 
 import pandas as pd
@@ -17,7 +17,7 @@ from fastapi import (
     HTTPException,
 )
 from graphrag.api.query import global_search, local_search
-from graphrag.config import create_graphrag_config
+from graphrag.config.create_graphrag_config import create_graphrag_config
 from graphrag.model.types import TextEmbedder
 from graphrag.vector_stores.base import (
     BaseVectorStore,
@@ -71,6 +71,7 @@ async def global_query(request: GraphRequest):
             )
 
     COMMUNITY_REPORT_TABLE = "output/create_final_community_reports.parquet"
+    COMMUNITIES_TABLE = "output/create_final_communities.parquet"
     ENTITIES_TABLE = "output/create_final_entities.parquet"
     NODES_TABLE = "output/create_final_nodes.parquet"
 
@@ -89,33 +90,31 @@ async def global_query(request: GraphRequest):
         links = {
             "nodes": {},
             "community": {},
+            "community_reports": {},
             "entities": {},
-            "text_units": {},
-            "relationships": {},
-            "covariates": {},
         }
         max_vals = {
             "nodes": -1,
             "community": -1,
+            "community_reports": -1,
             "entities": -1,
-            "text_units": -1,
-            "relationships": -1,
-            "covariates": -1,
         }
 
-        community_dfs = []
+        communities_dfs = []
+        community_reports_dfs = []
         entities_dfs = []
         nodes_dfs = []
 
         for index_name in sanitized_index_names:
+            # read the parquet files into DataFrames and add provenance information
             community_report_table_path = (
                 f"abfs://{index_name}/{COMMUNITY_REPORT_TABLE}"
             )
+            communities_table_path = f"abfs://{index_name}/{COMMUNITIES_TABLE}"
             entities_table_path = f"abfs://{index_name}/{ENTITIES_TABLE}"
             nodes_table_path = f"abfs://{index_name}/{NODES_TABLE}"
 
-            # read the parquet files into DataFrames and add provenance information
-            # note that nodes need to be set before communities so that max community id makes sense
+            # Prepare each index's nodes dataframe for merging
             nodes_df = get_df(nodes_table_path)
             for i in nodes_df["human_readable_id"]:
                 links["nodes"][i + max_vals["nodes"] + 1] = {
@@ -125,58 +124,77 @@ async def global_query(request: GraphRequest):
             if max_vals["nodes"] != -1:
                 nodes_df["human_readable_id"] += max_vals["nodes"] + 1
             nodes_df["community"] = nodes_df["community"].apply(
-                lambda x: str(int(x) + max_vals["community"] + 1) if x else x
+                lambda x: x + max_vals["community_reports"] + 1 if x != -1 else x
             )
-            nodes_df["title"] = nodes_df["title"].apply(lambda x: x + f"-{index_name}")
-            nodes_df["source_id"] = nodes_df["source_id"].apply(
-                lambda x: ",".join([i + f"-{index_name}" for i in x.split(",")])
+            nodes_df["title"] = nodes_df["title"].apply(
+                lambda x, index_name=index_name: x + f"-{index_name}"
             )
-            max_vals["nodes"] = nodes_df["human_readable_id"].max()
+            max_vals["nodes"] = int(nodes_df["human_readable_id"].max())
             nodes_dfs.append(nodes_df)
 
-            community_df = get_df(community_report_table_path)
-            for i in community_df["community"].astype(int):
+            # Prepare each index's community reports dataframe for merging
+            community_reports_df = get_df(community_report_table_path)
+            for i in community_reports_df["community"]:
+                links["community_reports"][i + max_vals["community_reports"] + 1] = {
+                    "index_name": sanitized_index_names_link[index_name],
+                    "id": str(i),
+                }
+            community_reports_df["community"] += max_vals["community_reports"] + 1
+            community_reports_df["human_readable_id"] += (
+                max_vals["community_reports"] + 1
+            )
+            max_vals["community_reports"] = int(community_reports_df["community"].max())
+            community_reports_dfs.append(community_reports_df)
+
+            # Prepare each index's communities dataframe for merging
+            communities_df = get_df(communities_table_path)
+            for i in communities_df["community"]:
                 links["community"][i + max_vals["community"] + 1] = {
                     "index_name": sanitized_index_names_link[index_name],
                     "id": str(i),
                 }
-            if max_vals["community"] != -1:
-                col = community_df["community"].astype(int) + max_vals["community"] + 1
-                community_df["community"] = col.astype(str)
-            max_vals["community"] = community_df["community"].astype(int).max()
-            community_dfs.append(community_df)
+            communities_df["community"] += max_vals["community"] + 1
+            communities_df["parent"] = communities_df["parent"].apply(
+                lambda x: x if x == -1 else x + max_vals["community"] + 1
+            )
+            communities_df["human_readable_id"] += max_vals["community"] + 1
+            max_vals["community"] = int(communities_df["community"].max())
+            communities_dfs.append(communities_df)
 
+            # Prepare each index's entities dataframe for merging
             entities_df = get_df(entities_table_path)
             for i in entities_df["human_readable_id"]:
                 links["entities"][i + max_vals["entities"] + 1] = {
                     "index_name": sanitized_index_names_link[index_name],
                     "id": i,
                 }
-            if max_vals["entities"] != -1:
-                entities_df["human_readable_id"] += max_vals["entities"] + 1
-            entities_df["name"] = entities_df["name"].apply(
-                lambda x: x + f"-{index_name}"
+            entities_df["human_readable_id"] += max_vals["entities"] + 1
+            entities_df["title"] = entities_df["title"].apply(
+                lambda x, index_name=index_name: x + f"-{index_name}"
             )
             entities_df["text_unit_ids"] = entities_df["text_unit_ids"].apply(
-                lambda x: [i + f"-{index_name}" for i in x]
+                lambda x, index_name=index_name: [i + f"-{index_name}" for i in x]
             )
             max_vals["entities"] = entities_df["human_readable_id"].max()
             entities_dfs.append(entities_df)
 
         # merge the dataframes
         nodes_combined = pd.concat(nodes_dfs, axis=0, ignore_index=True, sort=False)
-        community_combined = pd.concat(
-            community_dfs, axis=0, ignore_index=True, sort=False
+        community_reports_combined = pd.concat(
+            community_reports_dfs, axis=0, ignore_index=True, sort=False
         )
         entities_combined = pd.concat(
             entities_dfs, axis=0, ignore_index=True, sort=False
         )
+        communities_combined = pd.concat(
+            communities_dfs, axis=0, ignore_index=True, sort=False
+        )
 
         # load custom pipeline settings
-        this_directory = os.path.dirname(
-            os.path.abspath(inspect.getfile(inspect.currentframe()))
-        )
-        data = yaml.safe_load(open(f"{this_directory}/pipeline-settings.yaml"))
+        ROOT_DIR = Path(__file__).resolve().parent.parent.parent
+        with (ROOT_DIR / "scripts/settings.yaml").open("r") as f:
+            data = yaml.safe_load(f)
+
         # layer the custom settings on top of the default configuration settings of graphrag
         parameters = create_graphrag_config(data, ".")
 
@@ -185,8 +203,10 @@ async def global_query(request: GraphRequest):
             config=parameters,
             nodes=nodes_combined,
             entities=entities_combined,
-            community_reports=community_combined,
+            communities=communities_combined,
+            community_reports=community_reports_combined,
             community_level=COMMUNITY_LEVEL,
+            dynamic_community_selection=False,
             response_type="Multiple Paragraphs",
             query=request.query,
         )
@@ -232,16 +252,9 @@ async def local_query(request: GraphRequest):
     azure_client_manager = AzureClientManager()
     blob_service_client = azure_client_manager.get_blob_service_client()
 
-    community_dfs = []
-    covariates_dfs = []
-    entities_dfs = []
-    nodes_dfs = []
-    relationships_dfs = []
-    text_units_dfs = []
-
     links = {
         "nodes": {},
-        "community": {},
+        "community_reports": {},
         "entities": {},
         "text_units": {},
         "relationships": {},
@@ -249,12 +262,19 @@ async def local_query(request: GraphRequest):
     }
     max_vals = {
         "nodes": -1,
-        "community": -1,
+        "community_reports": -1,
         "entities": -1,
-        "text_units": -1,
+        "text_units": 0,
         "relationships": -1,
-        "covariates": -1,
+        "covariates": 0,
     }
+
+    community_reports_dfs = []
+    entities_dfs = []
+    nodes_dfs = []
+    relationships_dfs = []
+    text_units_dfs = []
+    covariates_dfs = []
 
     COMMUNITY_REPORT_TABLE = "output/create_final_community_reports.parquet"
     COVARIATES_TABLE = "output/create_final_covariates.parquet"
@@ -269,6 +289,7 @@ async def local_query(request: GraphRequest):
         # Current investigations show that community level 2 is the most useful for local search. Set this as the default value
         COMMUNITY_LEVEL = 2
 
+    # read the parquet files for each index into DataFrames and add provenance information
     for index_name in sanitized_index_names:
         # check for existence of files the query relies on to validate the index is complete
         validate_index_file_exist(index_name, COMMUNITY_REPORT_TABLE)
@@ -284,9 +305,7 @@ async def local_query(request: GraphRequest):
         relationships_table_path = f"abfs://{index_name}/{RELATIONSHIPS_TABLE}"
         text_units_table_path = f"abfs://{index_name}/{TEXT_UNITS_TABLE}"
 
-        # read the parquet files into DataFrames and add provenance information
-
-        # note that nodes need to set before communities to that max community id makes sense
+        # Prepare each index's nodes dataframe for merging
         nodes_df = get_df(nodes_table_path)
         for i in nodes_df["human_readable_id"]:
             links["nodes"][i + max_vals["nodes"] + 1] = {
@@ -296,46 +315,55 @@ async def local_query(request: GraphRequest):
         if max_vals["nodes"] != -1:
             nodes_df["human_readable_id"] += max_vals["nodes"] + 1
         nodes_df["community"] = nodes_df["community"].apply(
-            lambda x: str(int(x) + max_vals["community"] + 1) if x else x
+            lambda x: x + max_vals["community_reports"] + 1 if x != -1 else x
         )
-        nodes_df["id"] = nodes_df["id"].apply(lambda x: x + f"-{index_name}")
-        nodes_df["title"] = nodes_df["title"].apply(lambda x: x + f"-{index_name}")
-        nodes_df["source_id"] = nodes_df["source_id"].apply(
-            lambda x: ",".join([i + f"-{index_name}" for i in x.split(",")])
+        nodes_df["title"] = nodes_df["title"].apply(
+            lambda x, index_name=index_name: x + f"-{index_name}"
         )
-        max_vals["nodes"] = nodes_df["human_readable_id"].max()
+        nodes_df["id"] = nodes_df["id"].apply(
+            lambda x, index_name=index_name: x + f"-{index_name}"
+        )
+        max_vals["nodes"] = int(nodes_df["human_readable_id"].max())
         nodes_dfs.append(nodes_df)
 
-        community_df = get_df(community_report_table_path)
-        for i in community_df["community"].astype(int):
-            links["community"][i + max_vals["community"] + 1] = {
+        # Prepare each index's community reports dataframe for merging
+        community_reports_df = get_df(community_report_table_path)
+        community_reports_df["community"] = community_reports_df["community"].astype(
+            int
+        )
+        for i in community_reports_df["community"]:
+            links["community_reports"][i + max_vals["community_reports"] + 1] = {
                 "index_name": sanitized_index_names_link[index_name],
                 "id": str(i),
             }
-        if max_vals["community"] != -1:
-            col = community_df["community"].astype(int) + max_vals["community"] + 1
-            community_df["community"] = col.astype(str)
-        max_vals["community"] = community_df["community"].astype(int).max()
-        community_dfs.append(community_df)
+        community_reports_df["community"] += max_vals["community_reports"] + 1
+        community_reports_df["human_readable_id"] += max_vals["community_reports"] + 1
+        max_vals["community_reports"] = int(community_reports_df["community"].max())
+        community_reports_dfs.append(community_reports_df)
 
+        # Prepare each index's entities dataframe for merging
         entities_df = get_df(entities_table_path)
         for i in entities_df["human_readable_id"]:
             links["entities"][i + max_vals["entities"] + 1] = {
                 "index_name": sanitized_index_names_link[index_name],
                 "id": i,
             }
-        if max_vals["entities"] != -1:
-            entities_df["human_readable_id"] += max_vals["entities"] + 1
-        entities_df["id"] = entities_df["id"].apply(lambda x: x + f"-{index_name}")
-        entities_df["name"] = entities_df["name"].apply(lambda x: x + f"-{index_name}")
-        entities_df["text_unit_ids"] = entities_df["text_unit_ids"].apply(
-            lambda x: [i + f"-{index_name}" for i in x]
+        entities_df["human_readable_id"] += max_vals["entities"] + 1
+        entities_df["title"] = entities_df["title"].apply(
+            lambda x, index_name=index_name: x + f"-{index_name}"
         )
-        max_vals["entities"] = entities_df["human_readable_id"].max()
+        entities_df["id"] = entities_df["id"].apply(
+            lambda x, index_name=index_name: x + f"-{index_name}"
+        )
+        entities_df["text_unit_ids"] = entities_df["text_unit_ids"].apply(
+            lambda x, index_name=index_name: [i + f"-{index_name}" for i in x]
+        )
+        max_vals["entities"] = int(entities_df["human_readable_id"].max())
         entities_dfs.append(entities_df)
 
+        # Prepare each index's relationships dataframe for merging
         relationships_df = get_df(relationships_table_path)
-        for i in relationships_df["human_readable_id"].astype(int):
+        for i in relationships_df["human_readable_id"]:
             links["relationships"][i + max_vals["relationships"] + 1] = {
                 "index_name": sanitized_index_names_link[index_name],
                 "id": i,
@@ -348,77 +376,92 @@ async def local_query(request: GraphRequest):
             )
             relationships_df["human_readable_id"] = col.astype(str)
         relationships_df["source"] = relationships_df["source"].apply(
-            lambda x: x + f"-{index_name}"
+            lambda x, index_name=index_name: x + f"-{index_name}"
         )
         relationships_df["target"] = relationships_df["target"].apply(
-            lambda x: x + f"-{index_name}"
+            lambda x, index_name=index_name: x + f"-{index_name}"
         )
         relationships_df["text_unit_ids"] = relationships_df["text_unit_ids"].apply(
-            lambda x: [i + f"-{index_name}" for i in x]
+            lambda x, index_name=index_name: [i + f"-{index_name}" for i in x]
         )
-        max_vals["relationships"] = (
-            relationships_df["human_readable_id"].astype(int).max()
-        )
+        max_vals["relationships"] = int(relationships_df["human_readable_id"].max())
         relationships_dfs.append(relationships_df)
 
+        # Prepare each index's text units dataframe for merging
         text_units_df = get_df(text_units_table_path)
-        text_units_df["id"] = text_units_df["id"].apply(lambda x: f"{x}-{index_name}")
+        for i in range(text_units_df.shape[0]):
+            links["text_units"][i + max_vals["text_units"]] = {
+                "index_name": sanitized_index_names_link[index_name],
+                "id": i,
+            }
+        text_units_df["id"] = text_units_df["id"].apply(
+            lambda x, index_name=index_name: f"{x}-{index_name}"
+        )
+        text_units_df["human_readable_id"] = (
+            text_units_df["human_readable_id"] + max_vals["text_units"]
+        )
+        max_vals["text_units"] += text_units_df.shape[0]
         text_units_dfs.append(text_units_df)
 
+        # If present, prepare each index's covariates dataframe for merging
         index_container_client = blob_service_client.get_container_client(index_name)
         if index_container_client.get_blob_client(COVARIATES_TABLE).exists():
             covariates_df = get_df(covariates_table_path)
-            if i in covariates_df["human_readable_id"].astype(int):
-                links["covariates"][i + max_vals["covariates"] + 1] = {
+            for i in covariates_df["human_readable_id"].astype(int):
+                links["covariates"][i + max_vals["covariates"]] = {
                     "index_name": sanitized_index_names_link[index_name],
                     "id": i,
                 }
-            if max_vals["covariates"] != -1:
-                col = (
-                    covariates_df["human_readable_id"].astype(int)
-                    + max_vals["covariates"]
-                    + 1
-                )
-                covariates_df["human_readable_id"] = col.astype(str)
-            max_vals["covariates"] = (
-                covariates_df["human_readable_id"].astype(int).max()
+            covariates_df["id"] = covariates_df["id"].apply(
+                lambda x, index_name=index_name: f"{x}-{index_name}"
             )
+            covariates_df["human_readable_id"] = (
+                covariates_df["human_readable_id"] + max_vals["covariates"]
+            )
+            covariates_df["text_unit_id"] = covariates_df["text_unit_id"].apply(
+                lambda x, index_name=index_name: x + f"-{index_name}"
+            )
+            covariates_df["subject_id"] = covariates_df["subject_id"].apply(
+                lambda x, index_name=index_name: x + f"-{index_name}"
+            )
+            max_vals["covariates"] += covariates_df.shape[0]
             covariates_dfs.append(covariates_df)
 
-    nodes_combined = pd.concat(nodes_dfs, axis=0, ignore_index=True)
-    community_combined = pd.concat(community_dfs, axis=0, ignore_index=True)
-    entities_combined = pd.concat(entities_dfs, axis=0, ignore_index=True)
-    text_units_combined = pd.concat(text_units_dfs, axis=0, ignore_index=True)
-    relationships_combined = pd.concat(relationships_dfs, axis=0, ignore_index=True)
-    covariates_combined = (
-        pd.concat(covariates_dfs, axis=0, ignore_index=True)
-        if covariates_dfs != []
-        else None
+    # Merge the dataframes
+    nodes_combined = pd.concat(nodes_dfs, axis=0, ignore_index=True, sort=False)
+    community_reports_combined = pd.concat(
+        community_reports_dfs, axis=0, ignore_index=True, sort=False
     )
+    entities_combined = pd.concat(entities_dfs, axis=0, ignore_index=True, sort=False)
+    relationships_combined = pd.concat(
+        relationships_dfs, axis=0, ignore_index=True, sort=False
+    )
+    text_units_combined = pd.concat(
+        text_units_dfs, axis=0, ignore_index=True, sort=False
+    )
+    covariates_combined = None
+    if len(covariates_dfs) > 0:
+        covariates_combined = pd.concat(
+            covariates_dfs, axis=0, ignore_index=True, sort=False
+        )
 
     # load custom pipeline settings
-    this_directory = os.path.dirname(
-        os.path.abspath(inspect.getfile(inspect.currentframe()))
-    )
-    data = yaml.safe_load(open(f"{this_directory}/pipeline-settings.yaml"))
+    ROOT_DIR = Path(__file__).resolve().parent.parent.parent
+    with (ROOT_DIR / "scripts/settings.yaml").open("r") as f:
+        data = yaml.safe_load(f)
+
     # layer the custom settings on top of the default configuration settings of graphrag
     parameters = create_graphrag_config(data, ".")
 
     # add index_names to vector_store args
     parameters.embeddings.vector_store["index_names"] = sanitized_index_names
-    # internally write over the get_embedding_description_store
-    # method to use the multi-index collection.
-    import graphrag.api.query
 
-    graphrag.api.query._get_embedding_description_store = (
-        _get_embedding_description_store
-    )
     # perform async search
     result = await local_search(
         config=parameters,
         nodes=nodes_combined,
         entities=entities_combined,
-        community_reports=community_combined,
+        community_reports=community_reports_combined,
         text_units=text_units_combined,
         relationships=relationships_combined,
         covariates=covariates_combined,

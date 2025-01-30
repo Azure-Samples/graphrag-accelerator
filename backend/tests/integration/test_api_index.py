@@ -17,7 +17,10 @@ def test_schedule_index_without_data(client, cosmos_client: CosmosClient):
     """Test scheduling an index job with a non-existent data blob container."""
     response = client.post(
         "/index",
-        params={"index_container_name": "myindex", "storage_container_name": "nonexistent-data-container"},
+        params={
+            "index_container_name": "myindex",
+            "storage_container_name": "nonexistent-data-container",
+        },
     )
     assert response.status_code == 500
 
