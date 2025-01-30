@@ -26,7 +26,6 @@ from graphrag_app.api.graph import graph_route
 from graphrag_app.api.index import index_route
 from graphrag_app.api.prompt_tuning import prompt_tuning_route
 from graphrag_app.api.query import query_route
-from graphrag_app.api.query_streaming import query_streaming_route
 from graphrag_app.api.source import source_route
 from graphrag_app.logger.load_logger import load_pipeline_logger
 from graphrag_app.utils.azure_clients import AzureClientManager
@@ -130,8 +129,11 @@ app = FastAPIOffline(
     root_path=os.getenv("API_ROOT_PATH", ""),
     title="GraphRAG",
     version=os.getenv("GRAPHRAG_VERSION", "undefined_version"),
-    lifespan=lifespan,
+    lifespan=lifespan
+    if os.getenv("KUBERNETES_SERVICE_HOST")
+    else None,  # only set lifespan if running in AKS (by checking for a default k8s environment variable)
 )
+
 app.middleware("http")(catch_all_exceptions_middleware)
 app.add_middleware(
     CORSMiddleware,
@@ -143,7 +145,7 @@ app.add_middleware(
 app.include_router(data_route)
 app.include_router(index_route)
 app.include_router(query_route)
-app.include_router(query_streaming_route)
+# app.include_router(query_streaming_route) # temporarily disable streaming endpoints
 app.include_router(prompt_tuning_route)
 app.include_router(source_route)
 app.include_router(graph_route)

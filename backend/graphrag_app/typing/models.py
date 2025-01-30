@@ -31,7 +31,7 @@ class EntityResponse(BaseModel):
 
 
 class GraphRequest(BaseModel):
-    index_name: str | List[str]
+    index_name: str
     query: str
     community_level: int | None = None
 
