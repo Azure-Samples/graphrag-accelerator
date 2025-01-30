@@ -1,4 +1,3 @@
 [run]
 omit =
     **/__init__.py
-    src/models.py

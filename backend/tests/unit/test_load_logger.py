@@ -2,13 +2,13 @@ from unittest.mock import patch
 
 import pytest
 
-from src.logger.load_logger import load_pipeline_logger
+from graphrag_app.logger.load_logger import load_pipeline_logger
 
 
 @pytest.fixture
 def mock_app_insights_workflow_callbacks():
     with patch(
-        "src.logger.application_insights_workflow_callbacks.ApplicationInsightsWorkflowCallbacks"
+        "graphrag_app.logger.application_insights_workflow_callbacks.ApplicationInsightsWorkflowCallbacks"
     ) as mock_app_insights_workflow_callbacks:
         yield mock_app_insights_workflow_callbacks
 
@@ -24,7 +24,7 @@ def mock_file_workflow_callbacks():
 @pytest.fixture
 def mock_blob_workflow_callbacks():
     with patch(
-        "src.logger.blob_workflow_callbacks.BlobWorkflowCallbacks"
+        "graphrag_app.logger.blob_workflow_callbacks.BlobWorkflowCallbacks"
     ) as mock_blob_workflow_callbacks:
         yield mock_blob_workflow_callbacks
 
@@ -32,7 +32,7 @@ def mock_blob_workflow_callbacks():
 @pytest.fixture
 def mock_console_workflow_callbacks():
     with patch(
-        "src.logger.console_workflow_callbacks.ConsoleWorkflowCallbacks"
+        "graphrag_app.logger.console_workflow_callbacks.ConsoleWorkflowCallbacks"
     ) as mock_console_workflow_callbacks:
         yield mock_console_workflow_callbacks
 
@@ -46,8 +46,8 @@ def test_load_pipeline_logger_with_console(
 ):
     """Test load_pipeline_logger."""
     loggers = load_pipeline_logger(
-        reporting_dir="logs",
-        reporters=["app_insights", "blob", "console", "file"],
+        logging_dir="logs",
+        loggers=["app_insights", "blob", "console", "file"],
         index_name="test-index",
         num_workflow_steps=4,
     )

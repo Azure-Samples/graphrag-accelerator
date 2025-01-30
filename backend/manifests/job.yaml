@@ -1,0 +1,39 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+# NOTE: the location of this file is important as it gets referenced by the job-scheduler.py script
+# and depends on the relative path to this file when uvicorn is run
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: PLACEHOLDER
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: PLACEHOLDER
+      restartPolicy: OnFailure
+      nodeSelector:
+        workload: graphrag-indexing
+      containers:
+        - name: graphrag
+          image: PLACEHOLDER
+          # override default WORKDIR with absolute path to the scripts directory
+          workingDir: "/backend/scripts"
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: "5"
+              memory: "36Gi"
+            limits:
+              cpu: "8"
+              memory: "64Gi"
+          envFrom:
+            - configMapRef:
+                name: graphrag
+          command: [PLACEHOLDER]

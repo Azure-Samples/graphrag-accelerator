@@ -16,9 +16,6 @@ param dnsEndpointType string = 'Standard'
 @allowed(['Enabled', 'Disabled'])
 param publicNetworkAccess string = 'Disabled'
 
-@description('Array of objects with fields principalId, principalType, roleDefinitionId')
-param roleAssignments array = []
-
 param tags object = {}
 param allowBlobPublicAccess bool = false
 param allowCrossTenantReplication bool = true
@@ -66,14 +63,6 @@ resource storage 'Microsoft.Storage/storageAccounts@2023-01-01' = {
     ]
   }
 }
-
-resource storageRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
-  for role in roleAssignments: {
-    name: guid('${role.principalId}-${role.principalType}-${role.roleDefinitionId}')
-    scope: resourceGroup()
-    properties: role
-  }
-]
 
 output name string = storage.name
 output id string = storage.id

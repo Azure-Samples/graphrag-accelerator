@@ -1,55 +1,43 @@
 {
-    "total_runtime": 448.37977504730225,
+    "total_runtime": 358.0534498691559,
     "num_documents": 1,
     "input_load_time": 0,
     "workflows": {
         "create_base_text_units": {
-            "overall": 53.45723581314087,
-            "0_create_base_text_units": 53.45350193977356
+            "overall": 2.060708999633789
         },
         "create_final_documents": {
-            "overall": 0.02505803108215332,
-            "0_create_final_documents": 0.020849943161010742
+            "overall": 0.043251991271972656
         },
         "extract_graph": {
-            "overall": 34.7699990272522,
-            "0_extract_graph": 34.764244079589844
-        },
-        "create_final_covariates": {
-            "overall": 95.0032262802124,
-            "0_create_final_covariates": 94.99715995788574
+            "overall": 162.8238878250122
         },
         "compute_communities": {
-            "overall": 46.5885169506073,
-            "0_compute_communities": 46.58116793632507
+            "overall": 14.345926284790039
         },
         "create_final_entities": {
-            "overall": 0.016257047653198242,
-            "0_create_final_entities": 0.008460044860839844
+            "overall": 0.04870915412902832
         },
         "create_final_relationships": {
-            "overall": 0.024403810501098633,
-            "0_create_final_relationships": 0.015250921249389648
-        },
-        "create_final_communities": {
-            "overall": 0.06716585159301758,
-            "0_create_final_communities": 0.0562739372253418
+            "overall": 0.05901288986206055
         },
         "create_final_nodes": {
-            "overall": 0.07185697555541992,
-            "0_create_final_nodes": 0.06386590003967285
+            "overall": 0.07453203201293945
+        },
+        "create_final_communities": {
+            "overall": 0.127485990524292
+        },
+        "create_final_covariates": {
+            "overall": 142.99078702926636
         },
         "create_final_text_units": {
-            "overall": 0.049547672271728516,
-            "0_create_final_text_units": 0.04032492637634277
+            "overall": 0.12473607063293457
         },
         "create_final_community_reports": {
-            "overall": 208.44650506973267,
-            "0_create_final_community_reports": 208.43680477142334
+            "overall": 31.13183307647705
         },
         "generate_text_embeddings": {
-            "overall": 4.21114182472229,
-            "0_generate_text_embeddings": 4.199523687362671
+            "overall": 3.978173017501831
         }
     }
 }

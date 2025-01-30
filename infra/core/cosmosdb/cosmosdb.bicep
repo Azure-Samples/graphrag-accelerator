@@ -10,18 +10,6 @@ param location string = resourceGroup().location
 @allowed(['Enabled', 'Disabled'])
 param publicNetworkAccess string = 'Disabled'
 
-@description('Role definition id to assign to the principal. Learn more: https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-setup-rbac')
-@allowed([
-  '00000000-0000-0000-0000-000000000001' // 'Cosmos DB Built-in Data Reader' role
-  '00000000-0000-0000-0000-000000000002' // 'Cosmos DB Built-in Data Contributor' role
-])
-param roleDefinitionId array = [
-  '00000000-0000-0000-0000-000000000001'
-  '00000000-0000-0000-0000-000000000002'
-]
-
-param principalId string
-
 resource cosmosDb 'Microsoft.DocumentDB/databaseAccounts@2024-11-15' = {
   name: cosmosDbName
   location: location
@@ -80,104 +68,6 @@ resource cosmosDb 'Microsoft.DocumentDB/databaseAccounts@2024-11-15' = {
     }
   }
 }
-
-resource graphragDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2024-11-15' = {
-  parent: cosmosDb
-  name: 'graphrag'
-  properties: {
-    resource: {
-      id: 'graphrag'
-    }
-  }
-}
-
-resource jobsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-11-15' = {
-  parent: graphragDatabase
-  name: 'jobs'
-  properties: {
-    resource: {
-      id: 'jobs'
-      indexingPolicy: {
-        indexingMode: 'consistent'
-        automatic: true
-        includedPaths: [
-          {
-            path: '/*'
-          }
-        ]
-        excludedPaths: [
-          {
-            path: '/"_etag"/?'
-          }
-        ]
-      }
-      partitionKey: {
-        paths: [
-          '/id'
-        ]
-        kind: 'Hash'
-        version: 2
-      }
-      uniqueKeyPolicy: {
-        uniqueKeys: []
-      }
-      conflictResolutionPolicy: {
-        mode: 'LastWriterWins'
-        conflictResolutionPath: '/_ts'
-      }
-    }
-  }
-}
-
-resource containerStoreContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-11-15' = {
-  parent: graphragDatabase
-  name: 'container-store'
-  properties: {
-    resource: {
-      id: 'container-store'
-      indexingPolicy: {
-        indexingMode: 'consistent'
-        automatic: true
-        includedPaths: [
-          {
-            path: '/*'
-          }
-        ]
-        excludedPaths: [
-          {
-            path: '/"_etag"/?'
-          }
-        ]
-      }
-      partitionKey: {
-        paths: [
-          '/id'
-        ]
-        kind: 'Hash'
-        version: 2
-      }
-      uniqueKeyPolicy: {
-        uniqueKeys: []
-      }
-      conflictResolutionPolicy: {
-        mode: 'LastWriterWins'
-        conflictResolutionPath: '/_ts'
-      }
-    }
-  }
-}
-
-resource sqlRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-11-15' = [
-  for roleId in roleDefinitionId: {
-    name: guid('${roleId}-${principalId}-${cosmosDb.id}')
-    parent: cosmosDb
-    properties: {
-      roleDefinitionId: '${resourceGroup().id}/providers/Microsoft.DocumentDB/databaseAccounts/${cosmosDb.name}/sqlRoleDefinitions/${roleId}'
-      principalId: principalId
-      scope: cosmosDb.id
-    }
-  }
-]
 
 output name string = cosmosDb.name
 output id string = cosmosDb.id
