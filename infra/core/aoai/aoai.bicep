@@ -22,9 +22,6 @@ param llmTpmQuota int = 10
 @description('TPM quota for embedding model deployment (x1000)')
 param embeddingTpmQuota int = 10
 
-@description('Array of objects with fields principalId, roleDefinitionId')
-param roleAssignments array = []
-
 resource aoai 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
   name: openAiName
   location: location
@@ -73,14 +70,6 @@ resource embeddingDeployment 'Microsoft.CognitiveServices/accounts/deployments@2
     currentCapacity: embeddingTpmQuota
   }
 }
-
-resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
-  for role in roleAssignments: {
-    name: guid('${role.principalId}-${role.roleDefinitionId}')
-    scope: resourceGroup()
-    properties: role
-  }
-]
 
 output openAiEndpoint string = aoai.properties.endpoint
 output llmModel string = llmDeployment.properties.model.name
