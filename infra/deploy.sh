@@ -7,7 +7,7 @@
 aksNamespace="graphrag"
 
 # OPTIONAL PARAMS
-AISEARCH_AUDIENCE=""
+AI_SEARCH_AUDIENCE=""
 AISEARCH_ENDPOINT_SUFFIX=""
 APIM_NAME=""
 APIM_TIER=""
@@ -217,9 +217,9 @@ populateOptionalParams () {
         AISEARCH_ENDPOINT_SUFFIX="search.windows.net"
         printf "\tsetting AISEARCH_ENDPOINT_SUFFIX=$AISEARCH_ENDPOINT_SUFFIX\n"
     fi
-    if [ -z "$AISEARCH_AUDIENCE" ]; then
-        AISEARCH_AUDIENCE="https://search.azure.com"
-        printf "\tsetting AISEARCH_AUDIENCE=$AISEARCH_AUDIENCE\n"
+    if [ -z "$AI_SEARCH_AUDIENCE" ]; then
+        AI_SEARCH_AUDIENCE="https://search.azure.com"
+        printf "\tsetting AI_SEARCH_AUDIENCE=$AI_SEARCH_AUDIENCE\n"
     fi
     if [ -z "$PUBLISHER_NAME" ]; then
         PUBLISHER_NAME="publisher"
@@ -256,11 +256,11 @@ createResourceGroupIfNotExists () {
     local location=$1
     local rg=$2
     printf "Checking if resource group $rg exists... "
-    az group show -n $rg -o json >  /dev/null 2>&1
+    az group show -n $rg -o json > /dev/null 2>&1
     if [ $? -ne 0 ]; then
         printf "No.\n"
         printf "Creating resource group... "
-        az group create -l $location -n $rg >  /dev/null 2>&1
+        az group create -l $location -n $rg > /dev/null 2>&1
         printf "Done.\n"
     else
         printf "Yes.\n"
@@ -271,7 +271,7 @@ getAksCredentials () {
     local rg=$1
     local aks=$2
     printf "Getting AKS credentials... "
-    az aks get-credentials -g $rg -n $aks --overwrite-existing > /dev/null > /dev/null 2>&1
+    az aks get-credentials -g $rg -n $aks --overwrite-existing > /dev/null 2>&1
     exitIfCommandFailed $? "Error getting AKS credentials, exiting..."
     kubelogin convert-kubeconfig -l azurecli
     exitIfCommandFailed $? "Error logging into AKS, exiting..."
@@ -403,7 +403,6 @@ installGraphRAGHelmChart () {
     exitIfValueEmpty "$cosmosEndpoint" "Unable to parse CosmosDB endpoint from Azure outputs, exiting..."
 
     local graphragHostname=$(jq -r .azure_app_hostname.value <<< $AZURE_OUTPUTS)
-    local graphragHostname=$(jq -r .azure_app_hostname.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$graphragHostname" "Unable to parse graphrag hostname from deployment outputs, exiting..."
 
     local storageAccountBlobUrl=$(jq -r .azure_storage_account_blob_url.value <<< $AZURE_OUTPUTS)
@@ -445,6 +444,7 @@ installGraphRAGHelmChart () {
         --set "master.image.tag=$graphragImageVersion" \
         --set "ingress.host=$graphragHostname" \
         --set "graphragConfig.AI_SEARCH_URL=https://$aiSearchName.$AISEARCH_ENDPOINT_SUFFIX" \
+        --set "graphragConfig.AI_SEARCH_AUDIENCE=$AI_SEARCH_AUDIENCE" \
         --set "graphragConfig.APPLICATIONINSIGHTS_CONNECTION_STRING=$appInsightsConnectionString" \
         --set "graphragConfig.COSMOS_URI_ENDPOINT=$cosmosEndpoint" \
         --set "graphragConfig.GRAPHRAG_API_BASE=$graphragApiBase" \
@@ -527,7 +527,6 @@ deployGraphragAPI () {
     local apimName=$(jq -r .azure_apim_name.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$apimName" "Error parsing apim name from azure outputs, exiting..."
     local backendSwaggerUrl="$apimGatewayUrl/manpage/openapi.json"
-    local graphragUrl=$(jq -r .azure_app_url.value <<< $AZURE_OUTPUTS)
     local graphragUrl=$(jq -r .azure_app_url.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$graphragUrl" "Error parsing GraphRAG URL from azure outputs, exiting..."
 

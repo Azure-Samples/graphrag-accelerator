@@ -85,7 +85,7 @@ var dnsDomain = 'graphrag.io'
 var appHostname = 'graphrag.${dnsDomain}'
 var appUrl = 'http://${appHostname}'
 
-@description('Role definitions for various roles that will be assigned at deployment time. Learn more: https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles')
+@description('Role definitions for various RBAC roles that will be assigned at deployment time. Learn more: https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles')
 var roles = {
   acrPull: resourceId(
     'Microsoft.Authorization/roleDefinitions',
