@@ -24,7 +24,7 @@ resource api 'Microsoft.ApiManagement/service/apis@2023-09-01-preview' = {
     }
     isCurrent: true
     format: 'openapi+json'
-    value: string(loadJsonContent('graphrag-openapi.json')) // local file will be dynamically created by deployment script
+    value: string(loadJsonContent('../../managed-app/openapi.json')) // local file will be dynamically created by deployment script
   }
   resource apiPolicy 'policies@2022-08-01' = {
     name: 'policy'
