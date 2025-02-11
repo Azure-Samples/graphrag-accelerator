@@ -2,6 +2,13 @@
 
 This guide is a temporary document that walks through the process to convert the graphrag solution accelerator to a managed app.
 
+ ### Prerequisites
+ ### 1. create a ACR and push the code to a docker image.
+ ### 2. This managed app uses storage account to deploy, so please copy the storage account name and the SAS key.
+ ### 3. When publishing the managed app , please turn on anon access to the Blob where the package can be accessed. 
+
+ ### Steps to build Managed App
+
 ### 1. Auto format the bicep code
 
 As a precaution, start by auto-formating and linting the bicep code to detect any mistakes early-on.
@@ -27,8 +34,8 @@ The name of the final two files (`mainTemplate.json` and `createUiDefinition.jso
 
 ```bash
 cd <repo_root_directory>/infra/managed-app
-zip -rj managed-app.zip .
-```
+ tar -a -c -f managed-app.zip createUiDefinition.json mainTemplate.json openapi.json artifacts 
+ ```
 
 This zip file can then be uploaded to an Azure Storage location when setting up a [Service Catalog Managed Application Definition](https://ms.portal.azure.com/#view/Microsoft_Azure_Marketplace/GalleryItemDetailsBladeNopdl/id/Microsoft.ApplianceDefinition/selectionMode~/false/resourceGroupId//resourceGroupLocation//dontDiscardJourney~/false/selectedMenuId/home/launchingContext~/%7B%22galleryItemId%22%3A%22Microsoft.ApplianceDefinition%22%2C%22source%22%3A%5B%22GalleryFeaturedMenuItemPart%22%2C%22VirtualizedTileDetails%22%5D%2C%22menuItemId%22%3A%22home%22%2C%22subMenuItemId%22%3A%22Search%20results%22%2C%22telemetryId%22%3A%2220409084-39a1-4800-bbce-d0b26a6f46a4%22%7D/searchTelemetryId/d7d20e05-ca16-47f7-bed5-9c7b8d2fa641).
 
@@ -38,8 +45,9 @@ In the Azure Portal, go to Marketplace and create a `Service Catalog Managed App
 
 ### 6. Deploy the managed app
 
-In the Azure Portal, find and click on the managed app definition resource that was created in the previous step. A button option to `Deploy from definition` will be available. Click on it and proceed through the setup steps (defined by the `createUiDefinitions.json` file) that a consumer would experience when installing the managed app.
+
+You can deploy from the portal using the following steps In the Azure Portal, find and click on the managed app definition resource that was created in the previous step. A button option to `Deploy from definition` will be available. Click on it and proceed through the setup steps (defined by the `createUiDefinitions.json` file) that a consumer would experience when installing the managed app.
 
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure-Samples%2Fgraphrag-accelerator%2Frefs%2Fheads%2Fharjit-managed-app%2Finfra%2FmainTemplate.json)
+or you can deploy to azure [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure-Samples%2Fgraphrag-accelerator%2Frefs%2Fheads%2Fharjit-managed-app%2Finfra%2FmainTemplate.json)
 
