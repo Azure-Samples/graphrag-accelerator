@@ -16,10 +16,9 @@ param azure_apim_name string
 param managed_identity_aks string
 param ai_search_name string
 
-@description('Specifies the primary script URI.')
-param primaryScriptUri string
 param imagename string
 param imageversion string
+param script_file string
 
 
 param azure_aoai_endpoint string
@@ -47,6 +46,8 @@ param azure_workload_identity_client_id string
 param azure_workload_identity_principal_id string
 param  azure_workload_identity_name string
 param cognitive_services_audience string = 'https://cognitiveservices.azure.com/default'
+param public_storage_account_name string
+param public_storage_account_key string
 
 var clusterAdminRoleDefinitionId = resourceId('Microsoft.Authorization/roleDefinitions', '0ab0b1a8-8aac-4efd-b8c2-3ee1fb270be8')
 
@@ -55,13 +56,18 @@ resource aksCluster 'Microsoft.ContainerService/managedClusters@2022-11-02-previ
   name: azure_aks_name
 }
 
+resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: uniqueString(resourceGroup().id)
+  location: location
+}
+
 
 resource clusterAdminContributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name:  guid(managed_identity_aks, aksCluster.id, clusterAdminRoleDefinitionId)
   scope: aksCluster
   properties: {
     roleDefinitionId: clusterAdminRoleDefinitionId
-    principalId: managed_identity_aks
+    principalId: managedIdentity.properties.principalId
     principalType: 'ServicePrincipal'
   }
 }
@@ -73,10 +79,14 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01'= {
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: {
-      '${managed_identity_aks}': {}
+      '${managedIdentity.id}': {}
     }
   }
   properties: {
+    storageAccountSettings: {
+      storageAccountName: public_storage_account_name
+      storageAccountKey: public_storage_account_key
+    }
     forceUpdateTag: utcValue
     azCliVersion: '2.7.0'
     timeout: 'PT1H'
@@ -219,12 +229,19 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01'= {
   
     value: azure_aoai_endpoint 
   }
+
+  {   
+    name: 'AZURE_RESOURCE_GROUP'
+  
+    value: resourceGroup().name 
+  }
         
     
       ]
     cleanupPreference: 'OnSuccess'
     retentionInterval: 'P1D'
-    primaryScriptUri: primaryScriptUri
+    //primaryScriptUri: primaryScriptUri
+    scriptContent:script_file
     }
     dependsOn: [
       aksCluster

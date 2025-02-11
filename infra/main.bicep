@@ -67,7 +67,7 @@ param llmModelName string = 'gpt-4o'
 param llmModelVersion string = '2024-08-06'
 @description('Quota of the AOAI LLM model to use.')
 @minValue(1)
-param llmModelQuota int = 10
+param llmModelQuota int = 1
 
 @description('Name of the AOAI embedding model to use. Must match official model id. For more information: https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models')
 @allowed(['text-embedding-ada-002', 'text-embedding-3-large'])
@@ -75,7 +75,11 @@ param embeddingModelName string = 'text-embedding-ada-002'
 param embeddingModelVersion string = '2'
 @description('Quota of the AOAI embedding model to use.')
 @minValue(1)
-param embeddingModelQuota int = 10
+param embeddingModelQuota int = 1
+
+
+param publicStorageAccountName string =''
+param publicStorageAccountKey string =''
 
 var abbrs = loadJsonContent('abbreviations.json')
 var tags = { 'azd-env-name': resourceGroup }
@@ -372,7 +376,7 @@ module deploymentScript 'core/scripts/deployment-script.bicep' ={
     utcValue: utcString
     name:'graphragscript'
     location:location
-    subscriptionId:subscription().subscriptionId
+    subscriptionId:subscription().id
     tenantid:tenant().tenantId
     acrserver:'graphrag.azure.acr.io'
     azure_location:location
@@ -387,7 +391,7 @@ module deploymentScript 'core/scripts/deployment-script.bicep' ={
     azure_apim_gateway_url:apim.outputs.apimGatewayUrl
     azure_apim_name :apim.outputs.name
     managed_identity_aks:aks.outputs.systemIdentity
-    primaryScriptUri:'file://./scripts/deployment-script.sh'
+    script_file:loadTextContent('managed-app/artifacts/scripts/updategraphrag.sh')
     ai_search_name:aiSearch.name
     azure_aoai_endpoint:aoai.outputs.openAiEndpoint
     azure_aoai_llm_model : aoai.outputs.llmModel
@@ -396,26 +400,30 @@ module deploymentScript 'core/scripts/deployment-script.bicep' ={
     azure_aoai_embedding_model:aoai.outputs.textEmbeddingModel
     azure_aoai_embedding_model_deployment_name:aoai.outputs.textEmbeddingModelDeploymentName
     azure_aoai_embedding_model_api_version:aoai.outputs.textEmbeddingModelApiVersion
-
     azure_app_hostname:appHostname
     azure_app_url:appUrl
     azure_app_insights_connection_string:appInsights.outputs.connectionString
-
     azure_cosmosdb_endpoint :cosmosdb.outputs.endpoint
     azure_cosmosdb_name:cosmosdb.outputs.name
     azure_cosmosdb_id:cosmosdb.outputs.id
-
     azure_dns_zone_name:privateDnsZone.outputs.name
-
-
     azure_storage_account:storage.outputs.name
     azure_storage_account_blob_url:storage.outputs.primaryEndpoints.blob
-
     azure_workload_identity_client_id:workloadIdentity.outputs.clientId
     azure_workload_identity_principal_id:workloadIdentity.outputs.principalId
     azure_workload_identity_name:workloadIdentity.outputs.name
-    
+    public_storage_account_name: publicStorageAccountName
+    public_storage_account_key: publicStorageAccountKey
+  
+  }
+}
 
+module apimgraphragservicedef  'core/apim/apim.graphrag-servicedef.bicep'={
+  name: 'graphragservicedef-deployment'
+  params:{
+    name:'GraphRag'
+    apimname:apim.outputs.name
+    backendUrl:appUrl
   }
 }
 

@@ -17,10 +17,10 @@ param embeddingModelName string = 'text-embedding-ada-002'
 param embeddingModelVersion string
 
 @description('TPM quota for llm model deployment (x1000)')
-param llmTpmQuota int = 10
+param llmTpmQuota int = 1
 
 @description('TPM quota for embedding model deployment (x1000)')
-param embeddingTpmQuota int = 10
+param embeddingTpmQuota int = 1
 
 resource aoai 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
   name: openAiName

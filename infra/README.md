@@ -39,3 +39,7 @@ In the Azure Portal, go to Marketplace and create a `Service Catalog Managed App
 ### 6. Deploy the managed app
 
 In the Azure Portal, find and click on the managed app definition resource that was created in the previous step. A button option to `Deploy from definition` will be available. Click on it and proceed through the setup steps (defined by the `createUiDefinitions.json` file) that a consumer would experience when installing the managed app.
+
+
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https%3A%2F%2Fgithub.com%2FAzure-Samples%2Fgraphrag-accelerator%2Fblob%2Fharjit-managed-app%2Finfra%2FmainTemplate.json)
+

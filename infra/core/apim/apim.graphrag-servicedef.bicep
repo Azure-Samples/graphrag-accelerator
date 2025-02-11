@@ -5,6 +5,9 @@ param backendUrl string
 param name string
 param apimname string
 
+
+
+
 resource api 'Microsoft.ApiManagement/service/apis@2023-09-01-preview' = {
   name: '${apimname}/${name}'
   properties: {

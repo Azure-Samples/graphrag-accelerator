@@ -65,7 +65,7 @@ resource aks 'Microsoft.ContainerService/managedClusters@2024-09-02-preview' = {
   }
   properties: {
     enableRBAC: true
-    disableLocalAccounts: true
+    disableLocalAccounts: false
     dnsPrefix: !empty(dnsPrefix) ? dnsPrefix : toLower(clusterName)
     aadProfile: {
       managed: true

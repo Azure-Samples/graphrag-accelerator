@@ -159,7 +159,43 @@
             "visible": true
           }
         ]
+      },
+      {
+        "name": "StorageaccountSettings",
+        "label": "StorageAccount Settings",
+        "subLabel": {
+          "preValidation": "Configure the graphrag settings",
+          "postValidation": "Completed"
+        },
+        "elements": [
+          {
+            "name": "StorageAccountName",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Storage Account",
+            "defaultValue": "",
+            "toolTip": "StorageAccountName to use",
+            "visible": true,
+            "constraints": {
+              "required": true
+            }
+          },
+          {
+          "name": "StorageAccountKey",
+          "type": "Microsoft.Common.PasswordBox",
+          "label": {
+            "password": "Storage Account Key",
+            "confirmPassword": "Confirm Storage Account Key"
+          },
+          "constraints": {
+            "required": true
+          },
+          "visible": true
+    
+        }
+
+        ]
       }
+
     ],
     "outputs": {
       "resourceGroup": "[resourceGroup().name]",
@@ -170,7 +206,9 @@
       "embeddingModelName": "[steps('aoaiSettings').embeddingModel]",
       "embeddingModelQuota": "[int(steps('aoaiSettings').embeddingModelQuota)]",
       "llmModelVersion": "[steps('aoaiSettings').llmModelVersion]",
-      "embeddingModelVersion": "[steps('aoaiSettings').embeddingModelVersion]"
+      "embeddingModelVersion": "[steps('aoaiSettings').embeddingModelVersion]",
+      "publicStorageAccountName": "[steps('StorageaccountSettings').StorageAccountName]",
+      "publicStorageAccountKey": "[steps('StorageaccountSettings').StorageAccountKey]"
     }
   }
 }

@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.33.13.18514",
-      "templateHash": "9931387349449043336"
+      "version": "0.33.93.31351",
+      "templateHash": "9942415607713496570"
     }
   },
   "parameters": {
@@ -92,6 +92,18 @@
       "type": "string",
       "defaultValue": ""
     },
+    "utcString": {
+      "type": "string",
+      "defaultValue": "[utcNow()]"
+    },
+    "graphragimage": {
+      "type": "string",
+      "defaultValue": "graphragbackend"
+    },
+    "graphragimageversion": {
+      "type": "string",
+      "defaultValue": "latest"
+    },
     "llmModelName": {
       "type": "string",
       "defaultValue": "gpt-4o",
@@ -112,7 +124,7 @@
     },
     "llmModelQuota": {
       "type": "int",
-      "defaultValue": 10,
+      "defaultValue": 1,
       "minValue": 1,
       "metadata": {
         "description": "Quota of the AOAI LLM model to use."
@@ -135,11 +147,19 @@
     },
     "embeddingModelQuota": {
       "type": "int",
-      "defaultValue": 10,
+      "defaultValue": 1,
       "minValue": 1,
       "metadata": {
         "description": "Quota of the AOAI embedding model to use."
       }
+    },
+    "publicStorageAccountName": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "publicStorageAccountKey": {
+      "type": "securestring",
+      "defaultValue": ""
     }
   },
   "variables": {
@@ -280,6 +300,7 @@
       "webSitesFunctions": "func-",
       "webStaticSites": "stapp-"
     },
+    "$fxv#1": "#!/bin/bash\n# Install kubectl\nset -e\naz aks install-cli --only-show-errors\n  \n\n# Get AKS credentials\naz aks get-credentials \\\n  --admin \\\n  --name $AZURE_AKS_NAME  \\\n  --resource-group $AZURE_RESOURCE_GROUP --only-show-errors\n\n# Check if the cluster is private or not\n\n# Assign a value to aksNamespace\naksNamespace=\"graphrag\"\n\n# Install Helm\ncurl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 -o get_helm.sh -s\nchmod 700 get_helm.sh\n./get_helm.sh &>/dev/null\n\n# Add Helm repos\nhelm repo add prometheus-community https://prometheus-community.github.io/helm-charts\nhelm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx\n\n# Update Helm repos\nhelm repo update\n\nhelm pull  oci://graphrag.azurecr.io/graphrag --untar\n\n  \nhelm upgrade -i graphrag ./graphrag -f ./graphrag/values.yaml \\\n    --namespace $aksNamespace --create-namespace \\\n    --set \"serviceAccount.name=$AZURE_AKS_SERVICE_ACCOUNT_NAME\" \\\n    --set \"serviceAccount.annotations.azure\\.workload\\.identity/client-id=$AZURE_WORKLOAD_IDENTITY_CLIENT_ID\" \\\n    --set \"master.image.repository=graphrag.azurecr.io/$IMAGE_NAME\" \\\n    --set \"master.image.tag=$IMAGE_VERSION\" \\\n    --set \"ingress.host=$AZURE_APP_HOSTNAME\" \\\n    --set \"graphragConfig.APPLICATIONINSIGHTS_CONNECTION_STRING=$APP_INSIGHTS_CONNECTION_STRING\" \\\n    --set \"graphragConfig.AI_SEARCH_URL=https://$AI_SEARCH_NAME.search.windows.net\" \\\n    --set \"graphragConfig.COSMOS_URI_ENDPOINT=$AZURE_COSMOSDB_ENDPOINT\" \\\n    --set \"graphragConfig.GRAPHRAG_API_BASE=$AZURE_OPENAI_ENDPOINT\" \\\n    --set \"graphragConfig.GRAPHRAG_API_VERSION=$AZURE_AOAI_LLM_MODEL_API_VERSION\" \\\n    --set \"graphragConfig.GRAPHRAG_LLM_MODEL=$AZURE_AOAI_LLM_MODEL\"\\\n    --set \"graphragConfig.GRAPHRAG_LLM_DEPLOYMENT_NAME=$AZURE_AOAI_LLM_MODEL_DEPLOYMENT_NAME\" \\\n    --set \"graphragConfig.GRAPHRAG_EMBEDDING_MODEL=$AZURE_AOAI_EMBEDDING_MODEL\" \\\n    --set \"graphragConfig.GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME=$AZURE_AOAI_EMBEDDING_MODEL_DEPLOYMENT_NAME\" \\\n    --set \"graphragConfig.COGNITIVE_SERVICES_AUDIENCE=$COGNITIVE_SERVICES_AUDIENCE\" \\\n    --set \"graphragConfig.STORAGE_ACCOUNT_BLOB_URL=$AZURE_STORAGE_ACCOUNT_BLOB_URL\"\n\n  \n\n\n\n",
     "resourceBaseNameFinal": "[if(not(empty(parameters('resourceBaseName'))), parameters('resourceBaseName'), toLower(uniqueString(format('{0}/resourceGroups/{1}', subscription().id, parameters('resourceGroup')))))]",
     "abbrs": "[variables('$fxv#0')]",
     "tags": {
@@ -324,8 +345,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.13.18514",
-              "templateHash": "12633129174833370467"
+              "version": "0.33.93.31351",
+              "templateHash": "15674161325892705676"
             }
           },
           "parameters": {
@@ -472,8 +493,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.13.18514",
-              "templateHash": "7894561717174372245"
+              "version": "0.33.93.31351",
+              "templateHash": "13254511464568135903"
             }
           },
           "parameters": {
@@ -527,8 +548,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.13.18514",
-              "templateHash": "6505063178335705329"
+              "version": "0.33.93.31351",
+              "templateHash": "11258206015777241921"
             }
           },
           "parameters": {
@@ -605,8 +626,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.13.18514",
-              "templateHash": "7427556975670137358"
+              "version": "0.33.93.31351",
+              "templateHash": "16619124547797522615"
             }
           },
           "parameters": {
@@ -914,8 +935,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.13.18514",
-              "templateHash": "7094004855498640344"
+              "version": "0.33.93.31351",
+              "templateHash": "9158217012658604749"
             }
           },
           "parameters": {
@@ -1065,8 +1086,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.13.18514",
-              "templateHash": "3498035798180053085"
+              "version": "0.33.93.31351",
+              "templateHash": "15475380690582621771"
             }
           },
           "parameters": {
@@ -1112,14 +1133,14 @@
             },
             "llmTpmQuota": {
               "type": "int",
-              "defaultValue": 10,
+              "defaultValue": 1,
               "metadata": {
                 "description": "TPM quota for llm model deployment (x1000)"
               }
             },
             "embeddingTpmQuota": {
               "type": "int",
-              "defaultValue": 10,
+              "defaultValue": 1,
               "metadata": {
                 "description": "TPM quota for embedding model deployment (x1000)"
               }
@@ -1236,8 +1257,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.13.18514",
-              "templateHash": "2055687397636798534"
+              "version": "0.33.93.31351",
+              "templateHash": "3579514199569414551"
             }
           },
           "parameters": {
@@ -1336,8 +1357,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.13.18514",
-              "templateHash": "11487597397946974030"
+              "version": "0.33.93.31351",
+              "templateHash": "4262586997141187053"
             }
           },
           "parameters": {
@@ -1517,7 +1538,7 @@
               },
               "properties": {
                 "enableRBAC": true,
-                "disableLocalAccounts": true,
+                "disableLocalAccounts": false,
                 "dnsPrefix": "[if(not(empty(parameters('dnsPrefix'))), parameters('dnsPrefix'), toLower(parameters('clusterName')))]",
                 "aadProfile": {
                   "managed": true,
@@ -1685,8 +1706,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.13.18514",
-              "templateHash": "11816911936820039606"
+              "version": "0.33.93.31351",
+              "templateHash": "4114639481216656536"
             }
           },
           "parameters": {
@@ -1813,8 +1834,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.13.18514",
-              "templateHash": "2376857239076024622"
+              "version": "0.33.93.31351",
+              "templateHash": "4148789917591925909"
             }
           },
           "parameters": {
@@ -1905,8 +1926,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.13.18514",
-              "templateHash": "5608400408329637194"
+              "version": "0.33.93.31351",
+              "templateHash": "5352518107419090409"
             }
           },
           "parameters": {
@@ -2085,8 +2106,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.13.18514",
-              "templateHash": "14280738582927740005"
+              "version": "0.33.93.31351",
+              "templateHash": "11002141915701219380"
             }
           },
           "parameters": {
@@ -2204,8 +2225,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.13.18514",
-              "templateHash": "14582251664377611150"
+              "version": "0.33.93.31351",
+              "templateHash": "14843923724157327855"
             }
           },
           "parameters": {
@@ -2456,8 +2477,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.13.18514",
-              "templateHash": "10620983066885906719"
+              "version": "0.33.93.31351",
+              "templateHash": "2670804874768629752"
             }
           },
           "parameters": {
@@ -2564,8 +2585,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.13.18514",
-              "templateHash": "11208726344160642523"
+              "version": "0.33.93.31351",
+              "templateHash": "17962046310475786003"
             }
           },
           "parameters": {
@@ -2657,8 +2678,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.13.18514",
-              "templateHash": "1285005992081263811"
+              "version": "0.33.93.31351",
+              "templateHash": "13258802455944913421"
             }
           },
           "parameters": {
@@ -2755,8 +2776,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.13.18514",
-              "templateHash": "16525541988331055931"
+              "version": "0.33.93.31351",
+              "templateHash": "1905656724149562282"
             }
           },
           "parameters": {
@@ -2835,8 +2856,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.33.13.18514",
-                      "templateHash": "6113218360443805978"
+                      "version": "0.33.93.31351",
+                      "templateHash": "9115361788050213720"
                     }
                   },
                   "parameters": {
@@ -2956,8 +2977,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.13.18514",
-              "templateHash": "3076000571800932587"
+              "version": "0.33.93.31351",
+              "templateHash": "6906230456894515846"
             }
           },
           "parameters": {
@@ -3057,8 +3078,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.13.18514",
-              "templateHash": "13518705746136222913"
+              "version": "0.33.93.31351",
+              "templateHash": "13335949838347044523"
             }
           },
           "parameters": {
@@ -3168,8 +3189,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.13.18514",
-              "templateHash": "13518705746136222913"
+              "version": "0.33.93.31351",
+              "templateHash": "13335949838347044523"
             }
           },
           "parameters": {
@@ -3279,8 +3300,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.13.18514",
-              "templateHash": "13518705746136222913"
+              "version": "0.33.93.31351",
+              "templateHash": "13335949838347044523"
             }
           },
           "parameters": {
@@ -3388,8 +3409,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.33.13.18514",
-              "templateHash": "13518705746136222913"
+              "version": "0.33.93.31351",
+              "templateHash": "13335949838347044523"
             }
           },
           "parameters": {
@@ -3463,6 +3484,1859 @@
         "[resourceId('Microsoft.Resources/deployments', 'azure-monitor-privatelink-scope-deployment')]",
         "[resourceId('Microsoft.Resources/deployments', 'privatelink-private-dns-zones-deployment')]",
         "[resourceId('Microsoft.Resources/deployments', 'vnet-deployment')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "[parameters('utcString')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "utcValue": {
+            "value": "[parameters('utcString')]"
+          },
+          "name": {
+            "value": "graphragscript"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "subscriptionId": {
+            "value": "[subscription().id]"
+          },
+          "tenantid": {
+            "value": "[tenant().tenantId]"
+          },
+          "acrserver": {
+            "value": "graphrag.azure.acr.io"
+          },
+          "azure_location": {
+            "value": "[parameters('location')]"
+          },
+          "azure_acr_login_server": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'acr-deployment'), '2022-09-01').outputs.loginServer.value]"
+          },
+          "azure_acr_name": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'acr-deployment'), '2022-09-01').outputs.name.value]"
+          },
+          "azure_aks_name": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'aks-deployment'), '2022-09-01').outputs.name.value]"
+          },
+          "azure_aks_controlplanefqdn": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'aks-deployment'), '2022-09-01').outputs.controlPlaneFqdn.value]"
+          },
+          "azure_aks_managed_rg": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'aks-deployment'), '2022-09-01').outputs.managedResourceGroup.value]"
+          },
+          "azure_aks_service_account_name": {
+            "value": "[variables('aksServiceAccountName')]"
+          },
+          "imagename": {
+            "value": "[parameters('graphragimage')]"
+          },
+          "imageversion": {
+            "value": "[parameters('graphragimageversion')]"
+          },
+          "azure_apim_gateway_url": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'apim-deployment'), '2022-09-01').outputs.apimGatewayUrl.value]"
+          },
+          "azure_apim_name": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'apim-deployment'), '2022-09-01').outputs.name.value]"
+          },
+          "managed_identity_aks": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'aks-deployment'), '2022-09-01').outputs.systemIdentity.value]"
+          },
+          "script_file": {
+            "value": "[variables('$fxv#1')]"
+          },
+          "ai_search_name": {
+            "value": "aisearch-deployment"
+          },
+          "azure_aoai_endpoint": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.openAiEndpoint.value]"
+          },
+          "azure_aoai_llm_model": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.llmModel.value]"
+          },
+          "azure_aoai_llm_model_deployment_name": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.llmModelDeploymentName.value]"
+          },
+          "azure_aoai_llm_model_api_version": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.llmModelApiVersion.value]"
+          },
+          "azure_aoai_embedding_model": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.textEmbeddingModel.value]"
+          },
+          "azure_aoai_embedding_model_deployment_name": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.textEmbeddingModelDeploymentName.value]"
+          },
+          "azure_aoai_embedding_model_api_version": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.textEmbeddingModelApiVersion.value]"
+          },
+          "azure_app_hostname": {
+            "value": "[variables('appHostname')]"
+          },
+          "azure_app_url": {
+            "value": "[variables('appUrl')]"
+          },
+          "azure_app_insights_connection_string": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'app-insights-deployment'), '2022-09-01').outputs.connectionString.value]"
+          },
+          "azure_cosmosdb_endpoint": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'cosmosdb-deployment'), '2022-09-01').outputs.endpoint.value]"
+          },
+          "azure_cosmosdb_name": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'cosmosdb-deployment'), '2022-09-01').outputs.name.value]"
+          },
+          "azure_cosmosdb_id": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'cosmosdb-deployment'), '2022-09-01').outputs.id.value]"
+          },
+          "azure_dns_zone_name": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'private-dns-zone-deployment'), '2022-09-01').outputs.name.value]"
+          },
+          "azure_storage_account": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storage-deployment'), '2022-09-01').outputs.name.value]"
+          },
+          "azure_storage_account_blob_url": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storage-deployment'), '2022-09-01').outputs.primaryEndpoints.value.blob]"
+          },
+          "azure_workload_identity_client_id": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'workload-identity-deployment'), '2022-09-01').outputs.clientId.value]"
+          },
+          "azure_workload_identity_principal_id": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'workload-identity-deployment'), '2022-09-01').outputs.principalId.value]"
+          },
+          "azure_workload_identity_name": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'workload-identity-deployment'), '2022-09-01').outputs.name.value]"
+          },
+          "public_storage_account_name": {
+            "value": "[parameters('publicStorageAccountName')]"
+          },
+          "public_storage_account_key": {
+            "value": "[parameters('publicStorageAccountKey')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.33.93.31351",
+              "templateHash": "17195102145442235485"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string"
+            },
+            "utcValue": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "subscriptionId": {
+              "type": "string"
+            },
+            "tenantid": {
+              "type": "string"
+            },
+            "acrserver": {
+              "type": "string"
+            },
+            "azure_location": {
+              "type": "string"
+            },
+            "azure_acr_login_server": {
+              "type": "string"
+            },
+            "azure_acr_name": {
+              "type": "string"
+            },
+            "azure_aks_name": {
+              "type": "string"
+            },
+            "azure_aks_controlplanefqdn": {
+              "type": "string"
+            },
+            "azure_aks_managed_rg": {
+              "type": "string"
+            },
+            "azure_aks_service_account_name": {
+              "type": "string"
+            },
+            "azure_apim_gateway_url": {
+              "type": "string"
+            },
+            "azure_apim_name": {
+              "type": "string"
+            },
+            "managed_identity_aks": {
+              "type": "string"
+            },
+            "ai_search_name": {
+              "type": "string"
+            },
+            "imagename": {
+              "type": "string"
+            },
+            "imageversion": {
+              "type": "string"
+            },
+            "script_file": {
+              "type": "string"
+            },
+            "azure_aoai_endpoint": {
+              "type": "string"
+            },
+            "azure_aoai_llm_model": {
+              "type": "string"
+            },
+            "azure_aoai_llm_model_deployment_name": {
+              "type": "string"
+            },
+            "azure_aoai_llm_model_api_version": {
+              "type": "string"
+            },
+            "azure_aoai_embedding_model": {
+              "type": "string"
+            },
+            "azure_aoai_embedding_model_deployment_name": {
+              "type": "string"
+            },
+            "azure_aoai_embedding_model_api_version": {
+              "type": "string"
+            },
+            "azure_app_hostname": {
+              "type": "string"
+            },
+            "azure_app_url": {
+              "type": "string"
+            },
+            "azure_app_insights_connection_string": {
+              "type": "string"
+            },
+            "azure_cosmosdb_endpoint": {
+              "type": "string"
+            },
+            "azure_cosmosdb_name": {
+              "type": "string"
+            },
+            "azure_cosmosdb_id": {
+              "type": "string"
+            },
+            "azure_dns_zone_name": {
+              "type": "string"
+            },
+            "azure_storage_account": {
+              "type": "string"
+            },
+            "azure_storage_account_blob_url": {
+              "type": "string"
+            },
+            "azure_workload_identity_client_id": {
+              "type": "string"
+            },
+            "azure_workload_identity_principal_id": {
+              "type": "string"
+            },
+            "azure_workload_identity_name": {
+              "type": "string"
+            },
+            "cognitive_services_audience": {
+              "type": "string",
+              "defaultValue": "https://cognitiveservices.azure.com/default"
+            },
+            "public_storage_account_name": {
+              "type": "string"
+            },
+            "public_storage_account_key": {
+              "type": "string"
+            }
+          },
+          "variables": {
+            "clusterAdminRoleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', '0ab0b1a8-8aac-4efd-b8c2-3ee1fb270be8')]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2023-01-31",
+              "name": "[uniqueString(resourceGroup().id)]",
+              "location": "[parameters('location')]"
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.ContainerService/managedClusters/{0}', parameters('azure_aks_name'))]",
+              "name": "[guid(parameters('managed_identity_aks'), resourceId('Microsoft.ContainerService/managedClusters', parameters('azure_aks_name')), variables('clusterAdminRoleDefinitionId'))]",
+              "properties": {
+                "roleDefinitionId": "[variables('clusterAdminRoleDefinitionId')]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', uniqueString(resourceGroup().id)), '2023-01-31').principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', uniqueString(resourceGroup().id))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Resources/deploymentScripts",
+              "apiVersion": "2020-10-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "kind": "AzureCLI",
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', uniqueString(resourceGroup().id)))]": {}
+                }
+              },
+              "properties": {
+                "storageAccountSettings": {
+                  "storageAccountName": "[parameters('public_storage_account_name')]",
+                  "storageAccountKey": "[parameters('public_storage_account_key')]"
+                },
+                "forceUpdateTag": "[parameters('utcValue')]",
+                "azCliVersion": "2.7.0",
+                "timeout": "PT1H",
+                "environmentVariables": [
+                  {
+                    "name": "AZURE_SUBSCRIPTION_ID",
+                    "value": "[parameters('subscriptionId')]"
+                  },
+                  {
+                    "name": "AZURE_TENANT_ID",
+                    "value": "[parameters('tenantid')]"
+                  },
+                  {
+                    "name": "ACR_SERVER",
+                    "value": "[parameters('acrserver')]"
+                  },
+                  {
+                    "name": "AZURE_LOCATION",
+                    "value": "[parameters('azure_location')]"
+                  },
+                  {
+                    "name": "AZURE_ACR_LOGIN_SERVER",
+                    "value": "[parameters('azure_acr_login_server')]"
+                  },
+                  {
+                    "name": "AZURE_ACR_NAME",
+                    "value": "[parameters('azure_acr_name')]"
+                  },
+                  {
+                    "name": "AZURE_AKS_NAME",
+                    "value": "[parameters('azure_aks_name')]"
+                  },
+                  {
+                    "name": "AZURE_AKS_CONTROLPLANEFQDN",
+                    "value": "[parameters('azure_aks_controlplanefqdn')]"
+                  },
+                  {
+                    "name": "AZURE_AKS_MANAGED_RG",
+                    "value": "[parameters('azure_aks_managed_rg')]"
+                  },
+                  {
+                    "name": "AZURE_AKS_SERVICE_ACCOUNT_NAME",
+                    "value": "[parameters('azure_aks_service_account_name')]"
+                  },
+                  {
+                    "name": "AZURE_APIM_GATEWAY_URL",
+                    "value": "[parameters('azure_apim_gateway_url')]"
+                  },
+                  {
+                    "name": "AZURE_APIM_NAME",
+                    "value": "[parameters('azure_apim_name')]"
+                  },
+                  {
+                    "name": "MANAGED_IDENTITY_AKS",
+                    "value": "[parameters('managed_identity_aks')]"
+                  },
+                  {
+                    "name": "IMAGE_NAME",
+                    "value": "[parameters('imagename')]"
+                  },
+                  {
+                    "name": "IMAGE_VERSION",
+                    "value": "[parameters('imageversion')]"
+                  },
+                  {
+                    "name": "AI_SEARCH_NAME",
+                    "value": "[parameters('ai_search_name')]"
+                  },
+                  {
+                    "name": "AZURE_AOAI_LLM_MODEL",
+                    "value": "[parameters('azure_aoai_llm_model')]"
+                  },
+                  {
+                    "name": "AZURE_AOAI_LLM_MODEL_DEPLOYMENT_NAME",
+                    "value": "[parameters('azure_aoai_llm_model_deployment_name')]"
+                  },
+                  {
+                    "name": "AZURE_AOAI_LLM_MODEL_API_VERSION",
+                    "value": "[parameters('azure_aoai_llm_model_api_version')]"
+                  },
+                  {
+                    "name": "AZURE_AOAI_EMBEDDING_MODEL",
+                    "value": "[parameters('azure_aoai_embedding_model')]"
+                  },
+                  {
+                    "name": "AZURE_AOAI_EMBEDDING_MODEL_DEPLOYMENT_NAME",
+                    "value": "[parameters('azure_aoai_embedding_model_deployment_name')]"
+                  },
+                  {
+                    "name": "AZURE_AOAI_EMBEDDING_MODEL_API_VERSION",
+                    "value": "[parameters('azure_aoai_embedding_model_api_version')]"
+                  },
+                  {
+                    "name": "AZURE_APP_HOSTNAME",
+                    "value": "[parameters('azure_app_hostname')]"
+                  },
+                  {
+                    "name": "AZURE_APP_URL",
+                    "value": "[parameters('azure_app_url')]"
+                  },
+                  {
+                    "name": "AZURE_APP_INSIGHTS_CONNECTION_STRING",
+                    "value": "[parameters('azure_app_insights_connection_string')]"
+                  },
+                  {
+                    "name": "AZURE_COSMOSDB_ENDPOINT",
+                    "value": "[parameters('azure_cosmosdb_endpoint')]"
+                  },
+                  {
+                    "name": "AZURE_COSMOSDB_NAME",
+                    "value": "[parameters('azure_cosmosdb_name')]"
+                  },
+                  {
+                    "name": "AZURE_COSMOSDB_ID",
+                    "value": "[parameters('azure_cosmosdb_id')]"
+                  },
+                  {
+                    "name": "AZURE_DNS_ZONE_NAME",
+                    "value": "[parameters('azure_dns_zone_name')]"
+                  },
+                  {
+                    "name": "AZURE_STORAGE_ACCOUNT",
+                    "value": "[parameters('azure_storage_account')]"
+                  },
+                  {
+                    "name": "AZURE_STORAGE_ACCOUNT_BLOB_URL",
+                    "value": "[parameters('azure_storage_account_blob_url')]"
+                  },
+                  {
+                    "name": "AZURE_WORKLOAD_IDENTITY_CLIENT_ID",
+                    "value": "[parameters('azure_workload_identity_client_id')]"
+                  },
+                  {
+                    "name": "AZURE_WORKLOAD_IDENTITY_PRINCIPAL_ID",
+                    "value": "[parameters('azure_workload_identity_principal_id')]"
+                  },
+                  {
+                    "name": "AZURE_WORKLOAD_IDENTITY_NAME",
+                    "value": "[parameters('azure_workload_identity_name')]"
+                  },
+                  {
+                    "name": "COGNITIVE_SERVICES_AUDIENCE",
+                    "value": "[parameters('cognitive_services_audience')]"
+                  },
+                  {
+                    "name": "AZURE_OPENAI_ENDPOINT",
+                    "value": "[parameters('azure_aoai_endpoint')]"
+                  },
+                  {
+                    "name": "AZURE_RESOURCE_GROUP",
+                    "value": "[resourceGroup().name]"
+                  }
+                ],
+                "cleanupPreference": "OnSuccess",
+                "retentionInterval": "P1D",
+                "scriptContent": "[parameters('script_file')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', uniqueString(resourceGroup().id))]"
+              ]
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'acr-deployment')]",
+        "[resourceId('Microsoft.Resources/deployments', 'aisearch-deployment')]",
+        "[resourceId('Microsoft.Resources/deployments', 'aks-deployment')]",
+        "[resourceId('Microsoft.Resources/deployments', 'aoai-deployment')]",
+        "[resourceId('Microsoft.Resources/deployments', 'apim-deployment')]",
+        "[resourceId('Microsoft.Resources/deployments', 'app-insights-deployment')]",
+        "[resourceId('Microsoft.Resources/deployments', 'cosmosdb-deployment')]",
+        "[resourceId('Microsoft.Resources/deployments', 'private-dns-zone-deployment')]",
+        "[resourceId('Microsoft.Resources/deployments', 'storage-deployment')]",
+        "[resourceId('Microsoft.Resources/deployments', 'workload-identity-deployment')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "graphragservicedef-deployment",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "GraphRag"
+          },
+          "apimname": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'apim-deployment'), '2022-09-01').outputs.name.value]"
+          },
+          "backendUrl": {
+            "value": "[variables('appUrl')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.33.93.31351",
+              "templateHash": "13338625497669096861"
+            }
+          },
+          "parameters": {
+            "backendUrl": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "apimname": {
+              "type": "string"
+            }
+          },
+          "variables": {
+            "$fxv#0": {
+              "openapi": "3.1.0",
+              "info": {
+                "title": "GraphRAG",
+                "version": "v0.0.0"
+              },
+              "paths": {
+                "/data": {
+                  "get": {
+                    "tags": [
+                      "Data Management"
+                    ],
+                    "summary": "Get all data storage containers.",
+                    "description": "Retrieve a list of all data storage containers.",
+                    "operationId": "get_all_data_storage_containers_data_get",
+                    "responses": {
+                      "200": {
+                        "description": "Successful Response",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/StorageNameList"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "post": {
+                    "tags": [
+                      "Data Management"
+                    ],
+                    "summary": "Upload data to a data storage container",
+                    "description": "Create a data storage container in Azure and upload files to it.\n\nArgs:\n    files (List[UploadFile]): A list of files to be uploaded.\n    storage_name (str): The name of the Azure Blob Storage container to which files will be uploaded.\n    overwrite (bool): Whether to overwrite existing files with the same name. Defaults to True. If False, files that already exist will be skipped.\n\nReturns:\n    BaseResponse: An instance of the BaseResponse model with a status message indicating the result of the upload.\n\nRaises:\n    HTTPException: If the container name is invalid or if any error occurs during the upload process.",
+                    "operationId": "upload_files_data_post",
+                    "parameters": [
+                      {
+                        "name": "storage_name",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                          "type": "string",
+                          "title": "Storage Name"
+                        }
+                      },
+                      {
+                        "name": "overwrite",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                          "type": "boolean",
+                          "default": true,
+                          "title": "Overwrite"
+                        }
+                      }
+                    ],
+                    "requestBody": {
+                      "required": true,
+                      "content": {
+                        "multipart/form-data": {
+                          "schema": {
+                            "$ref": "#/components/schemas/Body_upload_files_data_post"
+                          }
+                        }
+                      }
+                    },
+                    "responses": {
+                      "200": {
+                        "description": "Successful Response",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/BaseResponse"
+                            }
+                          }
+                        }
+                      },
+                      "422": {
+                        "description": "Validation Error",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/HTTPValidationError"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "/data/{storage_name}": {
+                  "delete": {
+                    "tags": [
+                      "Data Management"
+                    ],
+                    "summary": "Delete a data storage container",
+                    "description": "Delete a specified data storage container.",
+                    "operationId": "delete_files_data__storage_name__delete",
+                    "parameters": [
+                      {
+                        "name": "storage_name",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                          "type": "string",
+                          "title": "Storage Name"
+                        }
+                      }
+                    ],
+                    "responses": {
+                      "200": {
+                        "description": "Successful Response",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/BaseResponse"
+                            }
+                          }
+                        }
+                      },
+                      "422": {
+                        "description": "Validation Error",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/HTTPValidationError"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "/index": {
+                  "post": {
+                    "tags": [
+                      "Index Operations"
+                    ],
+                    "summary": "Build an index",
+                    "operationId": "setup_indexing_pipeline_index_post",
+                    "parameters": [
+                      {
+                        "name": "storage_name",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                          "type": "string",
+                          "title": "Storage Name"
+                        }
+                      },
+                      {
+                        "name": "index_name",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                          "type": "string",
+                          "title": "Index Name"
+                        }
+                      }
+                    ],
+                    "requestBody": {
+                      "content": {
+                        "multipart/form-data": {
+                          "schema": {
+                            "$ref": "#/components/schemas/Body_setup_indexing_pipeline_index_post"
+                          }
+                        }
+                      }
+                    },
+                    "responses": {
+                      "200": {
+                        "description": "Successful Response",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/BaseResponse"
+                            }
+                          }
+                        }
+                      },
+                      "422": {
+                        "description": "Validation Error",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/HTTPValidationError"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "get": {
+                    "tags": [
+                      "Index Operations"
+                    ],
+                    "summary": "Get all indexes",
+                    "description": "Retrieve a list of all index names.",
+                    "operationId": "get_all_indexes_index_get",
+                    "responses": {
+                      "200": {
+                        "description": "Successful Response",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/IndexNameList"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "/index/{index_name}": {
+                  "delete": {
+                    "tags": [
+                      "Index Operations"
+                    ],
+                    "summary": "Delete a specified index",
+                    "description": "Delete a specified index.",
+                    "operationId": "delete_index_index__index_name__delete",
+                    "parameters": [
+                      {
+                        "name": "index_name",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                          "type": "string",
+                          "title": "Index Name"
+                        }
+                      }
+                    ],
+                    "responses": {
+                      "200": {
+                        "description": "Successful Response",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/BaseResponse"
+                            }
+                          }
+                        }
+                      },
+                      "422": {
+                        "description": "Validation Error",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/HTTPValidationError"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "/index/status/{index_name}": {
+                  "get": {
+                    "tags": [
+                      "Index Operations"
+                    ],
+                    "summary": "Track the status of an indexing job",
+                    "operationId": "get_index_job_status_index_status__index_name__get",
+                    "parameters": [
+                      {
+                        "name": "index_name",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                          "type": "string",
+                          "title": "Index Name"
+                        }
+                      }
+                    ],
+                    "responses": {
+                      "200": {
+                        "description": "Successful Response",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/IndexStatusResponse"
+                            }
+                          }
+                        }
+                      },
+                      "422": {
+                        "description": "Validation Error",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/HTTPValidationError"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "/query/global": {
+                  "post": {
+                    "tags": [
+                      "Query Operations"
+                    ],
+                    "summary": "Perform a global search across the knowledge graph index",
+                    "description": "The global query method generates answers by searching over all AI-generated community reports in a map-reduce fashion. This is a resource-intensive method, but often gives good responses for questions that require an understanding of the dataset as a whole.",
+                    "operationId": "global_query_query_global_post",
+                    "requestBody": {
+                      "content": {
+                        "application/json": {
+                          "schema": {
+                            "$ref": "#/components/schemas/GraphRequest"
+                          }
+                        }
+                      },
+                      "required": true
+                    },
+                    "responses": {
+                      "200": {
+                        "description": "Successful Response",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/GraphResponse"
+                            }
+                          }
+                        }
+                      },
+                      "422": {
+                        "description": "Validation Error",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/HTTPValidationError"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "/query/local": {
+                  "post": {
+                    "tags": [
+                      "Query Operations"
+                    ],
+                    "summary": "Perform a local search across the knowledge graph index.",
+                    "description": "The local query method generates answers by combining relevant data from the AI-extracted knowledge-graph with text chunks of the raw documents. This method is suitable for questions that require an understanding of specific entities mentioned in the documents (e.g. What are the healing properties of chamomile?).",
+                    "operationId": "local_query_query_local_post",
+                    "requestBody": {
+                      "content": {
+                        "application/json": {
+                          "schema": {
+                            "$ref": "#/components/schemas/GraphRequest"
+                          }
+                        }
+                      },
+                      "required": true
+                    },
+                    "responses": {
+                      "200": {
+                        "description": "Successful Response",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/GraphResponse"
+                            }
+                          }
+                        }
+                      },
+                      "422": {
+                        "description": "Validation Error",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/HTTPValidationError"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "/query/streaming/global": {
+                  "post": {
+                    "tags": [
+                      "Query Streaming Operations"
+                    ],
+                    "summary": "Stream a response back after performing a global search",
+                    "description": "The global query method generates answers by searching over all AI-generated community reports in a map-reduce fashion. This is a resource-intensive method, but often gives good responses for questions that require an understanding of the dataset as a whole.",
+                    "operationId": "global_search_streaming_query_streaming_global_post",
+                    "requestBody": {
+                      "content": {
+                        "application/json": {
+                          "schema": {
+                            "$ref": "#/components/schemas/GraphRequest"
+                          }
+                        }
+                      },
+                      "required": true
+                    },
+                    "responses": {
+                      "200": {
+                        "description": "Successful Response",
+                        "content": {
+                          "application/json": {
+                            "schema": {}
+                          }
+                        }
+                      },
+                      "422": {
+                        "description": "Validation Error",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/HTTPValidationError"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "/query/streaming/local": {
+                  "post": {
+                    "tags": [
+                      "Query Streaming Operations"
+                    ],
+                    "summary": "Stream a response back after performing a local search",
+                    "description": "The local query method generates answers by combining relevant data from the AI-extracted knowledge-graph with text chunks of the raw documents. This method is suitable for questions that require an understanding of specific entities mentioned in the documents (e.g. What are the healing properties of chamomile?).",
+                    "operationId": "local_search_streaming_query_streaming_local_post",
+                    "requestBody": {
+                      "content": {
+                        "application/json": {
+                          "schema": {
+                            "$ref": "#/components/schemas/GraphRequest"
+                          }
+                        }
+                      },
+                      "required": true
+                    },
+                    "responses": {
+                      "200": {
+                        "description": "Successful Response",
+                        "content": {
+                          "application/json": {
+                            "schema": {}
+                          }
+                        }
+                      },
+                      "422": {
+                        "description": "Validation Error",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/HTTPValidationError"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "/index/config/prompts": {
+                  "get": {
+                    "tags": [
+                      "Index Configuration"
+                    ],
+                    "summary": "Generate graphrag prompts from user-provided data.",
+                    "description": "Generating custom prompts from user-provided data may take several minutes to run based on the amount of data used.",
+                    "operationId": "generate_prompts_index_config_prompts_get",
+                    "parameters": [
+                      {
+                        "name": "storage_name",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                          "type": "string",
+                          "title": "Storage Name"
+                        }
+                      },
+                      {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                          "type": "integer",
+                          "default": 5,
+                          "title": "Limit"
+                        }
+                      }
+                    ],
+                    "responses": {
+                      "200": {
+                        "description": "Successful Response",
+                        "content": {
+                          "application/json": {
+                            "schema": {}
+                          }
+                        }
+                      },
+                      "422": {
+                        "description": "Validation Error",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/HTTPValidationError"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "/source/report/{index_name}/{report_id}": {
+                  "get": {
+                    "tags": [
+                      "Sources"
+                    ],
+                    "summary": "Return a single community report.",
+                    "operationId": "get_report_info_source_report__index_name___report_id__get",
+                    "parameters": [
+                      {
+                        "name": "index_name",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                          "type": "string",
+                          "title": "Index Name"
+                        }
+                      },
+                      {
+                        "name": "report_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                          "type": "string",
+                          "title": "Report Id"
+                        }
+                      }
+                    ],
+                    "responses": {
+                      "200": {
+                        "description": "Successful Response",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/ReportResponse"
+                            }
+                          }
+                        }
+                      },
+                      "422": {
+                        "description": "Validation Error",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/HTTPValidationError"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "/source/text/{index_name}/{text_unit_id}": {
+                  "get": {
+                    "tags": [
+                      "Sources"
+                    ],
+                    "summary": "Return a single base text unit.",
+                    "operationId": "get_chunk_info_source_text__index_name___text_unit_id__get",
+                    "parameters": [
+                      {
+                        "name": "index_name",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                          "type": "string",
+                          "title": "Index Name"
+                        }
+                      },
+                      {
+                        "name": "text_unit_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                          "type": "string",
+                          "title": "Text Unit Id"
+                        }
+                      }
+                    ],
+                    "responses": {
+                      "200": {
+                        "description": "Successful Response",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/TextUnitResponse"
+                            }
+                          }
+                        }
+                      },
+                      "422": {
+                        "description": "Validation Error",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/HTTPValidationError"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "/source/entity/{index_name}/{entity_id}": {
+                  "get": {
+                    "tags": [
+                      "Sources"
+                    ],
+                    "summary": "Return a single entity.",
+                    "operationId": "get_entity_info_source_entity__index_name___entity_id__get",
+                    "parameters": [
+                      {
+                        "name": "index_name",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                          "type": "string",
+                          "title": "Index Name"
+                        }
+                      },
+                      {
+                        "name": "entity_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                          "type": "integer",
+                          "title": "Entity Id"
+                        }
+                      }
+                    ],
+                    "responses": {
+                      "200": {
+                        "description": "Successful Response",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/EntityResponse"
+                            }
+                          }
+                        }
+                      },
+                      "422": {
+                        "description": "Validation Error",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/HTTPValidationError"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "/source/claim/{index_name}/{claim_id}": {
+                  "get": {
+                    "tags": [
+                      "Sources"
+                    ],
+                    "summary": "Return a single claim.",
+                    "operationId": "get_claim_info_source_claim__index_name___claim_id__get",
+                    "parameters": [
+                      {
+                        "name": "index_name",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                          "type": "string",
+                          "title": "Index Name"
+                        }
+                      },
+                      {
+                        "name": "claim_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                          "type": "integer",
+                          "title": "Claim Id"
+                        }
+                      }
+                    ],
+                    "responses": {
+                      "200": {
+                        "description": "Successful Response",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/ClaimResponse"
+                            }
+                          }
+                        }
+                      },
+                      "422": {
+                        "description": "Validation Error",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/HTTPValidationError"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "/source/relationship/{index_name}/{relationship_id}": {
+                  "get": {
+                    "tags": [
+                      "Sources"
+                    ],
+                    "summary": "Return a single relationship.",
+                    "operationId": "get_relationship_info_source_relationship__index_name___relationship_id__get",
+                    "parameters": [
+                      {
+                        "name": "index_name",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                          "type": "string",
+                          "title": "Index Name"
+                        }
+                      },
+                      {
+                        "name": "relationship_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                          "type": "integer",
+                          "title": "Relationship Id"
+                        }
+                      }
+                    ],
+                    "responses": {
+                      "200": {
+                        "description": "Successful Response",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/RelationshipResponse"
+                            }
+                          }
+                        }
+                      },
+                      "422": {
+                        "description": "Validation Error",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/HTTPValidationError"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "/graph/graphml/{index_name}": {
+                  "get": {
+                    "tags": [
+                      "Graph Operations"
+                    ],
+                    "summary": "Retrieve a GraphML file of the knowledge graph",
+                    "operationId": "retrieve_graphml_file_graph_graphml__index_name__get",
+                    "parameters": [
+                      {
+                        "name": "index_name",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                          "type": "string",
+                          "title": "Index Name"
+                        }
+                      }
+                    ],
+                    "responses": {
+                      "200": {
+                        "description": "GraphML file successfully downloaded",
+                        "content": {
+                          "application/json": {
+                            "schema": {}
+                          }
+                        }
+                      },
+                      "422": {
+                        "description": "Validation Error",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/HTTPValidationError"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "/graph/stats/{index_name}": {
+                  "get": {
+                    "tags": [
+                      "Graph Operations"
+                    ],
+                    "summary": "Retrieve basic graph statistics, number of nodes and edges",
+                    "operationId": "retrieve_graph_stats_graph_stats__index_name__get",
+                    "parameters": [
+                      {
+                        "name": "index_name",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                          "type": "string",
+                          "title": "Index Name"
+                        }
+                      }
+                    ],
+                    "responses": {
+                      "200": {
+                        "description": "Successful Response",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/GraphDataResponse"
+                            }
+                          }
+                        }
+                      },
+                      "422": {
+                        "description": "Validation Error",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/HTTPValidationError"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "/health": {
+                  "get": {
+                    "summary": "API health check",
+                    "description": "Returns a 200 response to indicate the API is healthy.",
+                    "operationId": "health_check_health_get",
+                    "responses": {
+                      "200": {
+                        "description": "Successful Response",
+                        "content": {
+                          "application/json": {
+                            "schema": {}
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "components": {
+                "schemas": {
+                  "BaseResponse": {
+                    "properties": {
+                      "status": {
+                        "type": "string",
+                        "title": "Status"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "status"
+                    ],
+                    "title": "BaseResponse"
+                  },
+                  "Body_setup_indexing_pipeline_index_post": {
+                    "properties": {
+                      "entity_extraction_prompt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "binary"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "title": "Entity Extraction Prompt"
+                      },
+                      "community_report_prompt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "binary"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "title": "Community Report Prompt"
+                      },
+                      "summarize_descriptions_prompt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "binary"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "title": "Summarize Descriptions Prompt"
+                      }
+                    },
+                    "type": "object",
+                    "title": "Body_setup_indexing_pipeline_index_post"
+                  },
+                  "Body_upload_files_data_post": {
+                    "properties": {
+                      "files": {
+                        "items": {
+                          "type": "string",
+                          "format": "binary"
+                        },
+                        "type": "array",
+                        "title": "Files"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "files"
+                    ],
+                    "title": "Body_upload_files_data_post"
+                  },
+                  "ClaimResponse": {
+                    "properties": {
+                      "covariate_type": {
+                        "type": "string",
+                        "title": "Covariate Type"
+                      },
+                      "type": {
+                        "type": "string",
+                        "title": "Type"
+                      },
+                      "description": {
+                        "type": "string",
+                        "title": "Description"
+                      },
+                      "subject_id": {
+                        "type": "string",
+                        "title": "Subject Id"
+                      },
+                      "object_id": {
+                        "type": "string",
+                        "title": "Object Id"
+                      },
+                      "source_text": {
+                        "type": "string",
+                        "title": "Source Text"
+                      },
+                      "text_unit_id": {
+                        "type": "string",
+                        "title": "Text Unit Id"
+                      },
+                      "document_ids": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array",
+                        "title": "Document Ids"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "covariate_type",
+                      "type",
+                      "description",
+                      "subject_id",
+                      "object_id",
+                      "source_text",
+                      "text_unit_id",
+                      "document_ids"
+                    ],
+                    "title": "ClaimResponse"
+                  },
+                  "EntityResponse": {
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "title": "Name"
+                      },
+                      "description": {
+                        "type": "string",
+                        "title": "Description"
+                      },
+                      "text_units": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array",
+                        "title": "Text Units"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "name",
+                      "description",
+                      "text_units"
+                    ],
+                    "title": "EntityResponse"
+                  },
+                  "GraphDataResponse": {
+                    "properties": {
+                      "nodes": {
+                        "type": "integer",
+                        "title": "Nodes"
+                      },
+                      "edges": {
+                        "type": "integer",
+                        "title": "Edges"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "nodes",
+                      "edges"
+                    ],
+                    "title": "GraphDataResponse"
+                  },
+                  "GraphRequest": {
+                    "properties": {
+                      "index_name": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          }
+                        ],
+                        "title": "Index Name"
+                      },
+                      "query": {
+                        "type": "string",
+                        "title": "Query"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "index_name",
+                      "query"
+                    ],
+                    "title": "GraphRequest"
+                  },
+                  "GraphResponse": {
+                    "properties": {
+                      "result": {
+                        "title": "Result"
+                      },
+                      "context_data": {
+                        "title": "Context Data"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "result",
+                      "context_data"
+                    ],
+                    "title": "GraphResponse"
+                  },
+                  "HTTPValidationError": {
+                    "properties": {
+                      "detail": {
+                        "items": {
+                          "$ref": "#/components/schemas/ValidationError"
+                        },
+                        "type": "array",
+                        "title": "Detail"
+                      }
+                    },
+                    "type": "object",
+                    "title": "HTTPValidationError"
+                  },
+                  "IndexNameList": {
+                    "properties": {
+                      "index_name": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array",
+                        "title": "Index Name"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "index_name"
+                    ],
+                    "title": "IndexNameList"
+                  },
+                  "IndexStatusResponse": {
+                    "properties": {
+                      "status_code": {
+                        "type": "integer",
+                        "title": "Status Code"
+                      },
+                      "index_name": {
+                        "type": "string",
+                        "title": "Index Name"
+                      },
+                      "storage_name": {
+                        "type": "string",
+                        "title": "Storage Name"
+                      },
+                      "status": {
+                        "type": "string",
+                        "title": "Status"
+                      },
+                      "percent_complete": {
+                        "type": "number",
+                        "title": "Percent Complete"
+                      },
+                      "progress": {
+                        "type": "string",
+                        "title": "Progress"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "status_code",
+                      "index_name",
+                      "storage_name",
+                      "status",
+                      "percent_complete",
+                      "progress"
+                    ],
+                    "title": "IndexStatusResponse"
+                  },
+                  "RelationshipResponse": {
+                    "properties": {
+                      "source": {
+                        "type": "string",
+                        "title": "Source"
+                      },
+                      "source_id": {
+                        "type": "integer",
+                        "title": "Source Id"
+                      },
+                      "target": {
+                        "type": "string",
+                        "title": "Target"
+                      },
+                      "target_id": {
+                        "type": "integer",
+                        "title": "Target Id"
+                      },
+                      "description": {
+                        "type": "string",
+                        "title": "Description"
+                      },
+                      "text_units": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array",
+                        "title": "Text Units"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "source",
+                      "source_id",
+                      "target",
+                      "target_id",
+                      "description",
+                      "text_units"
+                    ],
+                    "title": "RelationshipResponse"
+                  },
+                  "ReportResponse": {
+                    "properties": {
+                      "text": {
+                        "type": "string",
+                        "title": "Text"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "text"
+                    ],
+                    "title": "ReportResponse"
+                  },
+                  "StorageNameList": {
+                    "properties": {
+                      "storage_name": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array",
+                        "title": "Storage Name"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "storage_name"
+                    ],
+                    "title": "StorageNameList"
+                  },
+                  "TextUnitResponse": {
+                    "properties": {
+                      "text": {
+                        "type": "string",
+                        "title": "Text"
+                      },
+                      "source_document": {
+                        "type": "string",
+                        "title": "Source Document"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "text",
+                      "source_document"
+                    ],
+                    "title": "TextUnitResponse"
+                  },
+                  "ValidationError": {
+                    "properties": {
+                      "loc": {
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "type": "array",
+                        "title": "Location"
+                      },
+                      "msg": {
+                        "type": "string",
+                        "title": "Message"
+                      },
+                      "type": {
+                        "type": "string",
+                        "title": "Error Type"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "loc",
+                      "msg",
+                      "type"
+                    ],
+                    "title": "ValidationError"
+                  }
+                }
+              }
+            },
+            "$fxv#1": "<policies>\n\t<inbound>\n\t\t<base />\n\t\t<cors allow-credentials=\"false\">\n\t\t\t<allowed-origins>\n\t\t\t\t<origin>*</origin>\n\t\t\t</allowed-origins>\n\t\t\t<allowed-methods>\n\t\t\t\t<method>*</method>\n\t\t\t</allowed-methods>\n\t\t\t<allowed-headers>\n\t\t\t\t<header>*</header>\n\t\t\t</allowed-headers>\n\t\t\t<expose-headers>\n\t\t\t\t<header>*</header>\n\t\t\t</expose-headers>\n\t\t</cors>\n\t</inbound>\n\t<backend>\n\t\t<forward-request buffer-response=\"false\" />\n\t</backend>\n\t<outbound>\n\t\t<base />\n\t</outbound>\n\t<on-error>\n\t\t<base />\n\t</on-error>\n</policies>"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ApiManagement/service/apis/policies",
+              "apiVersion": "2022-08-01",
+              "name": "[format('{0}/{1}/{2}', split(format('{0}/{1}', parameters('apimname'), parameters('name')), '/')[0], split(format('{0}/{1}', parameters('apimname'), parameters('name')), '/')[1], 'policy')]",
+              "properties": {
+                "format": "rawxml",
+                "value": "[variables('$fxv#1')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service/apis', split(format('{0}/{1}', parameters('apimname'), parameters('name')), '/')[0], split(format('{0}/{1}', parameters('apimname'), parameters('name')), '/')[1])]"
+              ]
+            },
+            {
+              "type": "Microsoft.ApiManagement/service/apis",
+              "apiVersion": "2023-09-01-preview",
+              "name": "[format('{0}/{1}', parameters('apimname'), parameters('name'))]",
+              "properties": {
+                "displayName": "GraphRAG",
+                "apiRevision": "1",
+                "subscriptionRequired": true,
+                "serviceUrl": "[parameters('backendUrl')]",
+                "path": "",
+                "protocols": [
+                  "https"
+                ],
+                "authenticationSettings": {
+                  "oAuth2AuthenticationSettings": [],
+                  "openidAuthenticationSettings": []
+                },
+                "subscriptionKeyParameterNames": {
+                  "header": "Ocp-Apim-Subscription-Key",
+                  "query": "subscription-key"
+                },
+                "isCurrent": true,
+                "format": "openapi+json",
+                "value": "[string(variables('$fxv#0'))]"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'apim-deployment')]"
       ]
     }
   ],
