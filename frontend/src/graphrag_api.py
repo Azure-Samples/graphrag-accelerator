@@ -156,7 +156,7 @@ class GraphragAPI:
             st.error(
                 "Multiple index names are currently not supported via the UI. This functionality is being moved into the graphrag library and will be available in a coming release."
             )
-            return None
+            return {"result": ""}
 
         index_name = index_name if isinstance(index_name, str) else index_name[0]
 
