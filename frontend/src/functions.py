@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+import json
 import os
 from pathlib import Path
 from typing import Optional
@@ -116,11 +117,29 @@ def generate_and_extract_prompts(
         client.generate_prompts(
             storage_name=storage_name, zip_file_name=zip_file_name, limit=limit
         )
-        _extract_prompts_from_zip(zip_file_name)
-        update_session_state_prompt_vars(initial_setting=True)
+        _extract_prompts_from_json(zip_file_name)
+        update_session_state_prompt_vars(initial_setting=True, prompt_dir=".")
         return
     except Exception as e:
         return e
+
+
+def _extract_prompts_from_json(json_file_name: str = "prompts.zip"):
+    with open(json_file_name, "r", encoding="utf-8") as file:
+        json_data = file.read()
+
+    json_data = json.loads(json_data)
+
+    with open("entity_extraction_prompt.txt", "w", encoding="utf-8") as file:
+        file.write(json_data["entity_extraction_prompt"])
+
+    with open("summarization_prompt.txt", "w", encoding="utf-8") as file:
+        file.write(json_data["entity_summarization_prompt"])
+
+    with open("community_summarization_prompt.txt", "w", encoding="utf-8") as file:
+        file.write(json_data["community_summarization_prompt"])
+
+    return json_data
 
 
 def _extract_prompts_from_zip(zip_file_name: str = "prompts.zip"):
