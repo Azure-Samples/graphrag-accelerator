@@ -110,8 +110,8 @@ class IndexPipeline:
                 )
 
                 response = self.client.build_index(
-                    storage_name=storage_selection,
-                    index_name=index_name,
+                    storage_container_name=storage_selection,
+                    index_container_name=index_name,
                     entity_extraction_prompt_filepath=entity_prompt,
                     summarize_description_prompt_filepath=summarize_prompt,
                     community_prompt_filepath=community_prompt,
