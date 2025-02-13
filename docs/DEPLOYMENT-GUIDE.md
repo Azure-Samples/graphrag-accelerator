@@ -30,16 +30,18 @@ Role Based Access Control (RBAC) Administrator | Subscription
 Owner                                          | Resource Group
 
 #### Resource Providers
-The Azure subscription that you deploy this solution accelerator in will require both the `Microsoft.OperationsManagement` and `Microsoft.AlertsManagement` resource providers to be registered.
+The Azure subscription that you deploy this solution accelerator in will require the `Microsoft.OperationsManagement`, ` Microsoft.Compute` and `Microsoft.AlertsManagement` resource providers to be registered.
 This can be accomplished via the [Azure Portal](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/resource-providers-and-types#azure-ortal) or with the following [Azure CLI](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/resource-providers-and-types#azure-cli) commands:
 
 ```shell
 # register providers
 az provider register --namespace Microsoft.OperationsManagement
 az provider register --namespace Microsoft.AlertsManagement
+az provider register --namespace Microsoft.Compute
 # verify providers were registered
 az provider show --namespace Microsoft.OperationsManagement -o table
 az provider show --namespace Microsoft.AlertsManagement -o table
+az provider show --namespace Microsoft.Compute -o table
 ```
 
 ## Installation
