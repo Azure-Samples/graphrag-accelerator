@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "graphrag.master.fullname" . }}
+  labels:
+    {{- include "graphrag.master.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.master.autoscaling.enabled }}
+  replicas: {{ .Values.master.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "graphrag.master.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.master.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        date: "{{ now | unixEpoch }}"
+        {{- include "graphrag.master.labels" . | nindent 8 }}
+        {{- with .Values.master.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "graphrag.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.master.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Values.master.name }}
+          securityContext:
+            {{- toYaml .Values.master.securityContext | nindent 12 }}
+          image: "{{ .Values.master.image.repository }}:{{ .Values.master.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.master.image.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "graphrag.fullname" . }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.master.service.port }}
+              protocol: TCP
+          livenessProbe:
+            {{- toYaml .Values.master.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.master.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.master.resources | nindent 12 }}
+          volumeMounts:
+          {{- with .Values.master.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.master.volumes }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.master.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.master.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.master.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

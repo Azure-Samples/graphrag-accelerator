@@ -1,0 +1,32 @@
+{{- if .Values.master.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "graphrag.master.fullname" . }}
+  labels:
+    {{- include "graphrag.master.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "graphrag.master.fullname" . }}
+  minReplicas: {{ .Values.master.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.master.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.master.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.master.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.master.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.master.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}

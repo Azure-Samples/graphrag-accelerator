@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "graphrag.master.fullname" . }}
+{{- if .Values.master.service.annotations }}
+  annotations:
+  {{- range $key, $value := .Values.master.service.annotations }}
+    {{ $key }}: {{ $value | quote }}
+  {{- end }}
+{{- end }}
+  labels:
+    {{- include "graphrag.master.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.master.service.type }}
+  ports:
+    - port: {{ .Values.master.service.port }}
+  selector:
+    {{- include "graphrag.master.selectorLabels" . | nindent 4 }}
