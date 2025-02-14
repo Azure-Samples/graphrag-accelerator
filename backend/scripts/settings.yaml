@@ -13,7 +13,7 @@ llm:
   api_version: $GRAPHRAG_API_VERSION
   model: $GRAPHRAG_LLM_MODEL
   deployment_name: $GRAPHRAG_LLM_DEPLOYMENT_NAME
-  cognitive_services_endpoint: $COGNITIVE_SERVICES_AUDIENCE
+  audience: $COGNITIVE_SERVICES_AUDIENCE
   model_supports_json: True
   tokens_per_minute: 80_000
   requests_per_minute: 480
@@ -43,7 +43,7 @@ embeddings:
     batch_size: 10
     model: $GRAPHRAG_EMBEDDING_MODEL
     deployment_name: $GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME
-    cognitive_services_endpoint: $COGNITIVE_SERVICES_AUDIENCE
+    audience: $COGNITIVE_SERVICES_AUDIENCE
     tokens_per_minute: 350_000
     requests_per_minute: 2_100
 
