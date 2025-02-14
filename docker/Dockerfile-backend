@@ -4,6 +4,16 @@
 # For more information about the base image: https://mcr.microsoft.com/en-us/artifact/mar/devcontainers/python/about
 FROM mcr.microsoft.com/devcontainers/python:3.10-bookworm
 
+# Patch Debian to remediate CVE findings
+# Apply Debian bookworm-updates by running a full system upgrade
+RUN echo "deb http://deb.debian.org/debian bookworm-updates main" >> /etc/apt/sources.list.d/bookworm-updates.list \
+    && echo "deb http://deb.debian.org/debian bookworm-backports main" >> /etc/apt/sources.list.d/backports.list \
+    && apt-get update \
+    && apt-get upgrade -y \
+    && apt-get autoremove -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # default graphrag version will be 0.0.0 unless overridden by --build-arg
 ARG GRAPHRAG_VERSION=0.0.0
 ENV GRAPHRAG_VERSION=v${GRAPHRAG_VERSION}
@@ -11,6 +21,9 @@ ENV PIP_ROOT_USER_ACTION=ignore
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 ENV SETUPTOOLS_USE_DISTUTILS=stdlib
 ENV TIKTOKEN_CACHE_DIR=/opt/tiktoken_cache/
+
+# CVE finding in pip < 23.3 - Upgrade pip to version 23.3 or greater
+RUN pip install --upgrade pip
 
 COPY backend /backend
 RUN cd backend \
@@ -22,6 +35,9 @@ RUN cd backend \
 RUN python -c "import nltk;nltk.download(['punkt','averaged_perceptron_tagger','maxent_ne_chunker','words','wordnet'])"
 # download tiktoken model encodings
 RUN python -c "import tiktoken; tiktoken.encoding_for_model('gpt-3.5-turbo'); tiktoken.encoding_for_model('gpt-4'); tiktoken.encoding_for_model('gpt-4o');"
+
+# CVE finding in cryptography <= 44.0.0 - cache version 44.0.1 of cryptography via pip
+RUN pip install cryptography==44.0.1
 
 WORKDIR /backend
 EXPOSE 80
