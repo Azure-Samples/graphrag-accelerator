@@ -4,13 +4,15 @@
 @description('Virtual Network IDs to link to')
 param linkedVnetIds array
 
-var aiSearchPrivateDnsZoneName = 'privatelink.search.windows.net'
-var blobStoragePrivateDnsZoneName = 'privatelink.blob.${environment().suffixes.storage}'
-var cosmosDbPrivateDnsZoneName = 'privatelink.documents.azure.com'
-var storagePrivateDnsZoneNames = [blobStoragePrivateDnsZoneName]
 var privateDnsZoneData = loadJsonContent('private-dns-zone-groups.json')
 var cloudName = toLower(environment().name)
+
+var aiSearchPrivateDnsZoneName = privateDnsZoneData[cloudName].aiSearch
+var blobStoragePrivateDnsZoneName = 'privatelink.blob.${environment().suffixes.storage}'
+var cosmosDbPrivateDnsZoneName = privateDnsZoneData[cloudName].cosmosDb
+var storagePrivateDnsZoneNames = [blobStoragePrivateDnsZoneName]
 var azureMonitorPrivateDnsZones = privateDnsZoneData[cloudName].azureMonitor
+
 var privateDnsZones = union(
   azureMonitorPrivateDnsZones,
   storagePrivateDnsZoneNames,
