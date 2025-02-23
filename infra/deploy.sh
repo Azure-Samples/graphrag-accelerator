@@ -21,12 +21,6 @@ CONTAINER_REGISTRY_NAME=""
 
 requiredParams=(
     LOCATION
-    GRAPHRAG_API_BASE
-    GRAPHRAG_API_VERSION
-    GRAPHRAG_LLM_MODEL
-    GRAPHRAG_LLM_DEPLOYMENT_NAME
-    GRAPHRAG_EMBEDDING_MODEL
-    GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME
     RESOURCE_GROUP
 )
 
@@ -152,6 +146,9 @@ checkRequiredTools () {
     which kubectl > /dev/null
     exitIfCommandFailed $? "kubectl is required, exiting..."
 
+    which kubelogin > /dev/null
+    exitIfCommandFailed $? "kubelogin is required, exiting..."
+
     which helm > /dev/null
     exitIfCommandFailed $? "helm is required, exiting..."
 
@@ -259,11 +256,11 @@ createResourceGroupIfNotExists () {
     local location=$1
     local rg=$2
     printf "Checking if resource group $rg exists... "
-    az group show -n $rg -o json > /dev/null 2>&1
+    az group show -n $rg -o json >  /dev/null 2>&1
     if [ $? -ne 0 ]; then
         printf "No.\n"
         printf "Creating resource group... "
-        az group create -l $location -n $rg > /dev/null 2>&1
+        az group create -l $location -n $rg >  /dev/null 2>&1
         printf "Done.\n"
     else
         printf "Yes.\n"
@@ -274,7 +271,7 @@ getAksCredentials () {
     local rg=$1
     local aks=$2
     printf "Getting AKS credentials... "
-    az aks get-credentials -g $rg -n $aks --overwrite-existing > /dev/null 2>&1
+    az aks get-credentials -g $rg -n $aks --overwrite-existing > /dev/null > /dev/null 2>&1
     exitIfCommandFailed $? "Error getting AKS credentials, exiting..."
     kubelogin convert-kubeconfig -l azurecli
     exitIfCommandFailed $? "Error logging into AKS, exiting..."
@@ -323,15 +320,13 @@ deployAzureResources () {
         --no-prompt \
         --resource-group $RESOURCE_GROUP \
         --template-file ./main.bicep \
-        --parameters "resourceBaseName=$RESOURCE_BASE_NAME" \
         --parameters "resourceGroup=$RESOURCE_GROUP" \
+        --parameters "resourceBaseName=$RESOURCE_BASE_NAME" \
         --parameters "apimName=$APIM_NAME" \
         --parameters "apimTier=$APIM_TIER" \
-        --parameters "apiPublisherName=$PUBLISHER_NAME" \
         --parameters "apiPublisherEmail=$PUBLISHER_EMAIL" \
+        --parameters "apiPublisherName=$PUBLISHER_NAME" \
         --parameters "enablePrivateEndpoints=$ENABLE_PRIVATE_ENDPOINTS" \
-        --parameters "acrName=$CONTAINER_REGISTRY_NAME" \
-        --parameters "deployerPrincipalId=$deployerPrincipalId" \
         --output json)
     # errors in deployment may not be caught by exitIfCommandFailed function so we also check the output for errors
     exitIfCommandFailed $? "Error deploying Azure resources..."
@@ -339,7 +334,6 @@ deployAzureResources () {
     AZURE_OUTPUTS=$(jq -r .properties.outputs <<< $AZURE_DEPLOY_RESULTS)
     exitIfCommandFailed $? "Error parsing outputs from Azure deployment..."
     exitIfValueEmpty "$AZURE_OUTPUTS" "Error parsing outputs from Azure deployment..."
-    assignAOAIRoleToManagedIdentity
 }
 
 validateSKUs() {
@@ -391,19 +385,6 @@ checkSKUQuotas() {
     printf "Done.\n"
 }
 
-assignAOAIRoleToManagedIdentity() {
-    printf "Assigning 'Cognitive Services OpenAI Contributor' role to managed identity... "
-    local servicePrincipalId=$(jq -r .azure_workload_identity_principal_id.value <<< $AZURE_OUTPUTS)
-    exitIfValueEmpty "$servicePrincipalId" "Unable to parse service principal id from azure outputs, exiting..."
-    local scope=$(az cognitiveservices account list --query "[?contains(properties.endpoint, '$GRAPHRAG_API_BASE')] | [0].id" -o tsv)
-    az role assignment create --only-show-errors \
-        --role "Cognitive Services OpenAI Contributor" \
-        --assignee "$servicePrincipalId" \
-        --scope "$scope" > /dev/null 2>&1
-    exitIfCommandFailed $? "Error assigning role to service principal, exiting..."
-    printf "Done.\n"
-}
-
 installGraphRAGHelmChart () {
     echo "Deploying graphrag helm chart... "
     local workloadId=$(jq -r .azure_workload_identity_client_id.value <<< $AZURE_OUTPUTS)
@@ -422,6 +403,7 @@ installGraphRAGHelmChart () {
     exitIfValueEmpty "$cosmosEndpoint" "Unable to parse CosmosDB endpoint from Azure outputs, exiting..."
 
     local graphragHostname=$(jq -r .azure_app_hostname.value <<< $AZURE_OUTPUTS)
+    local graphragHostname=$(jq -r .azure_app_hostname.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$graphragHostname" "Unable to parse graphrag hostname from deployment outputs, exiting..."
 
     local storageAccountBlobUrl=$(jq -r .azure_storage_account_blob_url.value <<< $AZURE_OUTPUTS)
@@ -432,8 +414,21 @@ installGraphRAGHelmChart () {
 
     local graphragImageName=$(sed -rn "s/([^:]+).*/\1/p" <<< "$GRAPHRAG_IMAGE")
     local graphragImageVersion=$(sed -rn "s/[^:]+:(.*)/\1/p" <<< "$GRAPHRAG_IMAGE")
-    exitIfValueEmpty "$graphragImageName" "Unable to parse graphrag image name, exiting..."
-    exitIfValueEmpty "$graphragImageVersion" "Unable to parse graphrag image version, exiting..."
+    exitIfValueEmpty "$graphragImageName" "Unable to parse graphrag docker image name, exiting..."
+    exitIfValueEmpty "$graphragImageVersion" "Unable to parse graphrag docker image version, exiting..."
+
+    local graphragApiBase=$(jq -r .azure_aoai_endpoint.value <<< $AZURE_OUTPUTS)
+    exitIfValueEmpty "$graphragApiBase" "Unable to parse AOAI endpoint from deployment outputs, exiting..."
+    local graphragApiVersion=$(jq -r .azure_aoai_llm_model_api_version.value <<< $AZURE_OUTPUTS)
+    exitIfValueEmpty "$graphragApiVersion" "Unable to parse AOAI model api version from deployment outputs, exiting..."
+    local graphragLlmModel=$(jq -r .azure_aoai_llm_model.value <<< $AZURE_OUTPUTS)
+    exitIfValueEmpty "$graphragLlmModel" "Unable to parse LLM model name from deployment outputs, exiting..."
+    local graphragLlmModelDeployment=$(jq -r .azure_aoai_llm_model_deployment_name.value <<< $AZURE_OUTPUTS)
+    exitIfValueEmpty "$graphragLlmModelDeployment" "Unable to parse LLM model deployment name from deployment outputs, exiting..."
+    local graphragEmbeddingModel=$(jq -r .azure_aoai_embedding_model.value <<< $AZURE_OUTPUTS)
+    exitIfValueEmpty "$graphragEmbeddingModel" "Unable to parse embedding model name from deployment outputs, exiting..."
+    local graphragEmbeddingModelDeployment=$(jq -r .azure_aoai_embedding_model_deployment_name.value <<< $AZURE_OUTPUTS)
+    exitIfValueEmpty "$graphragEmbeddingModelDeployment" "Unable to parse embedding model deployment name from deployment outputs, exiting..."
 
     reset_x=true
     if ! [ -o xtrace ]; then
@@ -449,17 +444,16 @@ installGraphRAGHelmChart () {
         --set "master.image.repository=$containerRegistryName/$graphragImageName" \
         --set "master.image.tag=$graphragImageVersion" \
         --set "ingress.host=$graphragHostname" \
-        --set "graphragConfig.APPLICATIONINSIGHTS_CONNECTION_STRING=$appInsightsConnectionString" \
         --set "graphragConfig.AI_SEARCH_URL=https://$aiSearchName.$AISEARCH_ENDPOINT_SUFFIX" \
-        --set "graphragConfig.AI_SEARCH_AUDIENCE=$AISEARCH_AUDIENCE" \
+        --set "graphragConfig.APPLICATIONINSIGHTS_CONNECTION_STRING=$appInsightsConnectionString" \
         --set "graphragConfig.COSMOS_URI_ENDPOINT=$cosmosEndpoint" \
-        --set "graphragConfig.GRAPHRAG_API_BASE=$GRAPHRAG_API_BASE" \
-        --set "graphragConfig.GRAPHRAG_API_VERSION=$GRAPHRAG_API_VERSION" \
+        --set "graphragConfig.GRAPHRAG_API_BASE=$graphragApiBase" \
+        --set "graphragConfig.GRAPHRAG_API_VERSION=$graphragApiVersion" \
+        --set "graphragConfig.GRAPHRAG_LLM_MODEL=$graphragLlmModel" \
+        --set "graphragConfig.GRAPHRAG_LLM_DEPLOYMENT_NAME=$graphragLlmModelDeployment" \
+        --set "graphragConfig.GRAPHRAG_EMBEDDING_MODEL=$graphragEmbeddingModel" \
+        --set "graphragConfig.GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME=$graphragEmbeddingModelDeployment" \
         --set "graphragConfig.COGNITIVE_SERVICES_AUDIENCE=$COGNITIVE_SERVICES_AUDIENCE" \
-        --set "graphragConfig.GRAPHRAG_LLM_MODEL=$GRAPHRAG_LLM_MODEL" \
-        --set "graphragConfig.GRAPHRAG_LLM_DEPLOYMENT_NAME=$GRAPHRAG_LLM_DEPLOYMENT_NAME" \
-        --set "graphragConfig.GRAPHRAG_EMBEDDING_MODEL=$GRAPHRAG_EMBEDDING_MODEL" \
-        --set "graphragConfig.GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME=$GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME" \
         --set "graphragConfig.STORAGE_ACCOUNT_BLOB_URL=$storageAccountBlobUrl"
 
     local helmResult=$?
@@ -533,6 +527,7 @@ deployGraphragAPI () {
     local apimName=$(jq -r .azure_apim_name.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$apimName" "Error parsing apim name from azure outputs, exiting..."
     local backendSwaggerUrl="$apimGatewayUrl/manpage/openapi.json"
+    local graphragUrl=$(jq -r .azure_app_url.value <<< $AZURE_OUTPUTS)
     local graphragUrl=$(jq -r .azure_app_url.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$graphragUrl" "Error parsing GraphRAG URL from azure outputs, exiting..."
 
