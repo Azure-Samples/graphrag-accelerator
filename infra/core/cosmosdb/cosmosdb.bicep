@@ -10,6 +10,8 @@ param location string = resourceGroup().location
 @allowed(['Enabled', 'Disabled'])
 param publicNetworkAccess string = 'Disabled'
 
+var maxThroughput = 1000
+
 resource cosmosDb 'Microsoft.DocumentDB/databaseAccounts@2024-11-15' = {
   name: cosmosDbName
   location: location
@@ -64,7 +66,25 @@ resource cosmosDb 'Microsoft.DocumentDB/databaseAccounts@2024-11-15' = {
     }
     networkAclBypassResourceIds: []
     capacity: {
-      totalThroughputLimit: 4000
+      totalThroughputLimit: maxThroughput
+    }
+  }
+}
+
+// create a single database that is used to maintain state information for graphrag indexing
+// NOTE: The current CosmosDB role assignments are not sufficient to allow the aks workload identity to create databases so we must do it in bicep at deployment time.
+// TODO: Identify and assign appropriate RBAC roles that allow the workload identity to create new databases instead of relying on this bicep implementation.
+resource graphragDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2024-11-15' = {
+  parent: cosmosDb
+  name: 'graphrag'
+  properties: {
+    options: {
+      autoscaleSettings: {
+        maxThroughput: maxThroughput
+      }
+    }
+    resource: {
+      id: 'graphrag'
     }
   }
 }
