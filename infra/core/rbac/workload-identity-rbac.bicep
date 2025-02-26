@@ -31,6 +31,9 @@ var roleDefinitions = [
   {
     id: '3913510d-42f4-4e42-8a64-420c390055eb' // Monitoring Metrics Publisher Role
   }
+  {
+    id: '5bd9cd88-fe45-4216-938b-f97437e15450' // DocumentDB Account Contributor - enables control plane operations
+  }
 ]
 
 resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
@@ -50,10 +53,24 @@ resource cosmosDb 'Microsoft.DocumentDB/databaseAccounts@2024-12-01-preview' exi
   name: cosmosDbName
 }
 
-var customRoleName = 'Custom cosmosDB role for graphrag - adds read/write permissions at the database and container level'
+// NOTE: The code snippet below is commented out because there is a known race condition issue at deployment time when assigning Cosmos DB built-in roles to an identity.
+// For more information: https://github.com/pulumi/pulumi-azure-native/issues/2816
+// For a temporary workaround, that seems to work in practice, we can create a custom role defintion with the same permissions as the built-in role and use it instead
+// var cosmosDbContainerReadWriteRoleId = '00000000-0000-0000-0000-000000000002'
+// resource sqlRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2023-11-15' = {
+//   name: guid(cosmosDb.id, principalId, principalType, cosmosDbContainerReadWriteRoleId)
+//   parent: cosmosDb
+//   properties: {
+//     principalId: principalId
+//     roleDefinitionId: '${cosmosDb.id}/sqlRoleDefinitions/${cosmosDbContainerReadWriteRoleId}'
+//     scope: cosmosDb.id
+//   }
+// }
+
+var customRoleName = 'Custom cosmosDB role for graphrag - adds read/write permissions at the container level'
 resource customCosmosRoleDefinition 'Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions@2024-12-01-preview' = {
   // note: the guid must be globally unique and deterministic (reproducible) across Azure
-  name: guid(subscription().subscriptionId, resourceGroup().name, cosmosDb.id, customRoleName) // guid is used to ensure uniqueness
+  name: guid(cosmosDb.id, customRoleName)
   parent: cosmosDb
   properties: {
     roleName: customRoleName
@@ -67,7 +84,6 @@ resource customCosmosRoleDefinition 'Microsoft.DocumentDB/databaseAccounts/sqlRo
           'Microsoft.DocumentDB/databaseAccounts/readMetadata'
           'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/*'
           'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers/items/*'
-          'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/write'
         ]
       }
     ]
@@ -76,13 +92,7 @@ resource customCosmosRoleDefinition 'Microsoft.DocumentDB/databaseAccounts/sqlRo
 
 resource assignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-12-01-preview' = {
   // note: the guid must be globally unique and deterministic (reproducible) across Azure
-  name: guid(
-    subscription().subscriptionId,
-    resourceGroup().name,
-    cosmosDb.id,
-    customCosmosRoleDefinition.id,
-    principalId
-  )
+  name: guid(cosmosDb.id, principalId, principalType, customCosmosRoleDefinition.id)
   parent: cosmosDb
   properties: {
     principalId: principalId

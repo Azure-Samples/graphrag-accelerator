@@ -47,21 +47,17 @@ async def catch_all_exceptions_middleware(request: Request, call_next):
 
 
 def intialize_cosmosdb_setup():
-    """Initialise CosmosDB (if necessary) by setting up a database and containers that are expected at startup time."""
+    """Initialise database setup (if necessary) and configure CosmosDB containers that are expected at startup time if they do not exist."""
     azure_client_manager = AzureClientManager()
     client = azure_client_manager.get_cosmos_client()
     db_client = client.create_database_if_not_exists("graphrag")
     # create containers with default settings
-    throughput = ThroughputProperties(
-        auto_scale_max_throughput=1000, auto_scale_increment_percent=1
-    )
     db_client.create_container_if_not_exists(
-        id="jobs", partition_key=PartitionKey(path="/id"), offer_throughput=throughput
+        id="jobs", partition_key=PartitionKey(path="/id")
     )
     db_client.create_container_if_not_exists(
         id="container-store",
         partition_key=PartitionKey(path="/id"),
-        offer_throughput=throughput,
     )
 
 
