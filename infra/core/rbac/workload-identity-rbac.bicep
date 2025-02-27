@@ -4,6 +4,9 @@
 @description('ID of the service principal to assign the RBAC roles to.')
 param principalId string
 
+@description('Name of the service principal to assign the RBAC roles to.')
+param principalName string
+
 @description('Type of principal to assign the RBAC roles to.')
 @allowed(['ServicePrincipal', 'User', 'Group', 'Device', 'ForeignGroup'])
 param principalType string
@@ -49,6 +52,11 @@ resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
   }
 ]
 
+resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
+  // id: '${resourceGroup().id}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/${principalId}'
+  name: principalName
+}
+
 resource cosmosDb 'Microsoft.DocumentDB/databaseAccounts@2024-12-01-preview' existing = {
   name: cosmosDbName
 }
@@ -66,6 +74,29 @@ resource cosmosDb 'Microsoft.DocumentDB/databaseAccounts@2024-12-01-preview' exi
 //     scope: cosmosDb.id
 //   }
 // }
+
+// a simple deployment script that just waits for 60 seconds
+resource sleeperScript 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
+  name: 'wait-for-identity'
+  location: resourceGroup().location
+  kind: 'AzureCLI'
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: [identity]
+  }
+  properties: {
+    azCliVersion: '2.67.0'
+    cleanupPreference: 'OnSuccess'
+    retentionInterval: 'PT5M'
+    storageAccountSettings: {
+      storageAccountName: 'StandardLRS'
+    }
+    scriptContent: '''
+      #!/bin/bash
+      sleep 60
+    '''
+  }
+}
 
 var customRoleName = 'Custom cosmosDB role for graphrag - adds read/write permissions at the container level'
 resource customCosmosRoleDefinition 'Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions@2024-12-01-preview' = {
@@ -90,7 +121,7 @@ resource customCosmosRoleDefinition 'Microsoft.DocumentDB/databaseAccounts/sqlRo
   }
 }
 
-resource assignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-12-01-preview' = {
+resource customRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-12-01-preview' = {
   // note: the guid must be globally unique and deterministic (reproducible) across Azure
   name: guid(cosmosDb.id, principalId, principalType, customCosmosRoleDefinition.id)
   parent: cosmosDb
@@ -99,4 +130,8 @@ resource assignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@20
     roleDefinitionId: customCosmosRoleDefinition.id
     scope: cosmosDb.id
   }
+  // allow extra time for the workload identity to be created and propagate in Entra ID
+  dependsOn: [
+    sleeperScript
+  ]
 }

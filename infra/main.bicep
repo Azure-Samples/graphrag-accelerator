@@ -90,6 +90,7 @@ var roles = {
 module aksWorkloadIdentityRBAC 'core/rbac/workload-identity-rbac.bicep' = {
   name: 'aks-workload-identity-rbac-assignments'
   params: {
+    principalName: workloadIdentity.outputs.name
     principalId: workloadIdentity.outputs.principalId
     principalType: 'ServicePrincipal'
     cosmosDbName: cosmosdb.outputs.name
@@ -174,7 +175,7 @@ module cosmosdb 'core/cosmosdb/cosmosdb.bicep' = {
   name: 'cosmosdb-deployment'
   params: {
     cosmosDbName: !empty(cosmosDbName) ? cosmosDbName : '${abbrs.documentDBDatabaseAccounts}${resourceBaseNameFinal}'
-    location: location
+    location: location // 'eastus2'
     publicNetworkAccess: enablePrivateEndpoints ? 'Disabled' : 'Enabled'
   }
 }
