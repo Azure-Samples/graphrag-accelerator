@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 @description('The name of the API Management service instance')
-param apiManagementName string = 'apiservice${uniqueString(resourceGroup().id)}'
+param apiManagementName string
 
 @description('The email address of the owner of the service')
 @minLength(1)

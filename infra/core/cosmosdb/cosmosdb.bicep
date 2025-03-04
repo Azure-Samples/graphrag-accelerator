@@ -72,8 +72,8 @@ resource cosmosDb 'Microsoft.DocumentDB/databaseAccounts@2024-11-15' = {
 }
 
 // create a single database that is used to maintain state information for graphrag indexing
-// NOTE: The current CosmosDB role assignments are not sufficient to allow the aks workload identity to create databases so we must do it in bicep at deployment time.
-// TODO: Identify and assign appropriate RBAC roles that allow the workload identity to create new databases instead of relying on this bicep implementation.
+// NOTE: The current CosmosDB role assignments are not sufficient to allow the aks workload identity to create databases and containers so we must do it in bicep at deployment time.
+// TODO: Identify and assign appropriate RBAC roles that allow the workload identity to create new databases and containers instead of relying on this bicep implementation.
 resource graphragDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2024-11-15' = {
   parent: cosmosDb
   name: 'graphrag'
@@ -85,6 +85,82 @@ resource graphragDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@20
     }
     resource: {
       id: 'graphrag'
+    }
+  }
+}
+
+resource jobsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-11-15' = {
+  parent: graphragDatabase
+  name: 'jobs'
+  properties: {
+    resource: {
+      id: 'jobs'
+      indexingPolicy: {
+        indexingMode: 'consistent'
+        automatic: true
+        includedPaths: [
+          {
+            path: '/*'
+          }
+        ]
+        excludedPaths: [
+          {
+            path: '/"_etag"/?'
+          }
+        ]
+      }
+      partitionKey: {
+        paths: [
+          '/id'
+        ]
+        kind: 'Hash'
+        version: 2
+      }
+      uniqueKeyPolicy: {
+        uniqueKeys: []
+      }
+      conflictResolutionPolicy: {
+        mode: 'LastWriterWins'
+        conflictResolutionPath: '/_ts'
+      }
+    }
+  }
+}
+
+resource containerStoreContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-11-15' = {
+  parent: graphragDatabase
+  name: 'container-store'
+  properties: {
+    resource: {
+      id: 'container-store'
+      indexingPolicy: {
+        indexingMode: 'consistent'
+        automatic: true
+        includedPaths: [
+          {
+            path: '/*'
+          }
+        ]
+        excludedPaths: [
+          {
+            path: '/"_etag"/?'
+          }
+        ]
+      }
+      partitionKey: {
+        paths: [
+          '/id'
+        ]
+        kind: 'Hash'
+        version: 2
+      }
+      uniqueKeyPolicy: {
+        uniqueKeys: []
+      }
+      conflictResolutionPolicy: {
+        mode: 'LastWriterWins'
+        conflictResolutionPath: '/_ts'
+      }
     }
   }
 }

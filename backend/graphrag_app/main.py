@@ -7,7 +7,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import yaml
-from azure.cosmos import PartitionKey, ThroughputProperties
+
+# from azure.cosmos import PartitionKey, ThroughputProperties
 from fastapi import (
     FastAPI,
     Request,
@@ -28,7 +29,8 @@ from graphrag_app.api.prompt_tuning import prompt_tuning_route
 from graphrag_app.api.query import query_route
 from graphrag_app.api.source import source_route
 from graphrag_app.logger.load_logger import load_pipeline_logger
-from graphrag_app.utils.azure_clients import AzureClientManager
+
+# from graphrag_app.utils.azure_clients import AzureClientManager
 
 
 async def catch_all_exceptions_middleware(request: Request, call_next):
@@ -46,19 +48,19 @@ async def catch_all_exceptions_middleware(request: Request, call_next):
         return Response("Unexpected internal server error.", status_code=500)
 
 
-def intialize_cosmosdb_setup():
-    """Initialise database setup (if necessary) and configure CosmosDB containers that are expected at startup time if they do not exist."""
-    azure_client_manager = AzureClientManager()
-    client = azure_client_manager.get_cosmos_client()
-    db_client = client.create_database_if_not_exists("graphrag")
-    # create containers with default settings
-    db_client.create_container_if_not_exists(
-        id="jobs", partition_key=PartitionKey(path="/id")
-    )
-    db_client.create_container_if_not_exists(
-        id="container-store",
-        partition_key=PartitionKey(path="/id"),
-    )
+# def intialize_cosmosdb_setup():
+#     """Initialise database setup (if necessary) and configure CosmosDB containers that are expected at startup time if they do not exist."""
+#     azure_client_manager = AzureClientManager()
+#     client = azure_client_manager.get_cosmos_client()
+#     db_client = client.create_database_if_not_exists("graphrag")
+#     # create containers with default settings
+#     db_client.create_container_if_not_exists(
+#         id="jobs", partition_key=PartitionKey(path="/id")
+#     )
+#     db_client.create_container_if_not_exists(
+#         id="container-store",
+#         partition_key=PartitionKey(path="/id"),
+#     )
 
 
 @asynccontextmanager
@@ -74,8 +76,8 @@ async def lifespan(app: FastAPI):
         yield
         return
 
-    # Initialize CosmosDB setup
-    intialize_cosmosdb_setup()
+    # TODO: must identify proper CosmosDB RBAC roles before databases and containers can be created by this web app
+    # intialize_cosmosdb_setup()
 
     try:
         # Check if the cronjob exists and create it if it does not exist
