@@ -7,7 +7,7 @@ param nsgName string = 'apim-nsg-${uniqueString(resourceGroup().id)}'
 @description('Azure region where the resources will be deployed')
 param location string = resourceGroup().location
 
-resource nsg 'Microsoft.Network/networkSecurityGroups@2024-01-01' = {
+resource nsg 'Microsoft.Network/networkSecurityGroups@2024-05-01' = {
   name: nsgName
   location: location
   properties: {

@@ -21,6 +21,10 @@ resource aiSearch 'Microsoft.Search/searchServices@2024-03-01-preview' = {
     replicaCount: 1
     partitionCount: 1
     publicNetworkAccess: publicNetworkAccess
+    networkRuleSet: {
+      ipRules: []
+      bypass: 'AzureServices'
+    }
     semanticSearch: 'disabled'
   }
 }

@@ -17,7 +17,7 @@ param apimTier string
 @description('NSG resource ID.')
 param nsgID string
 
-resource vnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
+resource vnet 'Microsoft.Network/virtualNetworks@2024-05-01' = {
   name: vnetName
   location: location
   properties: {

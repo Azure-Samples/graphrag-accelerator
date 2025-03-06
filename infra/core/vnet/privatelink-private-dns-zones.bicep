@@ -20,7 +20,7 @@ var privateDnsZones = union(
   [aiSearchPrivateDnsZoneName]
 )
 
-resource privateDnsZoneResources 'Microsoft.Network/privateDnsZones@2020-06-01' = [
+resource privateDnsZoneResources 'Microsoft.Network/privateDnsZones@2024-06-01' = [
   for name in privateDnsZones: {
     name: name
     location: 'global'

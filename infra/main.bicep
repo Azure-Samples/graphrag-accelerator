@@ -264,7 +264,7 @@ module privateDnsZone 'core/vnet/private-dns-zone.bicep' = {
   params: {
     name: dnsDomain
     vnetNames: [
-      vnet.outputs.vnetName // name
+      vnet.outputs.vnetName
     ]
   }
 }
@@ -273,7 +273,7 @@ module privatelinkPrivateDns 'core/vnet/privatelink-private-dns-zones.bicep' = i
   name: 'privatelink-private-dns-zones-deployment'
   params: {
     linkedVnetIds: [
-      vnet.outputs.vnetId // id
+      vnet.outputs.vnetId
     ]
   }
 }

@@ -4,11 +4,11 @@
 param privateDnsZoneName string
 param vnetIds array
 
-resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' existing = {
+resource privateDnsZone 'Microsoft.Network/privateDnsZones@2024-06-01' existing = {
   name: privateDnsZoneName
 }
 
-resource dnsVnetLinks 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = [
+resource dnsVnetLinks 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2024-06-01' = [
   for vnetId in vnetIds: {
     name: '${replace(privateDnsZoneName, '.', '-')}-${uniqueString(vnetId)}'
     parent: privateDnsZone

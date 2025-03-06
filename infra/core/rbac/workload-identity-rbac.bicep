@@ -60,6 +60,17 @@ resource contributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2022
   }
 }
 
+resource cognitiveServicesOpenAIContributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  // note: the guid must be globally unique and deterministic across Azure
+  name: guid(resourceGroup().id, principalId, principalType, roleIds.cognitiveServicesOpenAIContributor)
+  scope: resourceGroup()
+  properties: {
+    principalId: principalId
+    principalType: principalType
+    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', roleIds.cognitiveServicesOpenAIContributor)
+  }
+}
+
 resource aiSearchIndexDataContributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   // note: the guid must be globally unique and deterministic across Azure
   name: guid(aiSearch.id, principalId, principalType, roleIds.aiSearchIndexDataContributor)
@@ -71,16 +82,16 @@ resource aiSearchIndexDataContributorRoleAssignment 'Microsoft.Authorization/rol
   }
 }
 
-// resource aiSearchIndexDataReaderRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-//   // note: the guid must be globally unique and deterministic across Azure
-//   name: guid(aiSearch.id, principalId, principalType, roleIds.aiSearchIndexDataReader)
-//   scope: aiSearch
-//   properties: {
-//     principalId: principalId
-//     principalType: principalType
-//     roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', roleIds.aiSearchIndexDataReader)
-//   }
-// }
+resource aiSearchIndexDataReaderRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  // note: the guid must be globally unique and deterministic across Azure
+  name: guid(aiSearch.id, principalId, principalType, roleIds.aiSearchIndexDataReader)
+  scope: aiSearch
+  properties: {
+    principalId: principalId
+    principalType: principalType
+    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', roleIds.aiSearchIndexDataReader)
+  }
+}
 
 resource cosmosDbOperatorRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   // note: the guid must be globally unique and deterministic across Azure
