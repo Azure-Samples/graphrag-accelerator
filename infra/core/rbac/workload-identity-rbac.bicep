@@ -148,9 +148,9 @@ resource monitoringMetricsPublisherRoleAssignment 'Microsoft.Authorization/roleA
   }
 }
 
-// NOTE: The code snippet below is commented out because there is a known race condition issue at deployment time when assigning Cosmos DB built-in roles to an identity.
+// NOTE: The SQL role assignment below can be flaky due to a known race condition issue at deployment time when assigning Cosmos DB built-in roles to an identity.
 // For more information: https://github.com/pulumi/pulumi-azure-native/issues/2816
-// For a temporary workaround, that seems to work in practice, we can create a custom role defintion with the same permissions as the built-in role and use it instead
+// In practice, one option that may not have such flaky behavior is to create a custom role defintion with the same permissions as the built-in role and use it instead
 resource sqlRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-11-15' = {
   name: guid(cosmosDb.id, principalId, principalType, roleIds.cosmosDbBuiltInDataContributor)
   parent: cosmosDb

@@ -31,9 +31,6 @@ var resourceBaseNameFinal = !empty(resourceBaseName)
 @description('Cloud region for all resources')
 param location string = az.resourceGroup().location
 
-@description('Principal/Object ID of the deployer. Will be used to assign admin roles to the AKS cluster.')
-param deployerPrincipalId string
-
 @minLength(1)
 @description('Name of the publisher of the API Management instance.')
 param apiPublisherName string = 'Microsoft'
@@ -45,7 +42,7 @@ param apiPublisherEmail string = 'publisher@microsoft.com'
 @description('The AKS namespace to install GraphRAG in.')
 param aksNamespace string = 'graphrag'
 
-@description('Whether to enable private endpoints.')
+@description('Whether to use private endpoint connections or not.')
 param enablePrivateEndpoints bool = true
 
 @description('Whether to restore the API Management instance.')
@@ -166,7 +163,7 @@ module aks 'core/aks/aks.bicep' = {
     location: location
     graphragVMSize: 'standard_d8s_v5' // 8 vcpu, 32 GB memory
     graphragIndexingVMSize: 'standard_e8s_v5' // 8 vcpus, 64 GB memory
-    clusterAdmins: !empty(deployerPrincipalId) ? ['${deployerPrincipalId}'] : null
+    clusterAdmins: [deployer().objectId]
     logAnalyticsWorkspaceId: log.outputs.id
     subnetId: vnet.outputs.aksSubnetId
     privateDnsZoneName: privateDnsZone.outputs.name
@@ -263,25 +260,21 @@ module privateDnsZone 'core/vnet/private-dns-zone.bicep' = {
   name: 'private-dns-zone-deployment'
   params: {
     name: dnsDomain
-    vnetNames: [
-      vnet.outputs.vnetName
-    ]
+    vnetName: vnet.outputs.name
   }
 }
 
 module privatelinkPrivateDns 'core/vnet/privatelink-private-dns-zones.bicep' = if (enablePrivateEndpoints) {
   name: 'privatelink-private-dns-zones-deployment'
   params: {
-    linkedVnetIds: [
-      vnet.outputs.vnetId
-    ]
+    linkedVnetId: vnet.outputs.id
   }
 }
 
 module azureMonitorPrivateLinkScope 'core/monitor/private-link-scope.bicep' = if (enablePrivateEndpoints) {
   name: 'azure-monitor-privatelink-scope-deployment'
   params: {
-    privateLinkScopeName: 'pls-${resourceBaseNameFinal}'
+    privateLinkScopeName: '${abbrs.networkPrivateLinkScope}${resourceBaseNameFinal}'
     privateLinkScopedResources: [
       log.outputs.id
       appInsights.outputs.id
@@ -337,6 +330,7 @@ module privateLinkScopePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (
   }
 }
 
+output deployer_principal_id string = deployer().objectId
 output azure_location string = location
 output azure_tenant_id string = tenant().tenantId
 output azure_ai_search_name string = aiSearch.outputs.name
