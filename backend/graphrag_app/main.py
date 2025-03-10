@@ -46,22 +46,24 @@ async def catch_all_exceptions_middleware(request: Request, call_next):
         return Response("Unexpected internal server error.", status_code=500)
 
 
+# NOTE: this function is not currently used, but it is a placeholder for future use once RBAC issues have been resolved
 def intialize_cosmosdb_setup():
-    """Initialise CosmosDB (if necessary) by setting up a database and containers that are expected at startup time."""
+    """Initialise database setup (if necessary) and configure CosmosDB containers that are expected at startup time if they do not exist."""
     azure_client_manager = AzureClientManager()
     client = azure_client_manager.get_cosmos_client()
-    db_client = client.create_database_if_not_exists("graphrag")
-    # create containers with default settings
     throughput = ThroughputProperties(
         auto_scale_max_throughput=1000, auto_scale_increment_percent=1
     )
+    db_client = client.create_database_if_not_exists(
+        "graphrag", offer_throughput=throughput
+    )
+    # create containers with default settings
     db_client.create_container_if_not_exists(
-        id="jobs", partition_key=PartitionKey(path="/id"), offer_throughput=throughput
+        id="jobs", partition_key=PartitionKey(path="/id")
     )
     db_client.create_container_if_not_exists(
         id="container-store",
         partition_key=PartitionKey(path="/id"),
-        offer_throughput=throughput,
     )
 
 
@@ -78,8 +80,8 @@ async def lifespan(app: FastAPI):
         yield
         return
 
-    # Initialize CosmosDB setup
-    intialize_cosmosdb_setup()
+    # TODO: must identify proper CosmosDB RBAC roles before databases and containers can be created by this web app
+    # intialize_cosmosdb_setup()
 
     try:
         # Check if the cronjob exists and create it if it does not exist

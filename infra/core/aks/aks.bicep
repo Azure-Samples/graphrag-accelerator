@@ -50,7 +50,7 @@ param subnetId string
 
 param privateDnsZoneName string
 
-@description('Array of object ids that will have admin role of the cluster')
+@description('Array of object ids of admins that will have admin control over the cluster')
 param clusterAdmins array = []
 
 resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' existing = {
@@ -187,11 +187,10 @@ resource aksManagedAutoUpgradeSchedule 'Microsoft.ContainerService/managedCluste
       schedule: {
         weekly: {
           intervalWeeks: 1
-          dayOfWeek: 'Monday'
+          dayOfWeek: 'Sunday'
         }
       }
       durationHours: 4
-      startDate: '2024-06-11'
       startTime: '12:00'
     }
   }
@@ -209,7 +208,6 @@ resource aksManagedNodeOSUpgradeSchedule 'Microsoft.ContainerService/managedClus
         }
       }
       durationHours: 4
-      startDate: '2024-06-11'
       startTime: '12:00'
     }
   }

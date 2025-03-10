@@ -10,7 +10,7 @@ param location string = resourceGroup().location
 @allowed(['enabled', 'disabled'])
 param publicNetworkAccess string = 'enabled'
 
-resource aiSearch 'Microsoft.Search/searchServices@2024-03-01-preview' = {
+resource search 'Microsoft.Search/searchServices@2024-06-01-preview' = {
   name: name
   location: location
   sku: {
@@ -21,9 +21,13 @@ resource aiSearch 'Microsoft.Search/searchServices@2024-03-01-preview' = {
     replicaCount: 1
     partitionCount: 1
     publicNetworkAccess: publicNetworkAccess
+    networkRuleSet: {
+      ipRules: []
+      bypass: 'AzureServices'
+    }
     semanticSearch: 'disabled'
   }
 }
 
-output name string = aiSearch.name
-output id string = aiSearch.id
+output name string = search.name
+output id string = search.id
