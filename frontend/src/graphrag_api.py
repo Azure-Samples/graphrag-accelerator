@@ -44,7 +44,9 @@ class GraphragAPI:
             print(f"Error: {str(e)}")
             return e
 
-    def upload_files(self, file_payloads: dict, input_storage_name: str):
+    def upload_files(
+        self, file_payloads: dict, container_name: str, overwrite: bool = True
+    ):
         """
         Upload files to Azure Blob Storage Container.
         """
@@ -53,7 +55,7 @@ class GraphragAPI:
                 self.api_url + "/data",
                 headers=self.upload_headers,
                 files=file_payloads,
-                params={"storage_name": input_storage_name},
+                params={"container_name": container_name, "overwrite": overwrite},
             )
             if response.status_code == 200:
                 return response
@@ -78,8 +80,8 @@ class GraphragAPI:
 
     def build_index(
         self,
-        storage_name: str,
-        index_name: str,
+        storage_container_name: str,
+        index_container_name: str,
         entity_extraction_prompt_filepath: str | StringIO = None,
         community_prompt_filepath: str | StringIO = None,
         summarize_description_prompt_filepath: str | StringIO = None,
@@ -112,7 +114,10 @@ class GraphragAPI:
         return requests.post(
             url,
             files=prompt_files if len(prompt_files) > 0 else None,
-            params={"index_name": index_name, "storage_name": storage_name},
+            params={
+                "storage_container_name": storage_container_name,
+                "index_container_name": index_container_name,
+            },
             headers=self.headers,
         )
 
@@ -146,11 +151,20 @@ class GraphragAPI:
         """
         Submite query to GraphRAG API using specific index and query type.
         """
+
+        if isinstance(index_name, list) and len(index_name) > 1:
+            st.error(
+                "Multiple index names are currently not supported via the UI. This functionality is being moved into the graphrag library and will be available in a coming release."
+            )
+            return {"result": ""}
+
+        index_name = index_name if isinstance(index_name, str) else index_name[0]
+
         try:
             request = {
                 "index_name": index_name,
                 "query": query,
-                "reformat_context_data": True,
+                # "reformat_context_data": True,
             }
             response = requests.post(
                 f"{self.api_url}/query/{query_type.lower()}",
@@ -223,7 +237,7 @@ class GraphragAPI:
         Generate graphrag prompts using data provided in a specific storage container.
         """
         url = self.api_url + "/index/config/prompts"
-        params = {"storage_name": storage_name, "limit": limit}
+        params = {"container_name": storage_name, "limit": limit}
         with requests.get(url, params=params, headers=self.headers, stream=True) as r:
             r.raise_for_status()
             with open(zip_file_name, "wb") as f:

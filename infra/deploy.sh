@@ -310,9 +310,6 @@ checkForApimSoftDelete () {
 
 deployAzureResources () {
     echo "Deploying Azure resources..."
-    # get principal/object id of the signed in user
-    local deployerPrincipalId=$(az ad signed-in-user show --output json | jq -r .id)
-    exitIfValueEmpty $deployerPrincipalId "Principal ID of deployer not found"
     local datetime="`date +%Y-%m-%d_%H-%M-%S`"
     local deployName="graphrag-deploy-$datetime"
     echo "Deployment name: $deployName"
@@ -327,6 +324,7 @@ deployAzureResources () {
         --parameters "apiPublisherEmail=$PUBLISHER_EMAIL" \
         --parameters "apiPublisherName=$PUBLISHER_NAME" \
         --parameters "enablePrivateEndpoints=$ENABLE_PRIVATE_ENDPOINTS" \
+        --parameters "acrName=$CONTAINER_REGISTRY_NAME" \
         --output json)
     # errors in deployment may not be caught by exitIfCommandFailed function so we also check the output for errors
     exitIfCommandFailed $? "Error deploying Azure resources..."

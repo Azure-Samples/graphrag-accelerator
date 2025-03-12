@@ -221,8 +221,11 @@ def get_query_tab(client: GraphragAPI) -> None:
     with col1:
         query_type = st.selectbox(
             "Query Type",
-            ["Global Streaming", "Local Streaming", "Global", "Local"],
-            help="Select the query type - Each yeilds different results of specificity. Global queries focus on the entire graph structure. Local queries focus on a set of communities (subgraphs) in the graph that are more connected to each other than they are to the rest of the graph structure and can focus on very specific entities in the graph. Global streaming is a global query that displays results as they appear live.",
+            # ["Global Streaming", "Local Streaming", "Global", "Local"],
+            ["Global", "Local"],
+            help=(
+                "Select the query type - Each yeilds different results of specificity. Global queries focus on the entire graph structure. Local queries focus on a set of communities (subgraphs) in the graph that are more connected to each other than they are to the rest of the graph structure and can focus on very specific entities in the graph."
+            ),
         )
     with col2:
         search_indexes = client.get_index_names()

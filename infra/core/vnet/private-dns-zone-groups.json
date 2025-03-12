@@ -1,18 +1,24 @@
 {
   "azureCloud": {
+    "aiSearch": "privatelink.search.windows.net",
     "azureMonitor": [
       "privatelink.monitor.azure.com",
       "privatelink.oms.opinsights.azure.com",
       "privatelink.agentsvc.azure-automation.net",
       "privatelink.ods.opinsights.azure.com"
-    ]
+    ],
+    "blobStorage": "privatelink.blob.core.windows.net",
+    "cosmosDB": "privatelink.documents.azure.com"
   },
   "azureusgovernment": {
+    "aiSearch": "privatelink.search.azure.us",
     "azureMonitor": [
       "privatelink.monitor.azure.us",
       "privatelink.oms.opinsights.azure.us",
       "privatelink.agentsvc.azure-automation.us",
       "privatelink.ods.opinsights.azure.us"
-    ]
+    ],
+    "blobStorage": "privatelink.blob.core.usgovcloudapi.net",
+    "cosmosDB": "privatelink.documents.azure.us"
   }
 }
