@@ -6,22 +6,51 @@
 
 aksNamespace="graphrag"
 
-# OPTIONAL PARAMS
-AI_SEARCH_AUDIENCE=""
-AISEARCH_ENDPOINT_SUFFIX=""
+# Optional parameters with default values
+AI_SEARCH_AUDIENCE="https://search.azure.com"
+AISEARCH_ENDPOINT_SUFFIX="search.windows.net"
 APIM_NAME=""
-APIM_TIER=""
-CLOUD_NAME=""
-GRAPHRAG_IMAGE=""
-PUBLISHER_EMAIL=""
-PUBLISHER_NAME=""
+APIM_TIER="Developer"
+CLOUD_NAME="AzurePublicCloud"
+GRAPHRAG_IMAGE="graphrag:backend"
+PUBLISHER_EMAIL="publisher@microsoft.com"
+PUBLISHER_NAME="publisher"
 RESOURCE_BASE_NAME=""
-COGNITIVE_SERVICES_AUDIENCE=""
+COGNITIVE_SERVICES_AUDIENCE="https://cognitiveservices.azure.com/.default"
 CONTAINER_REGISTRY_NAME=""
+GRAPHRAG_API_BASE=""
+GRAPHRAG_API_VERSION="2023-03-15-preview"
+GRAPHRAG_LLM_MODEL="gpt-4o"
+GRAPHRAG_LLM_MODEL_VERSION="2024-08-06"
+GRAPHRAG_LLM_DEPLOYMENT_NAME="gpt-4o"
+GRAPHRAG_EMBEDDING_MODEL="text-embedding-ada-002"
+GRAPHRAG_EMBEDDING_MODEL_VERSION="2"
+GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME="text-embedding-ada-002"
 
 requiredParams=(
     LOCATION
     RESOURCE_GROUP
+)
+optionalParams=(
+    AI_SEARCH_AUDIENCE
+    AISEARCH_ENDPOINT_SUFFIX
+    APIM_NAME
+    APIM_TIER
+    CLOUD_NAME
+    GRAPHRAG_IMAGE
+    PUBLISHER_EMAIL
+    PUBLISHER_NAME
+    RESOURCE_BASE_NAME
+    COGNITIVE_SERVICES_AUDIENCE
+    CONTAINER_REGISTRY_NAME
+    GRAPHRAG_API_BASE
+    GRAPHRAG_API_VERSION
+    GRAPHRAG_LLM_MODEL
+    GRAPHRAG_LLM_MODEL_VERSION
+    GRAPHRAG_LLM_DEPLOYMENT_NAME
+    GRAPHRAG_EMBEDDING_MODEL
+    GRAPHRAG_EMBEDDING_MODEL_VERSION
+    GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME
 )
 
 errorBanner () {
@@ -194,62 +223,32 @@ checkRequiredParams () {
     done
 }
 
-populateRequiredParams () {
+populateParams () {
     local paramsFile=$1
     printf "Checking required parameters... "
     checkRequiredParams $paramsFile
-    # The jq command below sets environment variable based on the key-value
-    # pairs in a JSON-formatted file
+    printf "Done.\n"
+
+    # The jq command below sets env variables based on the key-value pairs defined in a JSON-formatted parameters file.
+    # This will override default values of previously defined env variables.
     eval $(jq -r 'to_entries | .[] | "export \(.key)=\(.value)"' $paramsFile)
-    printf "Done.\n"
-}
 
-populateOptionalParams () {
-    # Optional environment variables may be set in the parameters file.
-    # Otherwise using the default values below is recommended.
-    local paramsFile=$1
-    echo "Checking optional parameters..."
-    if [ -z "$APIM_TIER" ]; then
-        APIM_TIER="Developer"
-        printf "\tsetting APIM_TIER=$APIM_TIER\n"
-    fi
-    if [ -z "$AISEARCH_ENDPOINT_SUFFIX" ]; then
-        AISEARCH_ENDPOINT_SUFFIX="search.windows.net"
-        printf "\tsetting AISEARCH_ENDPOINT_SUFFIX=$AISEARCH_ENDPOINT_SUFFIX\n"
-    fi
-    if [ -z "$AI_SEARCH_AUDIENCE" ]; then
-        AI_SEARCH_AUDIENCE="https://search.azure.com"
-        printf "\tsetting AI_SEARCH_AUDIENCE=$AI_SEARCH_AUDIENCE\n"
-    fi
-    if [ -z "$PUBLISHER_NAME" ]; then
-        PUBLISHER_NAME="publisher"
-        printf "\tsetting PUBLISHER_NAME=$PUBLISHER_NAME\n"
-    fi
-    if [ -z "$PUBLISHER_EMAIL" ]; then
-        PUBLISHER_EMAIL="publisher@microsoft.com"
-        printf "\tsetting PUBLISHER_EMAIL=$PUBLISHER_EMAIL\n"
-    fi
-    if [ -z "$CLOUD_NAME" ]; then
-        CLOUD_NAME="AzurePublicCloud"
-        printf "\tsetting CLOUD_NAME=$CLOUD_NAME\n"
-    fi
-    if [ ! -z "$RESOURCE_BASE_NAME" ]; then
-        printf "\tsetting RESOURCE_BASE_NAME=$RESOURCE_BASE_NAME\n"
-    fi
-    if [ -z "$COGNITIVE_SERVICES_AUDIENCE" ]; then
-        COGNITIVE_SERVICES_AUDIENCE="https://cognitiveservices.azure.com/.default"
-        printf "\tsetting COGNITIVE_SERVICES_AUDIENCE=$COGNITIVE_SERVICES_AUDIENCE\n"
-    fi
-    if [ -z "$GRAPHRAG_IMAGE" ]; then
-        GRAPHRAG_IMAGE="graphrag:backend"
-        printf "\tsetting GRAPHRAG_IMAGE=$GRAPHRAG_IMAGE\n"
-    fi
-    printf "Done.\n"
-}
-
-populateParams () {
-    populateRequiredParams $1
-    populateOptionalParams $1
+    # print environment variables for end user
+    echo "Setting environment variables..."
+    for param in "${requiredParams[@]}"; do
+        # skip empty variables
+        if [ -z "${!param}" ]; then
+            continue
+        fi
+        printf "\t$param = ${!param}\n"
+    done
+    for param in "${optionalParams[@]}"; do
+        # skip empty variables
+        if [ -z "${!param}" ]; then
+            continue
+        fi
+        printf "\t$param = ${!param}\n"
+    done
 }
 
 createResourceGroupIfNotExists () {
@@ -310,6 +309,10 @@ checkForApimSoftDelete () {
 
 deployAzureResources () {
     echo "Deploying Azure resources..."
+    local deployAoai="true"
+    if [ -n "$GRAPHRAG_API_BASE" ]; then
+        deployAoai="false"
+    fi
     local datetime="`date +%Y-%m-%d_%H-%M-%S`"
     local deployName="graphrag-deploy-$datetime"
     echo "Deployment name: $deployName"
@@ -319,12 +322,19 @@ deployAzureResources () {
         --template-file ./main.bicep \
         --parameters "resourceGroup=$RESOURCE_GROUP" \
         --parameters "resourceBaseName=$RESOURCE_BASE_NAME" \
+        --parameters "deployAoai=$deployAoai" \
         --parameters "apimName=$APIM_NAME" \
         --parameters "apimTier=$APIM_TIER" \
         --parameters "apiPublisherEmail=$PUBLISHER_EMAIL" \
         --parameters "apiPublisherName=$PUBLISHER_NAME" \
         --parameters "enablePrivateEndpoints=$ENABLE_PRIVATE_ENDPOINTS" \
         --parameters "acrName=$CONTAINER_REGISTRY_NAME" \
+        --parameters "llmModelName=$GRAPHRAG_LLM_MODEL" \
+        --parameters "llmModelDeploymentName=$GRAPHRAG_LLM_DEPLOYMENT_NAME" \
+        --parameters "llmModelVersion=$GRAPHRAG_LLM_MODEL_VERSION" \
+        --parameters "embeddingModelName=$GRAPHRAG_EMBEDDING_MODEL" \
+        --parameters "embeddingModelDeploymentName=$GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME" \
+        --parameters "embeddingModelVersion=$GRAPHRAG_EMBEDDING_MODEL_VERSION" \
         --output json)
     # errors in deployment may not be caught by exitIfCommandFailed function so we also check the output for errors
     exitIfCommandFailed $? "Error deploying Azure resources..."
@@ -332,6 +342,30 @@ deployAzureResources () {
     AZURE_OUTPUTS=$(jq -r .properties.outputs <<< $AZURE_DEPLOY_RESULTS)
     exitIfCommandFailed $? "Error parsing outputs from Azure deployment..."
     exitIfValueEmpty "$AZURE_OUTPUTS" "Error parsing outputs from Azure deployment..."
+
+    # Must assign RBAC roles to the aks workload managed identity if AOAI was not part of the deployment (i.e. user chose to utilize an AOAI resource external to this deployment)
+    if [ -n "$GRAPHRAG_API_BASE" ]; then
+        assignAOAIRolesToManagedIdentity
+    fi
+}
+
+assignAOAIRolesToManagedIdentity() {
+    printf "Assigning roles 'Cognitive Services OpenAI Contributor' and 'Cognitive Services Usages Reader' to aks managed identity... "
+    local scope=$(az cognitiveservices account list --query "[?contains(properties.endpoint, '$GRAPHRAG_API_BASE')].id" -o tsv)
+    exitIfValueEmpty "$scope" "Unable to get AOAI resource id based on GRAPHRAG_API_BASE, exiting..."
+    local servicePrincipalId=$(jq -r .azure_workload_identity_principal_id.value <<< $AZURE_OUTPUTS)
+    exitIfValueEmpty "$servicePrincipalId" "Unable to parse service principal id from azure outputs, exiting..."
+    az role assignment create --only-show-errors \
+        --role "Cognitive Services OpenAI Contributor" \
+        --assignee "$servicePrincipalId" \
+        --scope "$scope"
+    exitIfCommandFailed $? "Error assigning 'Cognitive Services OpenAI Contributor' role to service principal, exiting..."
+    az role assignment create --only-show-errors \
+        --role "Cognitive Services Usages Reader" \
+        --assignee "$servicePrincipalId" \
+        --scope "$scope"
+    exitIfCommandFailed $? "Error assigning 'Cognitive Services Usages Reader' role to service principal, exiting..."
+    printf "Done.\n"
 }
 
 validateSKUs() {
@@ -414,18 +448,28 @@ installGraphRAGHelmChart () {
     exitIfValueEmpty "$graphragImageName" "Unable to parse graphrag docker image name, exiting..."
     exitIfValueEmpty "$graphragImageVersion" "Unable to parse graphrag docker image version, exiting..."
 
-    local graphragApiBase=$(jq -r .azure_aoai_endpoint.value <<< $AZURE_OUTPUTS)
-    exitIfValueEmpty "$graphragApiBase" "Unable to parse AOAI endpoint from deployment outputs, exiting..."
-    local graphragApiVersion=$(jq -r .azure_aoai_llm_model_api_version.value <<< $AZURE_OUTPUTS)
-    exitIfValueEmpty "$graphragApiVersion" "Unable to parse AOAI model api version from deployment outputs, exiting..."
-    local graphragLlmModel=$(jq -r .azure_aoai_llm_model.value <<< $AZURE_OUTPUTS)
-    exitIfValueEmpty "$graphragLlmModel" "Unable to parse LLM model name from deployment outputs, exiting..."
-    local graphragLlmModelDeployment=$(jq -r .azure_aoai_llm_model_deployment_name.value <<< $AZURE_OUTPUTS)
-    exitIfValueEmpty "$graphragLlmModelDeployment" "Unable to parse LLM model deployment name from deployment outputs, exiting..."
-    local graphragEmbeddingModel=$(jq -r .azure_aoai_embedding_model.value <<< $AZURE_OUTPUTS)
-    exitIfValueEmpty "$graphragEmbeddingModel" "Unable to parse embedding model name from deployment outputs, exiting..."
-    local graphragEmbeddingModelDeployment=$(jq -r .azure_aoai_embedding_model_deployment_name.value <<< $AZURE_OUTPUTS)
-    exitIfValueEmpty "$graphragEmbeddingModelDeployment" "Unable to parse embedding model deployment name from deployment outputs, exiting..."
+    # retrieve AOAOI values either from the deployment or from user provided input
+    if [ -n "$GRAPHRAG_API_BASE" ]; then
+        local graphragApiBase="$GRAPHRAG_API_BASE"
+        local graphragApiVersion="$GRAPHRAG_API_VERSION"
+        local graphragLlmModel="$GRAPHRAG_LLM_MODEL"
+        local graphragLlmModelDeployment="$GRAPHRAG_LLM_DEPLOYMENT_NAME"
+        local graphragEmbeddingModel="$GRAPHRAG_EMBEDDING_MODEL"
+        local graphragEmbeddingModelDeployment="$GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME"
+    else
+        local graphragApiBase=$(jq -r .azure_aoai_endpoint.value <<< $AZURE_OUTPUTS)
+        exitIfValueEmpty "$graphragApiBase" "Unable to parse AOAI endpoint from deployment outputs, exiting..."
+        local graphragApiVersion=$(jq -r .azure_aoai_llm_model_api_version.value <<< $AZURE_OUTPUTS)
+        exitIfValueEmpty "$graphragApiVersion" "Unable to parse AOAI model api version from deployment outputs, exiting..."
+        local graphragLlmModel=$(jq -r .azure_aoai_llm_model.value <<< $AZURE_OUTPUTS)
+        exitIfValueEmpty "$graphragLlmModel" "Unable to parse LLM model name from deployment outputs, exiting..."
+        local graphragLlmModelDeployment=$(jq -r .azure_aoai_llm_model_deployment_name.value <<< $AZURE_OUTPUTS)
+        exitIfValueEmpty "$graphragLlmModelDeployment" "Unable to parse LLM model deployment name from deployment outputs, exiting..."
+        local graphragEmbeddingModel=$(jq -r .azure_aoai_embedding_model.value <<< $AZURE_OUTPUTS)
+        exitIfValueEmpty "$graphragEmbeddingModel" "Unable to parse embedding model name from deployment outputs, exiting..."
+        local graphragEmbeddingModelDeployment=$(jq -r .azure_aoai_embedding_model_deployment_name.value <<< $AZURE_OUTPUTS)
+        exitIfValueEmpty "$graphragEmbeddingModelDeployment" "Unable to parse embedding model deployment name from deployment outputs, exiting..."
+    fi
 
     reset_x=true
     if ! [ -o xtrace ]; then
@@ -548,7 +592,7 @@ deployGraphragAPI () {
 grantDevAccessToAzureResources() {
     # This function is used to grant the deployer of this script "developer" access
     # to GraphRAG Azure resources by assigning the necessary RBAC roles for
-    # Azure Storage, AI Search, and CosmosDB to the signed-in user. This will grant
+    # Azure Storage, AI Search, and CosmosDB to the signed-in user. This grants
     # the deployer access to data in the storage account, cosmos db, and AI search services
     # from the Azure portal.
     echo "Granting deployer developer access to Azure resources..."

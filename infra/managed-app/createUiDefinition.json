@@ -3,16 +3,110 @@
   "handler": "Microsoft.Azure.CreateUIDef",
   "version": "0.1.2-preview",
   "parameters": {
-    "basics": [
-      {}
-    ],
+    "config": {
+      "isWizard": true,
+      "basics": {
+        "description": "Welcome to **[GraphRAG](https://aka.ms/graphrag)**.",
+        "subscription": {
+          "constraints": {
+            "validations": [
+              {
+                "permission": "Microsoft.Compute/virtualmachines/write",
+                "message": "Must have write permission for the virtual machine."
+              }
+            ]
+          },
+          "resourceProviders": [
+            "Microsoft.ApiManagement",
+            "Microsoft.Authorization",
+            "Microsoft.Compute",
+            "Microsoft.ContainerRegistry",
+            "Microsoft.ContainerService",
+            "Microsoft.DocumentDB",
+            "Microsoft.Insights",
+            "Microsoft.ManagedIdentity",
+            "Microsoft.Network",
+            "Microsoft.OperationalInsights",
+            "Microsoft.Search",
+            "Microsoft.Storage",
+            "Microsoft.CognitiveServices"
+          ]
+        },
+        "resourceGroup": {
+          "constraints": {
+            "validations": [
+              {
+                "isValid": "[not(contains(resourceGroup().name, 'test'))]",
+                "message": "Resource group name can't contain 'test'."
+              }
+            ]
+          },
+          "allowExisting": false
+        },
+        "location": {
+          "resourceTypes": [
+            "Microsoft.ApiManagement/service",
+            "Microsoft.Authorization/roleAssignments",
+            "Microsoft.CognitiveServices/accounts",
+            "Microsoft.ContainerRegistry/registries",
+            "Microsoft.ContainerService/managedClusters",
+            "Microsoft.DocumentDB/databaseAccounts",
+            "Microsoft.Insights/components",
+            "Microsoft.Insights/privateLinkScopes",
+            "Microsoft.ManagedIdentity/userAssignedIdentities",
+            "Microsoft.Network/networkSecurityGroups",
+            "Microsoft.Network/privateDnsZones",
+            "Microsoft.Network/privateEndpoints",
+            "Microsoft.Network/publicIPAddresses",
+            "Microsoft.Network/virtualNetworks",
+            "Microsoft.OperationalInsights/workspaces",
+            "Microsoft.Search/searchServices",
+            "Microsoft.Storage/storageAccounts"
+          ]
+        }
+      }
+    },
+    "basics": [],
     "steps": [
       {
-        "name": "aoaiSettings",
-        "label": "AOAI Settings",
+        "name": "apiSettings",
+        "label": "API Configuration",
+        "description": "Customize GraphRAG API endpoint behavior:",
         "subLabel": {
-          "preValidation": "Configure the AOAI settings",
-          "postValidation": "Completed"
+          "preValidation": "Configure the API settings",
+          "postValidation": "Complete"
+        },
+        "elements": [
+          {
+            "name": "apimTier",
+            "type": "Microsoft.Common.DropDown",
+            "label": "APIM Tier",
+            "defaultValue": "StandardV2",
+            "toolTip": "API Management tier to use.",
+            "visible": true,
+            "constraints": {
+              "allowedValues": [
+                {
+                  "label": "Developer",
+                  "value": "Developer"
+                },
+                {
+                  "label": "StandardV2",
+                  "value": "StandardV2"
+                }
+              ],
+              "required": true
+            }
+          }
+        ]
+      },
+      {
+        "name": "aoaiSettings",
+        "label": "OpenAI Settings",
+        "description": "Customize Azure OpenAI model deployments:",
+        "subLabel": {
+          "preValidation": "Configure AOAI settings",
+          "postValidation": "Complete"
         },
         "elements": [
           {
@@ -63,11 +157,11 @@
             "label": "LLM Model Quota (x1000)",
             "placeholder": "85",
             "defaultValue": "",
-            "toolTip": "Model quota to use.",
+            "toolTip": "LLM model quota to use.",
             "constraints": {
               "required": true,
               "regex": "^[1-9][0-9]*$",
-              "validationMessage": "Valid LLM model quota."
+              "validationMessage": "Must provide a valid amount (> 0) of LLM model quota."
             },
             "visible": true
           },
@@ -76,7 +170,7 @@
             "type": "Microsoft.Common.DropDown",
             "label": "Embedding Model",
             "defaultValue": "text-embedding-ada-002",
-            "toolTip": "Embedding model to use",
+            "toolTip": "Embedding model to use.",
             "constraints": {
               "allowedValues": [
                 {
@@ -98,11 +192,11 @@
             "label": "Embedding Model Quota (x1000)",
             "placeholder": "100",
             "defaultValue": "",
-            "toolTip": "Model quota to use.",
+            "toolTip": "Embedding model quota to use.",
             "constraints": {
               "required": true,
               "regex": "^[1-9][0-9]*$",
-              "validationMessage": "Valid embedding model quota."
+              "validationMessage": "Must provide a valid amount (> 0) of embedding model quota."
             },
             "visible": true
           },
@@ -111,7 +205,7 @@
             "type": "Microsoft.Common.DropDown",
             "label": "Embedding Model Version",
             "defaultValue": "2",
-            "toolTip": "Use a valid embedding model version.",
+            "toolTip": "Embedding model version to use.",
             "constraints": {
               "allowedValues": [
                 {
@@ -130,33 +224,46 @@
         ]
       },
       {
-        "name": "graphragSettings",
-        "label": "GraphRAG Settings",
+        "name": "kubernetes",
+        "label": "Kubernetes",
+        "description": "Customize kubernetes settings:",
         "subLabel": {
-          "preValidation": "Configure the graphrag settings",
-          "postValidation": "Completed"
+          "preValidation": "Configure kubernetes settings",
+          "postValidation": "Complete"
         },
         "elements": [
           {
-            "name": "apimTier",
-            "type": "Microsoft.Common.DropDown",
-            "label": "APIM Tier",
-            "defaultValue": "StandardV2",
-            "toolTip": "APIM tier to use",
+            "name": "namespace",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Namespace",
+            "defaultValue": "graphrag",
+            "toolTip": "Define a valid k8s namespace.",
             "constraints": {
-              "allowedValues": [
-                {
-                  "label": "Developer",
-                  "value": "Developer"
-                },
-                {
-                  "label": "StandardV2",
-                  "value": "StandardV2"
-                }
-              ],
-              "required": true
-            },
-            "visible": true
+              "required": true,
+              "regex": "^(?!-)[a-z0-9-]{1,253}$",
+              "validationMessage": "Only lowercase alphanumeric characters are allowed, with a maximum length of 253 characters. Cannot start with a hyphen."
+            }
+          }
+        ]
+      },
+      {
+        "name": "networking",
+        "label": "Networking",
+        "description": "Customize networking & security settings:",
+        "subLabel": {
+          "preValidation": "Configure network settings",
+          "postValidation": "Complete"
+        },
+        "elements": [
+          {
+            "name": "enablePrivateEndpoints",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Enable private endpoints.",
+            "toolTip": "Whether or not to use private endpoint connections.",
+            "defaultValue": true,
+            "constraints": {
+              "required": false
+            }
           }
         ]
       }
@@ -164,13 +271,15 @@
     "outputs": {
       "resourceGroup": "[resourceGroup().name]",
       "location": "[location()]",
-      "apimTier": "[steps('graphragSettings').apimTier]",
+      "apimTier": "[steps('apiSettings').apimTier]",
       "llmModelName": "[steps('aoaiSettings').llmModel]",
       "llmModelQuota": "[int(steps('aoaiSettings').llmModelQuota)]",
       "embeddingModelName": "[steps('aoaiSettings').embeddingModel]",
       "embeddingModelQuota": "[int(steps('aoaiSettings').embeddingModelQuota)]",
       "llmModelVersion": "[steps('aoaiSettings').llmModelVersion]",
-      "embeddingModelVersion": "[steps('aoaiSettings').embeddingModelVersion]"
+      "embeddingModelVersion": "[steps('aoaiSettings').embeddingModelVersion]",
+      "enablePrivateEndpoints": "[steps('networking').enablePrivateEndpoints]",
+      "aksNamespace": "[steps('kubernetes').namespace]"
     }
   }
 }

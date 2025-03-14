@@ -46,8 +46,9 @@ az provider show --namespace Microsoft.Compute -o table
 
 ## Installation
 
-### 1. Deploy Azure OpenAI Service
-You will need access to a deployed Azure OpenAI (AOAI) resource. Otherwise documentation on how to deploy an AOAI service can be found [here](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/create-resource?pivots=web-portal). Ensure deployments for the `gpt-4 turbo` model and `text-embedding-ada-002` embedding model are setup. Take note of the model deployment name and model name.
+### 1. Azure OpenAI Quota
+As a prerequisit to deployment, you will either need access to an already deployed Azure OpenAI (AOAI) resource or have available quota in your subscription. If an existing AOAI resource is not used, the deployment code in this accelerator will deploy an AOAI resource with some default model choices.
+Documentation on how to deploy an AOAI service can be found [here](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/create-resource?pivots=web-portal). Ensure deployments for the `gpt-4 turbo` model and `text-embedding-ada-002` embedding model are setup. Take note of the model deployment name and model name.
 Note that the AOAI instance **must** be in the same subscription that you plan to deploy this solution accelerator in.
 
 As a starting point, we recommend the following quota thresholds be setup for this solution accelerator to run.
@@ -81,19 +82,21 @@ In the `deploy.parameters.json` file, provide values for the following required 
 
 | Variable | Expected Value | Required | Description
 | :--- | :--- | --- | ---: |
-`GRAPHRAG_API_BASE`                    | https://<my_openai_name>.openai.azure.com | Yes | Azure OpenAI service endpoint.
-`GRAPHRAG_API_VERSION`                 | 2023-03-15-preview                        | Yes | Azure OpenAI API version.
-`GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME`   |                                           | Yes | Deployment name of the Azure OpenAI embedding model.
-`GRAPHRAG_EMBEDDING_MODEL`             | text-embedding-ada-002                    | Yes | Name of the Azure OpenAI embedding model.
-`GRAPHRAG_LLM_DEPLOYMENT_NAME`         |                                           | Yes | Deployment name of the gpt-4 turbo model.
-`GRAPHRAG_LLM_MODEL`                   | gpt-4                                     | Yes | Name of the gpt-4 turbo model.
 `LOCATION`                             | <my_location>                             | Yes | The azure cloud region to deploy GraphRAG resources to (can be different than the location of your AOAI instance). Please use the [compressed form](https://azuretracks.com/2021/04/current-azure-region-names-reference) of a cloud region name (i.e. `eastus2`).
 `RESOURCE_GROUP`                       | <my_resource_group>                       | Yes | The resource group that GraphRAG will be deployed in. Will get created automatically if the resource group does not exist.
+`GRAPHRAG_API_BASE`                    | https://<my_openai_name>.openai.azure.com | No  | An existing Azure OpenAI service endpoint.
+`GRAPHRAG_API_VERSION`                 | 2023-03-15-preview                        | No  | OpenAI API version. Required if `GRAPHRAG_API_BASE` is defined.
+`GRAPHRAG_EMBEDDING_MODEL`             | text-embedding-ada-002                    | No  | Name of the Azure OpenAI embedding model. Required if `GRAPHRAG_API_BASE` is defined.
+`GRAPHRAG_EMBEDDING_MODEL_VERSION`     | 2                                         | No  | Model version of the Azure OpenAI embedding model. Required if `GRAPHRAG_API_BASE` is defined.
+`GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME`   |                                           | No  | Deployment name of the Azure OpenAI embedding model. Required if `GRAPHRAG_API_BASE` is defined.
+`GRAPHRAG_LLM_MODEL`                   | gpt-4                                     | No  | Name of the gpt-4 turbo model. Required if `GRAPHRAG_API_BASE` is defined.
+`GRAPHRAG_LLM_MODEL_VERSION`           | turbo-2024-04-09                          | No  | Model version of the gpt-4 turbo model. Required if `GRAPHRAG_API_BASE` is defined.
+`GRAPHRAG_LLM_DEPLOYMENT_NAME`         |                                           | No  | Deployment name of the gpt-4 turbo model. Required if `GRAPHRAG_API_BASE` is defined.
 `GRAPHRAG_IMAGE`                       | graphrag:backend                          | No  | The name and tag of the graphrag docker image in the container registry. Will default to `graphrag:backend` and be hosted at `my_container_registry_name>.azurecr.io/graphrag:backend`.
 `CONTAINER_REGISTRY_NAME`              | <my_container_registry_name>              | No  | Name of an Azure Container Registry where the `graphrag` backend docker image will be hosted. Leave off `.azurecr.io` from the name. If not provided, a unique name will be generated (recommended).
-`COGNITIVE_SERVICES_AUDIENCE` |                                           | No  | Endpoint for cognitive services identity authorization. Will default to `https://cognitiveservices.azure.com/.default` for Azure Commercial cloud but should be defined for deployments in other Azure clouds.
+`COGNITIVE_SERVICES_AUDIENCE`          |                                           | No  | Endpoint for cognitive services identity authorization. Will default to `https://cognitiveservices.azure.com/.default` for Azure Commercial cloud but should be defined for deployments in other Azure clouds.
 `APIM_NAME`                            |                                           | No  | Hostname of the API. Must be a globally unique name. The API will be accessible at `https://<APIM_NAME>.azure-api.net`. If not provided a unique name will be generated.
-`APIM_TIER`                            |                                           | No  | The [APIM tier](https://azure.microsoft.com/en-us/pricing/details/api-management) to use. Must be either `Developer` or `StandardV2`. Will default to `Developer` for cost savings.
+`APIM_TIER`                            |                                           | No  | The [APIM tier](https://azure.microsoft.com/en-us/pricing/details/api-management) to use. Can be either `Developer` or `StandardV2`. Will default to `Developer` for cost savings.
 `RESOURCE_BASE_NAME`                   |                                           | No  | Suffix to apply to all azure resource names. If not provided a unique suffix will be generated.
 `AISEARCH_ENDPOINT_SUFFIX`             |                                           | No  | Suffix to apply to AI search endpoint. Will default to `search.windows.net` for Azure Commercial cloud but should be overridden for deployments in other Azure clouds.
 `AISEARCH_AUDIENCE`                    |                                           | No  | Audience for AAD for AI Search. Will default to `https://search.azure.com/` for Azure Commercial cloud but should be overridden for deployments in other Azure clouds.
@@ -104,7 +107,7 @@ cd infra
 bash deploy.sh -h # view help menu for additional options
 bash deploy.sh -p deploy.parameters.json
 ```
-When deploying for the first time, it will take ~40-50 minutes to deploy. Subsequent runs of this command will be faster.
+When deploying for the first time, it may take ~40-50 minutes to deploy all resources. In cases where a deployment error may occur (e.g. not enough quota), subsequent runs of this command will be faster if you rerun the deployment using the same resource group.
 
 ### 6. Use GraphRAG
 Once the deployment has finished, check out our [`Quickstart`](../notebooks/1-Quickstart.ipynb) notebook for a demonstration of how to use the GraphRAG API. To access the API documentation, visit `<APIM_gateway_url>/manpage/docs` in your browser. You can find the `APIM_gateway_url` by looking in the Azure Portal for the deployed APIM instance.

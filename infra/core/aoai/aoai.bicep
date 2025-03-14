@@ -1,5 +1,5 @@
 @description('Name of the Azure OpenAI instance')
-param openAiName string = 'openai${uniqueString(resourceGroup().id)}'
+param openAiName string
 
 @description('Location for the Azure OpenAI instance')
 param location string = resourceGroup().location
@@ -7,19 +7,25 @@ param location string = resourceGroup().location
 @description('LLM model name')
 param llmModelName string = 'gpt-4o'
 
+@description('LLM model deployment name')
+param llmModelDeploymentName string = 'gpt-4o'
+
 @description('LLM Model API version')
 param llmModelVersion string
 
 @description('Embedding model name')
 param embeddingModelName string = 'text-embedding-ada-002'
 
+@description('Embedding model deployment name')
+param embeddingModelDeploymentName string = 'text-embedding-ada-002'
+
 @description('Embedding Model API version')
 param embeddingModelVersion string
 
-@description('TPM quota for llm model deployment (x1000)')
+@description('TPM quota for the LLM model (x1000)')
 param llmTpmQuota int = 10
 
-@description('TPM quota for embedding model deployment (x1000)')
+@description('TPM quota for the embedding model (x1000)')
 param embeddingTpmQuota int = 10
 
 resource aoai 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
@@ -37,7 +43,7 @@ resource aoai 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
 
 resource llmDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
   parent: aoai
-  name: llmModelName
+  name: llmModelDeploymentName // model deployment name
   sku: {
     name: 'GlobalStandard'
     capacity: llmTpmQuota
@@ -45,7 +51,7 @@ resource llmDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10
   properties: {
     model: {
       format: 'OpenAI'
-      name: llmModelName
+      name: llmModelName // model name
       version: llmModelVersion
     }
     currentCapacity: llmTpmQuota
@@ -54,8 +60,8 @@ resource llmDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10
 
 resource embeddingDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
   parent: aoai
-  name: embeddingModelName
-  // NOTE: simultaneous model deployments are not supported at this time. As a workaround, use dependsOn to force the models to be deployed in a sequential manner.
+  name: embeddingModelDeploymentName // model deployment name
+  // NOTE: simultaneous AOAI model deployments are not supported at this time. As a workaround, use dependsOn to force the models to get deployed sequentially.
   dependsOn: [llmDeployment]
   sku: {
     name: 'Standard'
@@ -64,14 +70,16 @@ resource embeddingDeployment 'Microsoft.CognitiveServices/accounts/deployments@2
   properties: {
     model: {
       format: 'OpenAI'
-      name: embeddingModelName
+      name: embeddingModelName // model name
       version: embeddingModelVersion
     }
     currentCapacity: embeddingTpmQuota
   }
 }
 
-output openAiEndpoint string = aoai.properties.endpoint
+output name string = aoai.name
+output id string = aoai.id
+output endpoint string = aoai.properties.endpoint
 output llmModel string = llmDeployment.properties.model.name
 output llmModelDeploymentName string = llmDeployment.name
 output llmModelApiVersion string = llmDeployment.apiVersion

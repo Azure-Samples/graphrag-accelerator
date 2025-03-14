@@ -22,11 +22,10 @@ Managed Identity
 @description('Name of the resource group that GraphRAG will be deployed in.')
 param resourceGroup string
 
+// optional parameters with reasonable defaults unless explicitly overridden (most names will be auto-generated if not provided)
 @description('Unique name to append to each resource')
 param resourceBaseName string = ''
-var resourceBaseNameFinal = !empty(resourceBaseName)
-  ? resourceBaseName
-  : toLower(uniqueString('${subscription().id}/resourceGroups/${resourceGroup}'))
+var resourceBaseNameFinal = !empty(resourceBaseName) ? resourceBaseName : toLower(uniqueString(az.resourceGroup().id))
 
 @description('Cloud region for all resources')
 param location string = az.resourceGroup().location
@@ -48,7 +47,9 @@ param enablePrivateEndpoints bool = true
 @description('Whether to restore the API Management instance.')
 param restoreAPIM bool = false
 
-// optional parameters that will default to a generated name if not provided
+@description('The resource id of an existing AOAI service. Deployment of a new AOAI service will be skipped if this parameter is provided.')
+param deployAoai bool = true
+
 param apimTier string = 'Developer'
 param apimName string = ''
 param acrName string = ''
@@ -60,19 +61,22 @@ param aiSearchName string = ''
 @description('Name of the AOAI LLM model to use. Must match official model id. For more information: https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models')
 @allowed(['gpt-4o', 'gpt-4o-mini'])
 param llmModelName string = 'gpt-4o'
+@description('Deployment name of the AOAI LLM model to use. For more information: https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models')
+param llmModelDeploymentName string = 'gpt-4o'
 @description('Version of the AOAI LLM model to use.')
 param llmModelVersion string = '2024-08-06'
 @description('Quota of the AOAI LLM model to use.')
 @minValue(1)
-param llmModelQuota int = 10
-
+param llmModelQuota int = 1
 @description('Name of the AOAI embedding model to use. Must match official model id. For more information: https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models')
 @allowed(['text-embedding-ada-002', 'text-embedding-3-large'])
 param embeddingModelName string = 'text-embedding-ada-002'
+@description('Deployment name of the AOAI embedding model to use. Must match official model id. For more information: https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models')
+param embeddingModelDeploymentName string = 'text-embedding-ada-002'
 param embeddingModelVersion string = '2'
 @description('Quota of the AOAI embedding model to use.')
 @minValue(1)
-param embeddingModelQuota int = 10
+param embeddingModelQuota int = 1
 
 var abbrs = loadJsonContent('abbreviations.json')
 var tags = { 'azd-env-name': resourceGroup }
@@ -111,6 +115,7 @@ module aksWorkloadIdentityRBAC 'core/rbac/workload-identity-rbac.bicep' = {
     appInsightsName: appInsights.outputs.name
     cosmosDbName: cosmosdb.outputs.name
     storageName: storage.outputs.name
+    aoaiName: deployAoai ? aoai.outputs.name : ''
   }
 }
 
@@ -166,15 +171,17 @@ module vnet 'core/vnet/vnet.bicep' = {
   }
 }
 
-module aoai 'core/aoai/aoai.bicep' = {
+module aoai 'core/aoai/aoai.bicep' = if (deployAoai) {
   name: 'aoai-deployment'
   params: {
     openAiName: '${abbrs.cognitiveServicesAccounts}${resourceBaseNameFinal}'
     location: location
     llmModelName: llmModelName
+    llmModelDeploymentName: llmModelDeploymentName
     llmModelVersion: llmModelVersion
     llmTpmQuota: llmModelQuota
     embeddingModelName: embeddingModelName
+    embeddingModelDeploymentName: embeddingModelDeploymentName
     embeddingModelVersion: embeddingModelVersion
     embeddingTpmQuota: embeddingModelQuota
   }
@@ -377,13 +384,16 @@ output azure_aks_controlplanefqdn string = aks.outputs.controlPlaneFqdn
 output azure_aks_managed_rg string = aks.outputs.managedResourceGroup
 output azure_aks_service_account_name string = aksServiceAccountName
 
-output azure_aoai_endpoint string = aoai.outputs.openAiEndpoint
-output azure_aoai_llm_model string = aoai.outputs.llmModel
-output azure_aoai_llm_model_deployment_name string = aoai.outputs.llmModelDeploymentName
-output azure_aoai_llm_model_api_version string = aoai.outputs.llmModelApiVersion
-output azure_aoai_embedding_model string = aoai.outputs.textEmbeddingModel
-output azure_aoai_embedding_model_deployment_name string = aoai.outputs.textEmbeddingModelDeploymentName
-output azure_aoai_embedding_model_api_version string = aoai.outputs.textEmbeddingModelApiVersion
+// conditionally output AOAI endpoint information if it was deployed
+output azure_aoai_endpoint string = deployAoai ? aoai.outputs.endpoint : ''
+output azure_aoai_llm_model string = deployAoai ? aoai.outputs.llmModel : ''
+output azure_aoai_llm_model_deployment_name string = deployAoai ? aoai.outputs.llmModelDeploymentName : ''
+output azure_aoai_llm_model_api_version string = deployAoai ? aoai.outputs.llmModelApiVersion : ''
+output azure_aoai_embedding_model string = deployAoai ? aoai.outputs.textEmbeddingModel : ''
+output azure_aoai_embedding_model_deployment_name string = deployAoai
+  ? aoai.outputs.textEmbeddingModelDeploymentName
+  : ''
+output azure_aoai_embedding_model_api_version string = deployAoai ? aoai.outputs.textEmbeddingModelApiVersion : ''
 
 output azure_apim_gateway_url string = apim.outputs.apimGatewayUrl
 output azure_apim_name string = apim.outputs.name
