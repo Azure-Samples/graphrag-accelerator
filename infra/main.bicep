@@ -57,26 +57,41 @@ param storageAccountName string = ''
 param cosmosDbName string = ''
 param aiSearchName string = ''
 
-// AOAI parameters
+//
+// start AOAI parameters
+//
 @description('Name of the AOAI LLM model to use. Must match official model id. For more information: https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models')
-@allowed(['gpt-4o', 'gpt-4o-mini'])
+@allowed(['gpt-4', 'gpt-4o', 'gpt-4o-mini'])
 param llmModelName string = 'gpt-4o'
+
 @description('Deployment name of the AOAI LLM model to use. For more information: https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models')
 param llmModelDeploymentName string = 'gpt-4o'
-@description('Version of the AOAI LLM model to use.')
+
+@description('Model version of the AOAI LLM model to use.')
+@allowed(['2024-08-06', 'turbo-2024-04-09'])
 param llmModelVersion string = '2024-08-06'
+
 @description('Quota of the AOAI LLM model to use.')
 @minValue(1)
 param llmModelQuota int = 1
+
 @description('Name of the AOAI embedding model to use. Must match official model id. For more information: https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models')
 @allowed(['text-embedding-ada-002', 'text-embedding-3-large'])
 param embeddingModelName string = 'text-embedding-ada-002'
+
 @description('Deployment name of the AOAI embedding model to use. Must match official model id. For more information: https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models')
 param embeddingModelDeploymentName string = 'text-embedding-ada-002'
+
+@description('Model version of the AOAI embedding model to use.')
+@allowed(['2', '1'])
 param embeddingModelVersion string = '2'
+
 @description('Quota of the AOAI embedding model to use.')
 @minValue(1)
 param embeddingModelQuota int = 1
+//
+// end AOAI parameters
+//
 
 var abbrs = loadJsonContent('abbreviations.json')
 var tags = { 'azd-env-name': resourceGroup }
@@ -388,12 +403,12 @@ output azure_aks_service_account_name string = aksServiceAccountName
 output azure_aoai_endpoint string = deployAoai ? aoai.outputs.endpoint : ''
 output azure_aoai_llm_model string = deployAoai ? aoai.outputs.llmModel : ''
 output azure_aoai_llm_model_deployment_name string = deployAoai ? aoai.outputs.llmModelDeploymentName : ''
+output azure_aoai_llm_model_quota int = deployAoai ? aoai.outputs.llmModelQuota : 0
 output azure_aoai_llm_model_api_version string = deployAoai ? aoai.outputs.llmModelApiVersion : ''
-output azure_aoai_embedding_model string = deployAoai ? aoai.outputs.textEmbeddingModel : ''
-output azure_aoai_embedding_model_deployment_name string = deployAoai
-  ? aoai.outputs.textEmbeddingModelDeploymentName
-  : ''
-output azure_aoai_embedding_model_api_version string = deployAoai ? aoai.outputs.textEmbeddingModelApiVersion : ''
+output azure_aoai_embedding_model string = deployAoai ? aoai.outputs.embeddingModel : ''
+output azure_aoai_embedding_model_deployment_name string = deployAoai ? aoai.outputs.embeddingModelDeploymentName : ''
+output azure_aoai_embedding_model_quota int = deployAoai ? aoai.outputs.embeddingModelQuota : 0
+output azure_aoai_embedding_model_api_version string = deployAoai ? aoai.outputs.embeddingModelApiVersion : ''
 
 output azure_apim_gateway_url string = apim.outputs.apimGatewayUrl
 output azure_apim_name string = apim.outputs.name

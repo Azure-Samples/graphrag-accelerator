@@ -20,12 +20,14 @@ COGNITIVE_SERVICES_AUDIENCE="https://cognitiveservices.azure.com/.default"
 CONTAINER_REGISTRY_NAME=""
 GRAPHRAG_API_BASE=""
 GRAPHRAG_API_VERSION="2023-03-15-preview"
-GRAPHRAG_LLM_MODEL="gpt-4o"
-GRAPHRAG_LLM_MODEL_VERSION="2024-08-06"
-GRAPHRAG_LLM_DEPLOYMENT_NAME="gpt-4o"
+GRAPHRAG_LLM_MODEL="gpt-4"
+GRAPHRAG_LLM_MODEL_VERSION="turbo-2024-04-09"
+GRAPHRAG_LLM_DEPLOYMENT_NAME="gpt-4"
+GRAPHRAG_LLM_MODEL_QUOTA="80"
 GRAPHRAG_EMBEDDING_MODEL="text-embedding-ada-002"
 GRAPHRAG_EMBEDDING_MODEL_VERSION="2"
 GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME="text-embedding-ada-002"
+GRAPHRAG_EMBEDDING_MODEL_QUOTA="300"
 
 requiredParams=(
     LOCATION
@@ -309,6 +311,7 @@ checkForApimSoftDelete () {
 
 deployAzureResources () {
     echo "Deploying Azure resources..."
+    # only deploy AOAI if the user did not provide links to an existing AOAI service
     local deployAoai="true"
     if [ -n "$GRAPHRAG_API_BASE" ]; then
         deployAoai="false"
@@ -322,19 +325,21 @@ deployAzureResources () {
         --template-file ./main.bicep \
         --parameters "resourceGroup=$RESOURCE_GROUP" \
         --parameters "resourceBaseName=$RESOURCE_BASE_NAME" \
-        --parameters "deployAoai=$deployAoai" \
         --parameters "apimName=$APIM_NAME" \
         --parameters "apimTier=$APIM_TIER" \
         --parameters "apiPublisherEmail=$PUBLISHER_EMAIL" \
         --parameters "apiPublisherName=$PUBLISHER_NAME" \
         --parameters "enablePrivateEndpoints=$ENABLE_PRIVATE_ENDPOINTS" \
         --parameters "acrName=$CONTAINER_REGISTRY_NAME" \
+        --parameters "deployAoai=$deployAoai" \
         --parameters "llmModelName=$GRAPHRAG_LLM_MODEL" \
         --parameters "llmModelDeploymentName=$GRAPHRAG_LLM_DEPLOYMENT_NAME" \
         --parameters "llmModelVersion=$GRAPHRAG_LLM_MODEL_VERSION" \
+        --parameters "llmModelQuota=$GRAPHRAG_LLM_MODEL_QUOTA" \
         --parameters "embeddingModelName=$GRAPHRAG_EMBEDDING_MODEL" \
         --parameters "embeddingModelDeploymentName=$GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME" \
         --parameters "embeddingModelVersion=$GRAPHRAG_EMBEDDING_MODEL_VERSION" \
+        --parameters "embeddingModelQuota=$GRAPHRAG_EMBEDDING_MODEL_QUOTA" \
         --output json)
     # errors in deployment may not be caught by exitIfCommandFailed function so we also check the output for errors
     exitIfCommandFailed $? "Error deploying Azure resources..."
