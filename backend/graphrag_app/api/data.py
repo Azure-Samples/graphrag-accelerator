@@ -80,10 +80,11 @@ async def upload_file_async(
 
     with upload_file.file as file_stream:
         try:
-            # extract text from file and upload to Azure Blob Storage
-            md = MarkItDown()
-            result = md.convert(file_stream)
-            await converted_blob_client.upload_blob(result.text_content, overwrite=overwrite)
+            if not await check_cache(file_stream, container_client):
+                # extract text from file and upload to Azure Blob Storage
+                md = MarkItDown()
+                result = md.convert(file_stream)
+                await converted_blob_client.upload_blob(result.text_content, overwrite=overwrite)
         except Exception:
             pass
 
