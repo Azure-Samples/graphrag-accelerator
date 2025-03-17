@@ -71,7 +71,10 @@ async def upload_file_async(
     Asynchronously convert and upload a file to the specified blob container.
     Silently ignore errors that occur when overwrite=False.
     """
-    blob_client = container_client.get_blob_client(upload_file.filename)
+    filename = upload_file.filename
+    converted_filename = filename.split(".")[0] + ".txt"
+    blob_client = container_client.get_blob_client(converted_filename)
+    
     with upload_file.file as file_stream:
         try:
             # Extract text from file and upload to Azure Blob Storage
