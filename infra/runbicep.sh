@@ -1,8 +1,6 @@
 #!/bin/bash
 
 deployAzureResources () {
-
-    
     echo "Deploying Azure resources..."
     local datetime="`date +%Y%m%d%H%M%S`"
     local deployName="graphrag-deploy-$datetime"
@@ -14,8 +12,8 @@ deployAzureResources () {
         --resource-group "$rggoup" \
         --mode Incremental \
         --template-file ./main.bicep \
-        --parameters "resourceBaseName=$rggoup" \
         --parameters "resourceGroup=$rggoup" \
+        --parameters "resourceBaseName=$rggoup" \
         --parameters "apimName=$rggoup" \
         --parameters "apimTier=Developer" \
         --parameters "apiPublisherName=harjsin" \
@@ -30,6 +28,4 @@ deployAzureResources () {
     exitIfValueEmpty "$AZURE_OUTPUTS" "Error parsing outputs from Azure deployment..."
 }
 
-
 deployAzureResources
-
