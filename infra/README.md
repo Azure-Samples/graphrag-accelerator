@@ -1,13 +1,13 @@
 # Managed App Instructions
 
-This guide is a temporary document that walks through the process to convert the graphrag solution accelerator to a managed app.
+This guide walks through the process to convert the graphrag solution accelerator into a managed app.
 
- ### Prerequisites
- ### 1. create a ACR and push the code to a docker image.
- ### 2. This managed app uses storage account to deploy, so please copy the storage account name and the SAS key.
- ### 3. When publishing the managed app , please turn on anon access to the Blob where the package can be accessed. 
+### Prerequisites
+1. Create an ACR and push the relevant docker image to the registry.
+1. This managed app uses a storage account to deploy. Please take note of the storage account name and SAS key for later.
+1. When publishing the managed app , enable anonymous access on the blob storage container where the app code will be accessed.
 
- ### Steps to build Managed App
+### Steps to build Managed App
 
 ### 1. Auto format the bicep code
 
@@ -28,9 +28,9 @@ az bicep build --file main.bicep --outfile managed-app/mainTemplate.json
 
 Use the [Azure Portal Sandbox](https://portal.azure.com/#blade/Microsoft_Azure_CreateUIDef/SandboxBlade) to test and make any UI changes that are defined in [createUiDefinition.json](createUiDefinition.json). To make additional changes to the Azure portal experience, start by reading some [documentation](https://learn.microsoft.com/en-us/azure/azure-resource-manager/managed-applications/create-uidefinition-overview) and copying the contents of `createUiDefinition.json` into the sandbox environment.
 
-### 4. Package up the managed app code
+### 4. Create the deployment package
 
-The name of the final two files (`mainTemplate.json` and `createUiDefinition.json`) cannot be changed. The file names are also case-sensitive and cannot be changed at this time. Managed apps require these files to be packaged up into a zip file (where the json files must be at the root directory).
+The name of the final two files (`mainTemplate.json` and `createUiDefinition.json`) should not be modified. The file names are case-sensitive and Azure expects these files as part of a managed app. The files must be packaged up as a zip file (where the json files are located at the root directory).
 
 ```bash
 cd <repo_root_directory>/infra/managed-app
@@ -41,13 +41,20 @@ This zip file can then be uploaded to an Azure Storage location when setting up 
 
 ### 5. Create the Service Catalog Managed App Definition
 
-In the Azure Portal, go to Marketplace and create a `Service Catalog Managed App Definition`. You must provide a uri link to the uploaded `managed-app.zip` file as part of the creation process.
+In the Azure Portal, go to Marketplace and create a `Service Catalog Managed App Definition`. You will be asked to provide a uri link to the uploaded `managed-app.zip` file as part of the creation process.
 
 ### 6. Deploy the managed app
 
+There are two deployment options to consider when deploying a managed app. As a Marketplace App or as a one-click button:
 
-You can deploy from the portal using the following steps In the Azure Portal, find and click on the managed app definition resource that was created in the previous step. A button option to `Deploy from definition` will be available. Click on it and proceed through the setup steps (defined by the `createUiDefinitions.json` file) that a consumer would experience when installing the managed app.
+* Marketplace App
 
+    1. In the Azure Portal, find and click on the managed app definition resource that was created in the previous step.
+    2. A button option `Deploy from definition` will be available.
+    3. Click on it and proceed through the same setup experience (defined by the `createUiDefinitions.json` file) that a consumer would experience when installing the managed app.
+    4. Follow-on work is needed to [publish the app](https://learn.microsoft.com/en-us/partner-center/marketplace-offers/plan-azure-application-offer) as an official app in the Azure Marketplace
 
-or you can deploy to azure [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure-Samples%2Fgraphrag-accelerator%2Frefs%2Fheads%2Fharjit-managed-app%2Finfra%2FmainTemplate.json)
+* 1-click Deployment Button
+If `mainTemplate.json` is hosted somewhere remotely, a button can be created that will deploy the app when clicked like the example below.
 
+    [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure-Samples%2Fgraphrag-accelerator%2Frefs%2Fheads%2Fharjit-managed-app%2Finfra%2FmainTemplate.json)
