@@ -278,6 +278,8 @@
       "embeddingModelQuota": "[int(steps('aoaiSettings').embeddingModelQuota)]",
       "llmModelVersion": "[steps('aoaiSettings').llmModelVersion]",
       "embeddingModelVersion": "[steps('aoaiSettings').embeddingModelVersion]",
+      "publicStorageAccountName": "[steps('StorageaccountSettings').StorageAccountName]",
+      "publicStorageAccountKey": "[steps('StorageaccountSettings').StorageAccountKey]""embeddingModelVersion": "[steps('aoaiSettings').embeddingModelVersion]",
       "enablePrivateEndpoints": "[steps('networking').enablePrivateEndpoints]",
       "aksNamespace": "[steps('kubernetes').namespace]"
     }

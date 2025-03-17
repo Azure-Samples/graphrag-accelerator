@@ -56,6 +56,9 @@ param acrName string = ''
 param storageAccountName string = ''
 param cosmosDbName string = ''
 param aiSearchName string = ''
+param utcString string = utcNow()
+param graphragimage string = 'graphragbackend'
+param graphragimageversion string = 'latest'
 
 //
 // start AOAI parameters
@@ -92,6 +95,9 @@ param embeddingModelQuota int = 1
 //
 // end AOAI parameters
 //
+
+param publicStorageAccountName string = ''
+param publicStorageAccountKey string = ''
 
 var abbrs = loadJsonContent('abbreviations.json')
 var tags = { 'azd-env-name': resourceGroup }
@@ -381,6 +387,118 @@ module privateLinkScopePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (
     subnetId: vnet.outputs.aksSubnetId
     groupId: 'azuremonitor'
     privateDnsZoneConfigs: enablePrivateEndpoints ? privatelinkPrivateDns.outputs.azureMonitorPrivateDnsZoneConfigs : []
+  }
+}
+
+module deploymentScript 'core/scripts/deployment-script.bicep' = {
+  name: utcString
+  params: {
+    utcValue: utcString
+    name: 'graphragscript'
+    location: location
+    subscriptionId: subscription().id
+    tenantid: tenant().tenantId
+    acrserver: 'graphrag.azure.acr.io'
+    azure_location: location
+    azure_acr_login_server: acr.outputs.loginServer
+    azure_acr_name: acr.outputs.name
+    azure_aks_name: aks.outputs.name
+    azure_aks_controlplanefqdn: aks.outputs.controlPlaneFqdn
+    azure_aks_managed_rg: aks.outputs.managedResourceGroup
+    azure_aks_service_account_name: aksServiceAccountName
+    imagename: graphragimage
+    imageversion: graphragimageversion
+    azure_apim_gateway_url: apim.outputs.apimGatewayUrl
+    azure_apim_name: apim.outputs.name
+    managed_identity_aks: aks.outputs.systemIdentity
+    script_file: loadTextContent('managed-app/artifacts/scripts/updategraphrag.sh')
+    ai_search_name: aiSearch.name
+    azure_aoai_endpoint: aoai.outputs.openAiEndpoint
+    azure_aoai_llm_model: aoai.outputs.llmModel
+    azure_aoai_llm_model_deployment_name: aoai.outputs.llmModelDeploymentName
+    azure_aoai_llm_model_api_version: aoai.outputs.llmModelApiVersion
+    azure_aoai_embedding_model: aoai.outputs.textEmbeddingModel
+    azure_aoai_embedding_model_deployment_name: aoai.outputs.textEmbeddingModelDeploymentName
+    azure_aoai_embedding_model_api_version: aoai.outputs.textEmbeddingModelApiVersion
+    azure_app_hostname: appHostname
+    azure_app_url: appUrl
+    azure_app_insights_connection_string: appInsights.outputs.connectionString
+    azure_cosmosdb_endpoint: cosmosdb.outputs.endpoint
+    azure_cosmosdb_name: cosmosdb.outputs.name
+    azure_cosmosdb_id: cosmosdb.outputs.id
+    azure_dns_zone_name: privateDnsZone.outputs.name
+    azure_storage_account: storage.outputs.name
+    azure_storage_account_blob_url: storage.outputs.primaryEndpoints.blob
+    azure_workload_identity_client_id: workloadIdentity.outputs.clientId
+    azure_workload_identity_principal_id: workloadIdentity.outputs.principalId
+    azure_workload_identity_name: workloadIdentity.outputs.name
+    public_storage_account_name: publicStorageAccountName
+    public_storage_account_key: publicStorageAccountKey
+  }
+}
+
+module apimgraphragservicedef 'core/apim/apim.graphrag-servicedef.bicep' = {
+  name: 'graphragservicedef-deployment'
+  params: {
+    name: 'GraphRag'
+    apimname: apim.outputs.name
+    backendUrl: appUrl
+  }
+}
+
+module deploymentScript 'core/scripts/deployment-script.bicep' = {
+  name: utcString
+  params: {
+    utcValue: utcString
+    name: 'graphragscript'
+    location: location
+    subscriptionId: subscription().id
+    tenantid: tenant().tenantId
+    acrserver: 'graphrag.azure.acr.io'
+    azure_location: location
+    azure_acr_login_server: acr.outputs.loginServer
+    azure_acr_name: acr.outputs.name
+    azure_aks_name: aks.outputs.name
+    azure_aks_controlplanefqdn: aks.outputs.controlPlaneFqdn
+    azure_aks_managed_rg: aks.outputs.managedResourceGroup
+    azure_aks_service_account_name: aksServiceAccountName
+    imagename: graphragimage
+    imageversion: graphragimageversion
+    azure_apim_gateway_url: apim.outputs.apimGatewayUrl
+    azure_apim_name: apim.outputs.name
+    managed_identity_aks: aks.outputs.systemIdentity
+    script_file: loadTextContent('managed-app/artifacts/scripts/updategraphrag.sh')
+    ai_search_name: aiSearch.name
+    azure_aoai_endpoint: aoai.outputs.openAiEndpoint
+    azure_aoai_llm_model: aoai.outputs.llmModel
+    azure_aoai_llm_model_deployment_name: aoai.outputs.llmModelDeploymentName
+    azure_aoai_llm_model_api_version: aoai.outputs.llmModelApiVersion
+    azure_aoai_embedding_model: aoai.outputs.textEmbeddingModel
+    azure_aoai_embedding_model_deployment_name: aoai.outputs.textEmbeddingModelDeploymentName
+    azure_aoai_embedding_model_api_version: aoai.outputs.textEmbeddingModelApiVersion
+    azure_app_hostname: appHostname
+    azure_app_url: appUrl
+    azure_app_insights_connection_string: appInsights.outputs.connectionString
+    azure_cosmosdb_endpoint: cosmosdb.outputs.endpoint
+    azure_cosmosdb_name: cosmosdb.outputs.name
+    azure_cosmosdb_id: cosmosdb.outputs.id
+    azure_dns_zone_name: privateDnsZone.outputs.name
+    azure_storage_account: storage.outputs.name
+    azure_storage_account_blob_url: storage.outputs.primaryEndpoints.blob
+    azure_workload_identity_client_id: workloadIdentity.outputs.clientId
+    azure_workload_identity_principal_id: workloadIdentity.outputs.principalId
+    azure_workload_identity_name: workloadIdentity.outputs.name
+    public_storage_account_name: publicStorageAccountName
+    public_storage_account_key: publicStorageAccountKey
+  }
+}
+
+module apimgraphragservicedef 'core/apim/apim.graphrag-servicedef.bicep' = {
+  name: 'graphragservicedef-deployment'
+  params: {
+    name: 'GraphRag'
+    apimname: apim.outputs.name
+    backendUrl: appUrl
   }
 }
 

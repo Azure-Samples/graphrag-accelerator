@@ -1,0 +1,13 @@
+{{- if .Values.ingress.createIngressClass -}}
+apiVersion: approuting.kubernetes.azure.com/v1alpha1
+kind: NginxIngressController
+metadata:
+  name: {{ .Values.ingress.className }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  controllerNamePrefix: {{ .Values.ingress.className }}
+  {{- with .Values.ingress.loadBalancerAnnotations }}
+  loadBalancerAnnotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
