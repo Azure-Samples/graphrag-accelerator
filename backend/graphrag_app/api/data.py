@@ -2,10 +2,13 @@
 # Licensed under the MIT License.
 
 import asyncio
+import csv
 import re
 import traceback
+from hashlib import sha256
+from io import StringIO
 from math import ceil
-from typing import List
+from typing import BinaryIO, List
 
 from azure.storage.blob.aio import ContainerClient
 from fastapi import (
@@ -73,16 +76,35 @@ async def upload_file_async(
     """
     filename = upload_file.filename
     converted_filename = filename.split(".")[0] + ".txt"
-    blob_client = container_client.get_blob_client(converted_filename)
-    
+    converted_blob_client = container_client.get_blob_client(converted_filename)
+
     with upload_file.file as file_stream:
         try:
-            # Extract text from file and upload to Azure Blob Storage
+            # extract text from file and upload to Azure Blob Storage
             md = MarkItDown()
             result = md.convert(file_stream)
-            await blob_client.upload_blob(result.text_content, overwrite=overwrite)
+            await converted_blob_client.upload_blob(result.text_content, overwrite=overwrite)
         except Exception:
             pass
+
+
+async def check_cache(file_stream: BinaryIO, container_client: ContainerClient) -> bool:
+    """
+    Check if the file has already been uploaded.
+    """
+    # load the file cache
+    cache_blob_client = container_client.get_blob_client("uploaded_files_cache.csv")
+    cache_download_stream = await cache_blob_client.download_blob()
+    cache_bytes = await cache_download_stream.readall()
+    cache_content = StringIO(cache_bytes.decode("utf-8"))
+    cache_reader = csv.reader(cache_content)
+
+    # comupte the sha256 hash of the file and check if it exists in the cache
+    file_hash = sha256(file_stream.read()).hexdigest()
+    for row in cache_reader:
+        if file_hash in row:
+            return True
+    return False
 
 
 class Cleaner:
@@ -145,10 +167,22 @@ async def upload_files(
         # clean files - remove illegal XML characters
         files = [UploadFile(Cleaner(f.file), filename=f.filename) for f in files]
 
-        # upload files in batches of 1000 to avoid exceeding Azure Storage API limits
         blob_container_client = await get_blob_container_client(
             sanitized_container_name
         )
+
+        # create and upload the file cache if it doesn't exist
+        cache_blob_client = blob_container_client.get_blob_client("uploaded_files_cache.csv")
+        if not cache_blob_client.exists():
+            headers = [
+                ['Filename', 'Hash']
+            ]
+            with open("uploaded_files_cache.csv", "w", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerows(headers)
+                cache_blob_client.upload_blob(f, overwrite=True)
+
+        # upload files in batches of 1000 to avoid exceeding Azure Storage API limits
         batch_size = 1000
         num_batches = ceil(len(files) / batch_size)
         for i in range(num_batches):
