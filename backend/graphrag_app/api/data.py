@@ -14,6 +14,7 @@ from fastapi import (
     HTTPException,
     UploadFile,
 )
+from markitdown import MarkItDown
 
 from graphrag_app.logger.load_logger import load_pipeline_logger
 from graphrag_app.typing.models import (
@@ -67,13 +68,16 @@ async def upload_file_async(
     upload_file: UploadFile, container_client: ContainerClient, overwrite: bool = True
 ) -> None:
     """
-    Asynchronously upload a file to the specified blob container.
+    Asynchronously convert and upload a file to the specified blob container.
     Silently ignore errors that occur when overwrite=False.
     """
     blob_client = container_client.get_blob_client(upload_file.filename)
     with upload_file.file as file_stream:
         try:
-            await blob_client.upload_blob(file_stream, overwrite=overwrite)
+            # Extract text from file and upload to Azure Blob Storage
+            md = MarkItDown()
+            result = md.convert(file_stream)
+            await blob_client.upload_blob(result.text_content, overwrite=overwrite)
         except Exception:
             pass
 
