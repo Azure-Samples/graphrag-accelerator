@@ -97,6 +97,7 @@ param embeddingModelQuota int = 1
 //
 
 param publicStorageAccountName string = ''
+@secure()
 param publicStorageAccountKey string = ''
 
 var abbrs = loadJsonContent('abbreviations.json')
@@ -293,10 +294,19 @@ module apim 'core/apim/apim.bicep' = {
   }
 }
 
-module graphragApi 'core/apim/apim.graphrag-documentation.bicep' = {
+module graphragDocsApi 'core/apim/apim.graphrag-docs-api.bicep' = {
   name: 'graphrag-api-deployment'
   params: {
-    apimname: apim.outputs.name
+    apiManagementName: apim.outputs.name
+    backendUrl: appUrl
+  }
+}
+
+module graphragApi 'core/apim/apim.graphrag-api.bicep' = {
+  name: 'graphragservicedef-deployment'
+  params: {
+    name: 'GraphRag'
+    apiManagementName: apim.outputs.name
     backendUrl: appUrl
   }
 }
@@ -390,15 +400,19 @@ module privateLinkScopePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (
   }
 }
 
-module deploymentScript 'core/scripts/deployment-script.bicep' = {
+module deploymentScript 'core/scripts/deployment-script.bicep' = if (!empty(publicStorageAccountName) && !empty(publicStorageAccountKey)) {
   name: utcString
   params: {
-    utcValue: utcString
     name: 'graphragscript'
     location: location
-    subscriptionId: subscription().id
     tenantid: tenant().tenantId
+    subscriptionId: subscription().id
+    script_file: loadTextContent('managed-app/artifacts/scripts/updategraphrag.sh')
+    public_storage_account_name: publicStorageAccountName
+    public_storage_account_key: publicStorageAccountKey
+    utcValue: utcString
     acrserver: 'graphrag.azure.acr.io'
+    ai_search_name: aiSearch.name
     azure_location: location
     azure_acr_login_server: acr.outputs.loginServer
     azure_acr_name: acr.outputs.name
@@ -406,13 +420,6 @@ module deploymentScript 'core/scripts/deployment-script.bicep' = {
     azure_aks_controlplanefqdn: aks.outputs.controlPlaneFqdn
     azure_aks_managed_rg: aks.outputs.managedResourceGroup
     azure_aks_service_account_name: aksServiceAccountName
-    imagename: graphragImage
-    imageversion: graphragImageVersion
-    azure_apim_gateway_url: apim.outputs.apimGatewayUrl
-    azure_apim_name: apim.outputs.name
-    managed_identity_aks: aks.outputs.systemIdentity
-    script_file: loadTextContent('managed-app/artifacts/scripts/updategraphrag.sh')
-    ai_search_name: aiSearch.name
     azure_aoai_endpoint: aoai.outputs.endpoint
     azure_aoai_llm_model: aoai.outputs.llmModel
     azure_aoai_llm_model_deployment_name: aoai.outputs.llmModelDeploymentName
@@ -420,6 +427,8 @@ module deploymentScript 'core/scripts/deployment-script.bicep' = {
     azure_aoai_embedding_model: aoai.outputs.embeddingModel
     azure_aoai_embedding_model_deployment_name: aoai.outputs.embeddingModelDeploymentName
     azure_aoai_embedding_model_api_version: aoai.outputs.embeddingModelApiVersion
+    azure_apim_gateway_url: apim.outputs.apimGatewayUrl
+    azure_apim_name: apim.outputs.name
     azure_app_hostname: appHostname
     azure_app_url: appUrl
     azure_app_insights_connection_string: appInsights.outputs.connectionString
@@ -432,17 +441,9 @@ module deploymentScript 'core/scripts/deployment-script.bicep' = {
     azure_workload_identity_client_id: workloadIdentity.outputs.clientId
     azure_workload_identity_principal_id: workloadIdentity.outputs.principalId
     azure_workload_identity_name: workloadIdentity.outputs.name
-    public_storage_account_name: publicStorageAccountName
-    public_storage_account_key: publicStorageAccountKey
-  }
-}
-
-module apimgraphragservicedef 'core/apim/apim.graphrag-servicedef.bicep' = {
-  name: 'graphragservicedef-deployment'
-  params: {
-    name: 'GraphRag'
-    apimname: apim.outputs.name
-    backendUrl: appUrl
+    image_name: graphragImage
+    image_version: graphragImageVersion
+    managed_identity_aks: aks.outputs.systemIdentity
   }
 }
 

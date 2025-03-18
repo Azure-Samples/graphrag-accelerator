@@ -3,21 +3,27 @@ param utcValue string
 param location string
 param subscriptionId string
 param tenantid string
+
 param acrserver string
 param azure_location string
+
 param azure_acr_login_server string
 param azure_acr_name string
+
 param azure_aks_name string
 param azure_aks_controlplanefqdn string
 param azure_aks_managed_rg string
 param azure_aks_service_account_name string
+
 param azure_apim_gateway_url string
 param azure_apim_name string
+
 param managed_identity_aks string
+
 param ai_search_name string
 
-param imagename string
-param imageversion string
+param image_name string
+param image_version string
 param script_file string
 
 param azure_aoai_endpoint string
@@ -43,7 +49,9 @@ param azure_storage_account_blob_url string
 param azure_workload_identity_client_id string
 param azure_workload_identity_principal_id string
 param azure_workload_identity_name string
+
 param cognitive_services_audience string = 'https://cognitiveservices.azure.com/default'
+
 param public_storage_account_name string
 param public_storage_account_key string
 
@@ -145,11 +153,11 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
       }
       {
         name: 'IMAGE_NAME'
-        value: imagename
+        value: image_name
       }
       {
         name: 'IMAGE_VERSION'
-        value: imageversion
+        value: image_version
       }
       {
         name: 'AI_SEARCH_NAME'
@@ -182,7 +190,6 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
       { name: 'AZURE_APP_INSIGHTS_CONNECTION_STRING', value: azure_app_insights_connection_string }
       {
         name: 'AZURE_COSMOSDB_ENDPOINT'
-
         value: azure_cosmosdb_endpoint
       }
       { name: 'AZURE_COSMOSDB_NAME', value: azure_cosmosdb_name }
@@ -208,13 +215,10 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
       }
       {
         name: 'AZURE_OPENAI_ENDPOINT'
-
         value: azure_aoai_endpoint
       }
-
       {
         name: 'AZURE_RESOURCE_GROUP'
-
         value: resourceGroup().name
       }
     ]

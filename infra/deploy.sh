@@ -585,10 +585,10 @@ deployGraphragAPI () {
     az deployment group create --only-show-errors --no-prompt \
         --name upload-graphrag-api \
         --resource-group $RESOURCE_GROUP \
-        --template-file core/apim/apim.graphrag-servicedef.bicep \
+        --template-file core/apim/apim.graphrag-api.bicep \
         --parameters "backendUrl=$graphragUrl" \
         --parameters "name=GraphRAG" \
-        --parameters "apimname=$apimName" > /dev/null
+        --parameters "apiManagementName=$apimName" > /dev/null
     exitIfCommandFailed $? "Error registering graphrag API, exiting..."
     # cleanup
     rm core/apim/graphrag-openapi.json

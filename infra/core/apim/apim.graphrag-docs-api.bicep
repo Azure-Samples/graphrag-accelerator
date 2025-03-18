@@ -1,11 +1,11 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-param apimname string
+param apiManagementName string
 param backendUrl string
 
-resource api_docs 'Microsoft.ApiManagement/service/apis@2023-09-01-preview' = {
-  name: '${apimname}/documentation'
+resource api_docs 'Microsoft.ApiManagement/service/apis@2024-05-01' = {
+  name: '${apiManagementName}/documentation'
   properties: {
     displayName: 'documentation'
     apiRevision: '1'
@@ -24,7 +24,7 @@ resource api_docs 'Microsoft.ApiManagement/service/apis@2023-09-01-preview' = {
     isCurrent: true
   }
 
-  resource documentation_docs 'operations@2023-09-01-preview' = {
+  resource documentation_docs 'operations@2024-05-01' = {
     name: 'docs'
     properties: {
       displayName: 'docs'
@@ -35,7 +35,7 @@ resource api_docs 'Microsoft.ApiManagement/service/apis@2023-09-01-preview' = {
     }
   }
 
-  resource documentation_openapi 'operations@2023-09-01-preview' = {
+  resource documentation_openapi 'operations@2024-05-01' = {
     name: 'openapi'
     properties: {
       displayName: 'openapi'

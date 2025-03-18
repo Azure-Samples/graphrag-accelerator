@@ -1,15 +1,12 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-param backendUrl string
+param apiManagementName string
 param name string
-param apimname string
+param backendUrl string
 
-
-
-
-resource api 'Microsoft.ApiManagement/service/apis@2023-09-01-preview' = {
-  name: '${apimname}/${name}'
+resource api 'Microsoft.ApiManagement/service/apis@2024-05-01' = {
+  name: '${apiManagementName}/${name}'
   properties: {
     displayName: 'GraphRAG'
     apiRevision: '1'

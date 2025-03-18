@@ -1,4 +1,5 @@
 #!/bin/bash
+
 # Install kubectl
 set -e
 az aks install-cli --only-show-errors
@@ -27,10 +28,8 @@ helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
 
 # Update Helm repos
 helm repo update
-
 helm pull  oci://graphrag.azurecr.io/graphrag --untar
 
-  
 helm upgrade -i graphrag ./graphrag -f ./graphrag/values.yaml \
     --namespace $aksNamespace --create-namespace \
     --set "serviceAccount.name=$AZURE_AKS_SERVICE_ACCOUNT_NAME" \
@@ -49,8 +48,3 @@ helm upgrade -i graphrag ./graphrag -f ./graphrag/values.yaml \
     --set "graphragConfig.GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME=$AZURE_AOAI_EMBEDDING_MODEL_DEPLOYMENT_NAME" \
     --set "graphragConfig.COGNITIVE_SERVICES_AUDIENCE=$COGNITIVE_SERVICES_AUDIENCE" \
     --set "graphragConfig.STORAGE_ACCOUNT_BLOB_URL=$AZURE_STORAGE_ACCOUNT_BLOB_URL"
-
-  
-
-
-
