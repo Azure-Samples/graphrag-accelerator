@@ -34,11 +34,23 @@ A *deployment package* is a zip file comprised of several files. This includes t
 
 Note that the file names for the json files (`mainTemplate.json` and `createUiDefinition.json`) should not be modified and are case-sensitive. Azure expects these files as part of a managed app deployment package.
 
+A local copy of the backend docker image is needed in order to retrieve a copy of the openapi.json spec associated with GraphRAG's REST API. This api spec file will become part of the final deployment package.
+```shell
+cd <repo_root_directory>
+docker build -t graphrag:backend -f docker/Dockerfile-backend .
+docker run -it -p 8080:80 graphrag:backend
+```
+
 Now create the deployment package:
 ```bash
-# add graphrag helm chart as an additional artifact
 cd <repo_root_directory>/infra
+
+# get the openapi specification file
+curl -s -o managed-app/openapi.json http://localhost:8080/manpage/openapi.json
+
+# add graphrag helm chart as an additional artifact
 cp -r helm/graphrag managed-app/artifacts/
+
 # zip up all files
 cd managed-app
 tar -a -cf managed-app-deployment-pkg.zip createUiDefinition.json mainTemplate.json openapi.json artifacts
