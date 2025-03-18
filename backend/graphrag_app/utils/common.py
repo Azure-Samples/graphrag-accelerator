@@ -193,6 +193,28 @@ def desanitize_name(sanitized_container_name: str) -> str | None:
         raise HTTPException(
             status_code=500, detail="Error retrieving original container name."
         )
+    
+
+async def create_cache(container_client: ContainerClient) -> None:
+    """
+    Create a file cache to track the uploaded files if it doesn't exist.
+    """
+    try:
+        cache_blob_client = container_client.get_blob_client("uploaded_files_cache.csv")
+        if not cache_blob_client.exists():
+            headers = [
+                ['Filename', 'Hash']
+            ]
+            with open("uploaded_files_cache.csv", "w", newline="") as f:
+                writer = csv.writer(f, delimiter=",")
+                writer.writerows(headers)
+                f.seek(0)
+                await cache_blob_client.upload_blob(f, overwrite=True)
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="Error creating file cache in Azure Blob Storage.",
+        )
 
 
 async def check_cache(file_stream: BinaryIO, container_client: ContainerClient) -> bool:

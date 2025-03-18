@@ -2,7 +2,6 @@
 # Licensed under the MIT License.
 
 import asyncio
-import csv
 import re
 import traceback
 from math import ceil
@@ -24,6 +23,7 @@ from graphrag_app.typing.models import (
 )
 from graphrag_app.utils.common import (
     check_cache,
+    create_cache,
     delete_cosmos_container_item_if_exist,
     delete_storage_container_if_exist,
     get_blob_container_client,
@@ -156,17 +156,7 @@ async def upload_files(
             sanitized_container_name
         )
 
-        # create and upload the file cache if it doesn't exist
-        cache_blob_client = blob_container_client.get_blob_client("uploaded_files_cache.csv")
-        if not cache_blob_client.exists():
-            headers = [
-                ['Filename', 'Hash']
-            ]
-            with open("uploaded_files_cache.csv", "w", newline="") as f:
-                writer = csv.writer(f, delimiter=",")
-                writer.writerows(headers)
-                f.seek(0)
-                await cache_blob_client.upload_blob(f, overwrite=True)
+        await create_cache(blob_container_client)
 
         # upload files in batches of 1000 to avoid exceeding Azure Storage API limits
         batch_size = 1000
