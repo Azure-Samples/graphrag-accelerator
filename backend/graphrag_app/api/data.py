@@ -85,6 +85,9 @@ async def upload_file_async(
                 md = MarkItDown()
                 result = md.convert(file_stream)
                 await converted_blob_client.upload_blob(result.text_content, overwrite=overwrite)
+
+                # update the file cache
+                await update_cache(filename, file_stream, container_client)
         except Exception:
             pass
 
@@ -98,14 +101,34 @@ async def check_cache(file_stream: BinaryIO, container_client: ContainerClient) 
     cache_download_stream = await cache_blob_client.download_blob()
     cache_bytes = await cache_download_stream.readall()
     cache_content = StringIO(cache_bytes.decode("utf-8"))
-    cache_reader = csv.reader(cache_content)
 
     # comupte the sha256 hash of the file and check if it exists in the cache
+    cache_reader = csv.reader(cache_content, delimiter=",")
     file_hash = sha256(file_stream.read()).hexdigest()
     for row in cache_reader:
         if file_hash in row:
             return True
     return False
+
+
+async def update_cache(filename: str, file_stream: BinaryIO, container_client: ContainerClient) -> None:
+    """
+    Update the file cache with the new file.
+    """
+    # load the file cache
+    cache_blob_client = container_client.get_blob_client("uploaded_files_cache.csv")
+    cache_download_stream = await cache_blob_client.download_blob()
+    cache_bytes = await cache_download_stream.readall()
+    cache_content = StringIO(cache_bytes.decode("utf-8"))
+
+    # compute the sha256 hash of the file and add it to the cache
+    cache_writer = csv.writer(cache_content, delimiter=",")
+    file_hash = sha256(file_stream.read()).hexdigest()
+    cache_writer.writerow([filename, file_hash])
+
+    # upload the updated cache to Azure Blob Storage
+    cache_content.seek(0)
+    await cache_blob_client.upload_blob(cache_content, overwrite=True)
 
 
 class Cleaner:
@@ -179,9 +202,10 @@ async def upload_files(
                 ['Filename', 'Hash']
             ]
             with open("uploaded_files_cache.csv", "w", newline="") as f:
-                writer = csv.writer(f)
+                writer = csv.writer(f, delimiter=",")
                 writer.writerows(headers)
-                cache_blob_client.upload_blob(f, overwrite=True)
+                f.seek(0)
+                await cache_blob_client.upload_blob(f, overwrite=True)
 
         # upload files in batches of 1000 to avoid exceeding Azure Storage API limits
         batch_size = 1000
