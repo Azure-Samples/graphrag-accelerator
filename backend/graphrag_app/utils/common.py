@@ -1,9 +1,13 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+import csv
 import hashlib
 import os
 import traceback
+from hashlib import sha256
+from io import StringIO
+from typing import BinaryIO
 
 import pandas as pd
 from azure.core.exceptions import ResourceNotFoundError
@@ -189,3 +193,42 @@ def desanitize_name(sanitized_container_name: str) -> str | None:
         raise HTTPException(
             status_code=500, detail="Error retrieving original container name."
         )
+
+
+async def check_cache(file_stream: BinaryIO, container_client: ContainerClient) -> bool:
+    """
+    Check if the file has already been uploaded.
+    """
+    # load the file cache
+    cache_blob_client = container_client.get_blob_client("uploaded_files_cache.csv")
+    cache_download_stream = await cache_blob_client.download_blob()
+    cache_bytes = await cache_download_stream.readall()
+    cache_content = StringIO(cache_bytes.decode("utf-8"))
+
+    # comupte the sha256 hash of the file and check if it exists in the cache
+    cache_reader = csv.reader(cache_content, delimiter=",")
+    file_hash = sha256(file_stream.read()).hexdigest()
+    for row in cache_reader:
+        if file_hash in row:
+            return True
+    return False
+
+
+async def update_cache(filename: str, file_stream: BinaryIO, container_client: ContainerClient) -> None:
+    """
+    Update the file cache with the new file.
+    """
+    # load the file cache
+    cache_blob_client = container_client.get_blob_client("uploaded_files_cache.csv")
+    cache_download_stream = await cache_blob_client.download_blob()
+    cache_bytes = await cache_download_stream.readall()
+    cache_content = StringIO(cache_bytes.decode("utf-8"))
+
+    # compute the sha256 hash of the file and add it to the cache
+    cache_writer = csv.writer(cache_content, delimiter=",")
+    file_hash = sha256(file_stream.read()).hexdigest()
+    cache_writer.writerow([filename, file_hash])
+
+    # upload the updated cache to Azure Blob Storage
+    cache_content.seek(0)
+    await cache_blob_client.upload_blob(cache_content, overwrite=True)
