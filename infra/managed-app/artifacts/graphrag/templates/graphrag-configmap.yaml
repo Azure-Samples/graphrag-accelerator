@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  labels:
-    {{- include "graphrag.labels" . | nindent 4 }}
-  name: {{ include "graphrag.fullname" . }}
-data:
-  {{- toYaml .Values.graphragConfig | nindent 2 }}
-  AKS_NAMESPACE: {{ .Release.Namespace }}

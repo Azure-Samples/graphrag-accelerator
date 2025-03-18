@@ -30,31 +30,54 @@ Use the [Azure Portal Sandbox](https://portal.azure.com/#blade/Microsoft_Azure_C
 
 ### 4. Create the deployment package
 
-The name of the final two files (`mainTemplate.json` and `createUiDefinition.json`) should not be modified. The file names are case-sensitive and Azure expects these files as part of a managed app. The files must be packaged up as a zip file (where the json files are located at the root directory).
+A *deployment package* is a zip file comprised of several files. This includes the json files from the previous steps along with any additional code relevant to the deployment (i.e. artifacts)
 
+Note that the file names for the json files (`mainTemplate.json` and `createUiDefinition.json`) should not be modified and are case-sensitive. Azure expects these files as part of a managed app deployment package.
+
+Now create the deployment package:
 ```bash
-cd <repo_root_directory>/infra/managed-app
- tar -a -c -f managed-app.zip createUiDefinition.json mainTemplate.json openapi.json artifacts 
- ```
+# add graphrag helm chart as an additional artifact
+cd <repo_root_directory>/infra
+cp -r helm/graphrag managed-app/artifacts/
+# zip up all files
+cd managed-app
+tar -a -cf managed-app-deployment-pkg.zip createUiDefinition.json mainTemplate.json openapi.json artifacts
+```
 
-This zip file can then be uploaded to an Azure Storage location when setting up a [Service Catalog Managed Application Definition](https://ms.portal.azure.com/#view/Microsoft_Azure_Marketplace/GalleryItemDetailsBladeNopdl/id/Microsoft.ApplianceDefinition/selectionMode~/false/resourceGroupId//resourceGroupLocation//dontDiscardJourney~/false/selectedMenuId/home/launchingContext~/%7B%22galleryItemId%22%3A%22Microsoft.ApplianceDefinition%22%2C%22source%22%3A%5B%22GalleryFeaturedMenuItemPart%22%2C%22VirtualizedTileDetails%22%5D%2C%22menuItemId%22%3A%22home%22%2C%22subMenuItemId%22%3A%22Search%20results%22%2C%22telemetryId%22%3A%2220409084-39a1-4800-bbce-d0b26a6f46a4%22%7D/searchTelemetryId/d7d20e05-ca16-47f7-bed5-9c7b8d2fa641).
+The deployment package will have the following file structure:
+```bash
+managed-app-deployment-pkg.zip
+├── artifacts
+│   ├── graphrag
+│   │   ├── Chart.yaml
+│   │   ├── LICENSE
+│   │   ├── templates
+│   │   └── values.yaml
+│   └── scripts
+│       └── updategraphrag.sh
+├── createUiDefinition.json
+├── mainTemplate.json
+└── openapi.json
+```
+
+This zip file should be uploaded to an Azure Storage location in preparation for the next step, setting up a Service Catalog Managed Application Definition.
 
 ### 5. Create the Service Catalog Managed App Definition
 
-In the Azure Portal, go to Marketplace and create a `Service Catalog Managed App Definition`. You will be asked to provide a uri link to the uploaded `managed-app.zip` file as part of the creation process.
+Click [here](https://ms.portal.azure.com/#view/Microsoft_Azure_Marketplace/GalleryItemDetailsBladeNopdl/id/Microsoft.ApplianceDefinition/selectionMode~/false/resourceGroupId//resourceGroupLocation//dontDiscardJourney~/false/selectedMenuId/home/launchingContext~/%7B%22galleryItemId%22%3A%22Microsoft.ApplianceDefinition%22%2C%22source%22%3A%5B%22GalleryFeaturedMenuItemPart%22%2C%22VirtualizedTileDetails%22%5D%2C%22menuItemId%22%3A%22home%22%2C%22subMenuItemId%22%3A%22Search%20results%22%2C%22telemetryId%22%3A%2220409084-39a1-4800-bbce-d0b26a6f46a4%22%7D/searchTelemetryId/d7d20e05-ca16-47f7-bed5-9c7b8d2fa641) or from within the Azure Portal, go to Marketplace and create a `Service Catalog Managed App Definition`. You will be asked to provide a uri link to the uploaded `managed-app-deployment-pkg.zip` file during the creation process.
 
 ### 6. Deploy the managed app
 
-There are two deployment options to consider when deploying a managed app. As a Marketplace App or as a one-click button:
+There are two deployment options to consider when deploying a managed app. As an app in the Marketplace or as a one-click button:
 
 * Marketplace App
 
-    1. In the Azure Portal, find and click on the managed app definition resource that was created in the previous step.
+    1. In the Azure Portal, find and click on the managed app definition resource created in the previous step.
     2. A button option `Deploy from definition` will be available.
     3. Click on it and proceed through the same setup experience (defined by the `createUiDefinitions.json` file) that a consumer would experience when installing the managed app.
     4. Follow-on work is needed to [publish the app](https://learn.microsoft.com/en-us/partner-center/marketplace-offers/plan-azure-application-offer) as an official app in the Azure Marketplace
 
 * 1-click Deployment Button
-If `mainTemplate.json` is hosted somewhere remotely, a button can be created that will deploy the app when clicked like the example below.
+If `mainTemplate.json` is hosted somewhere publicly (i.e. on Github), a deployment button can be created that deploys the app when clicked, like in the example below.
 
     [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure-Samples%2Fgraphrag-accelerator%2Frefs%2Fheads%2Fharjit-managed-app%2Finfra%2FmainTemplate.json)
