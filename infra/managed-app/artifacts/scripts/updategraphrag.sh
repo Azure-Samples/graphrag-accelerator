@@ -28,7 +28,7 @@ helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
 
 # Update Helm repos
 helm repo update
-helm pull  oci://graphrag.azurecr.io/graphrag --untar
+helm pull oci://graphrag.azurecr.io/graphrag --untar
 
 helm upgrade -i graphrag ./graphrag -f ./graphrag/values.yaml \
     --namespace $aksNamespace --create-namespace \

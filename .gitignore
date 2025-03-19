@@ -1,6 +1,6 @@
 # ignore temporary artifact files that users may create
-infra/managed-app/artifacts/graphrag/*
-infra/managed-app/openapi.json
+infra/managed-app/artifacts/graphrag/
+openapi.json
 
 # ignore vscode config files
 .vscode/
