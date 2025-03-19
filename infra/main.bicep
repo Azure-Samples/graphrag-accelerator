@@ -96,8 +96,10 @@ param embeddingModelQuota int = 1
 // end AOAI parameters
 //
 
+@description('This parameter will only get defined during a managed app deployment.')
 param publicStorageAccountName string = ''
 @secure()
+@description('This parameter will only get defined during a managed app deployment.')
 param publicStorageAccountKey string = ''
 
 var abbrs = loadJsonContent('abbreviations.json')
@@ -295,15 +297,15 @@ module apim 'core/apim/apim.bicep' = {
 }
 
 module graphragDocsApi 'core/apim/apim.graphrag-docs-api.bicep' = {
-  name: 'graphrag-api-deployment'
+  name: 'graphrag-docs-api-deployment'
   params: {
     apiManagementName: apim.outputs.name
     backendUrl: appUrl
   }
 }
 
-module graphragApi 'core/apim/apim.graphrag-api.bicep' = {
-  name: 'graphragservicedef-deployment'
+module graphragApi 'core/apim/apim.graphrag-api.bicep' = if (!empty(publicStorageAccountName) && !empty(publicStorageAccountKey)) {
+  name: 'graphrag-api-deployment'
   params: {
     name: 'GraphRag'
     apiManagementName: apim.outputs.name
@@ -449,19 +451,14 @@ module deploymentScript 'core/scripts/deployment-script.bicep' = if (!empty(publ
 
 output deployer_principal_id string = deployer().objectId
 output azure_location string = location
-
 output azure_tenant_id string = tenant().tenantId
-
 output azure_ai_search_name string = aiSearch.outputs.name
-
 output azure_acr_login_server string = acr.outputs.loginServer
 output azure_acr_name string = acr.outputs.name
-
 output azure_aks_name string = aks.outputs.name
 output azure_aks_controlplanefqdn string = aks.outputs.controlPlaneFqdn
 output azure_aks_managed_rg string = aks.outputs.managedResourceGroup
 output azure_aks_service_account_name string = aksServiceAccountName
-
 // conditionally output AOAI endpoint information if it was deployed
 output azure_aoai_endpoint string = deployAoai ? aoai.outputs.endpoint : ''
 output azure_aoai_llm_model string = deployAoai ? aoai.outputs.llmModel : ''
@@ -472,27 +469,20 @@ output azure_aoai_embedding_model string = deployAoai ? aoai.outputs.embeddingMo
 output azure_aoai_embedding_model_deployment_name string = deployAoai ? aoai.outputs.embeddingModelDeploymentName : ''
 output azure_aoai_embedding_model_quota int = deployAoai ? aoai.outputs.embeddingModelQuota : 0
 output azure_aoai_embedding_model_api_version string = deployAoai ? aoai.outputs.embeddingModelApiVersion : ''
-
 output azure_apim_gateway_url string = apim.outputs.apimGatewayUrl
 output azure_apim_name string = apim.outputs.name
-
 output azure_app_hostname string = appHostname
 output azure_app_url string = appUrl
-
 output azure_app_insights_connection_string string = appInsights.outputs.connectionString
-
 output azure_cosmosdb_endpoint string = cosmosdb.outputs.endpoint
 output azure_cosmosdb_name string = cosmosdb.outputs.name
 output azure_cosmosdb_id string = cosmosdb.outputs.id
-
 output azure_dns_zone_name string = privateDnsZone.outputs.name
 output azure_private_dns_zones array = enablePrivateEndpoints
   ? union(privatelinkPrivateDns.outputs.privateDnsZones, [privateDnsZone.outputs.name])
   : []
-
 output azure_storage_account string = storage.outputs.name
 output azure_storage_account_blob_url string = storage.outputs.primaryEndpoints.blob
-
 output azure_workload_identity_client_id string = workloadIdentity.outputs.clientId
 output azure_workload_identity_principal_id string = workloadIdentity.outputs.principalId
 output azure_workload_identity_name string = workloadIdentity.outputs.name

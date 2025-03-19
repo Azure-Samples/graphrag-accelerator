@@ -5,7 +5,7 @@ param apiManagementName string
 param name string
 param backendUrl string
 
-resource api 'Microsoft.ApiManagement/service/apis@2024-05-01' = {
+resource api 'Microsoft.ApiManagement/service/apis@2023-09-01-preview' = {
   name: '${apiManagementName}/${name}'
   properties: {
     displayName: 'GraphRAG'
@@ -24,7 +24,7 @@ resource api 'Microsoft.ApiManagement/service/apis@2024-05-01' = {
     }
     isCurrent: true
     format: 'openapi+json'
-    value: string(loadJsonContent('../../managed-app/openapi.json')) // local file will be dynamically created by deployment script
+    value: string(loadJsonContent('openapi.json')) // local file will be dynamically created by deployment script
   }
   resource apiPolicy 'policies@2022-08-01' = {
     name: 'policy'

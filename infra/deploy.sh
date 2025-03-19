@@ -48,9 +48,11 @@ optionalParams=(
     GRAPHRAG_API_BASE
     GRAPHRAG_API_VERSION
     GRAPHRAG_LLM_MODEL
+    GRAPHRAG_LLM_MODEL_QUOTA
     GRAPHRAG_LLM_MODEL_VERSION
     GRAPHRAG_LLM_DEPLOYMENT_NAME
     GRAPHRAG_EMBEDDING_MODEL
+    GRAPHRAG_EMBEDDING_MODEL_QUOTA
     GRAPHRAG_EMBEDDING_MODEL_VERSION
     GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME
 )
@@ -558,7 +560,7 @@ deployDnsRecord () {
     local dnsZoneName=$(jq -r .azure_dns_zone_name.value <<< $AZURE_OUTPUTS)
     exitIfValueEmpty "$dnsZoneName" "Error parsing DNS zone name from azure outputs, exiting..."
     az deployment group create --only-show-errors --no-prompt \
-        --name graphrag-dns \
+        --name graphrag-dns-deployment \
         --resource-group $RESOURCE_GROUP \
         --template-file core/vnet/private-dns-zone-a-record.bicep \
         --parameters "name=graphrag" \
@@ -580,10 +582,10 @@ deployGraphragAPI () {
     waitForGraphragBackend $backendSwaggerUrl
 
     # download the openapi spec from the backend and load it into APIM
-    az rest --only-show-errors --method get --url $backendSwaggerUrl -o json > core/apim/graphrag-openapi.json
+    az rest --only-show-errors --method get --url $backendSwaggerUrl -o json > core/apim/openapi.json
     exitIfCommandFailed $? "Error downloading graphrag openapi spec, exiting..."
     az deployment group create --only-show-errors --no-prompt \
-        --name upload-graphrag-api \
+        --name upload-graphrag-api-to-apim \
         --resource-group $RESOURCE_GROUP \
         --template-file core/apim/apim.graphrag-api.bicep \
         --parameters "backendUrl=$graphragUrl" \
@@ -591,7 +593,7 @@ deployGraphragAPI () {
         --parameters "apiManagementName=$apimName" > /dev/null
     exitIfCommandFailed $? "Error registering graphrag API, exiting..."
     # cleanup
-    rm core/apim/graphrag-openapi.json
+    #rm core/apim/openapi.json
 }
 
 grantDevAccessToAzureResources() {

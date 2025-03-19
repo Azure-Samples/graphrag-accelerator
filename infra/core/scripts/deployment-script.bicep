@@ -61,7 +61,7 @@ var clusterAdminRoleDefinitionId = resourceId(
 )
 
 // Resources
-resource aksCluster 'Microsoft.ContainerService/managedClusters@2022-11-02-preview' existing = {
+resource aksCluster 'Microsoft.ContainerService/managedClusters@2024-09-02-preview' existing = {
   name: azure_aks_name
 }
 

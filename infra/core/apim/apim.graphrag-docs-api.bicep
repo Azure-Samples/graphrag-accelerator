@@ -4,7 +4,7 @@
 param apiManagementName string
 param backendUrl string
 
-resource api_docs 'Microsoft.ApiManagement/service/apis@2024-05-01' = {
+resource api_docs 'Microsoft.ApiManagement/service/apis@2023-09-01-preview' = {
   name: '${apiManagementName}/documentation'
   properties: {
     displayName: 'documentation'
@@ -24,7 +24,7 @@ resource api_docs 'Microsoft.ApiManagement/service/apis@2024-05-01' = {
     isCurrent: true
   }
 
-  resource documentation_docs 'operations@2024-05-01' = {
+  resource documentation_docs 'operations@2023-09-01-preview' = {
     name: 'docs'
     properties: {
       displayName: 'docs'
@@ -35,7 +35,7 @@ resource api_docs 'Microsoft.ApiManagement/service/apis@2024-05-01' = {
     }
   }
 
-  resource documentation_openapi 'operations@2024-05-01' = {
+  resource documentation_openapi 'operations@2023-09-01-preview' = {
     name: 'openapi'
     properties: {
       displayName: 'openapi'
