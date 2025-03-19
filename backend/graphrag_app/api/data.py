@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 
 import asyncio
+import os
 import re
 import traceback
 from math import ceil
@@ -14,7 +15,7 @@ from fastapi import (
     HTTPException,
     UploadFile,
 )
-from markitdown import MarkItDown
+from markitdown import MarkItDown, StreamInfo
 
 from graphrag_app.logger.load_logger import load_pipeline_logger
 from graphrag_app.typing.models import (
@@ -75,7 +76,8 @@ async def upload_file_async(
     Silently ignore errors that occur when overwrite=False.
     """
     filename = upload_file.filename
-    converted_filename = filename.split(".")[0] + ".txt"
+    extension = os.path.splitext(filename)[1]
+    converted_filename = filename.replace(extension, ".txt")
     converted_blob_client = container_client.get_blob_client(converted_filename)
 
     with upload_file.file as file_stream:
@@ -83,13 +85,24 @@ async def upload_file_async(
             if not await check_cache(file_stream, container_client):
                 # extract text from file and upload to Azure Blob Storage
                 md = MarkItDown()
-                result = md.convert(file_stream)
+                stream_info = StreamInfo(
+                    extension=extension,
+                )
+                file_stream.file._file.seek(0)
+                file_stream = file_stream.file._file
+                result = md.convert_stream(
+                    stream=file_stream,
+                    stream_info=stream_info,
+                )
                 await converted_blob_client.upload_blob(result.text_content, overwrite=overwrite)
 
                 # update the file cache
                 await update_cache(filename, file_stream, container_client)
         except Exception:
-            pass
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error uploading file '{filename}' to container '{container_client.container_name}'.",
+            )
 
 
 class Cleaner:
@@ -107,7 +120,7 @@ class Cleaner:
         self.changes += len(_illegal_xml_chars_RE.findall(val))
         return _illegal_xml_chars_RE.sub(replacement, val)
 
-    def read(self, n):
+    def read(self, n: int = -1):
         return self.clean(self.file.read(n).decode()).encode(
             encoding="utf-8", errors="strict"
         )
