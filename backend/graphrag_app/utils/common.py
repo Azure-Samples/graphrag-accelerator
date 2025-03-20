@@ -193,7 +193,7 @@ def desanitize_name(sanitized_container_name: str) -> str | None:
         raise HTTPException(
             status_code=500, detail="Error retrieving original container name."
         )
-    
+
 
 async def create_cache(container_client: ContainerClient) -> None:
     """
@@ -203,9 +203,7 @@ async def create_cache(container_client: ContainerClient) -> None:
         cache_blob_client = container_client.get_blob_client("uploaded_files_cache.csv")
         if not await cache_blob_client.exists():
             # create the empty file cache csv
-            headers = [
-                ['Filename', 'Hash']
-            ]
+            headers = [["Filename", "Hash"]]
             with open("uploaded_files_cache.csv", "w", newline="") as f:
                 writer = csv.writer(f, delimiter=",")
                 writer.writerows(headers)
@@ -247,7 +245,9 @@ async def check_cache(file_stream: BinaryIO, container_client: ContainerClient) 
         )
 
 
-async def update_cache(filename: str, file_stream: BinaryIO, container_client: ContainerClient) -> None:
+async def update_cache(
+    filename: str, file_stream: BinaryIO, container_client: ContainerClient
+) -> None:
     """
     Update the file cache with the new file by appending a new row to the cache.
     """
@@ -274,7 +274,9 @@ async def update_cache(filename: str, file_stream: BinaryIO, container_client: C
 
         # Upload the updated cache to Azure Blob Storage
         updated_cache_content.seek(0)
-        await cache_blob_client.upload_blob(updated_cache_content.getvalue().encode("utf-8"), overwrite=True)
+        await cache_blob_client.upload_blob(
+            updated_cache_content.getvalue().encode("utf-8"), overwrite=True
+        )
     except Exception:
         raise HTTPException(
             status_code=500,

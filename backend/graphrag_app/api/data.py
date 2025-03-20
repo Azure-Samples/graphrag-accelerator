@@ -97,7 +97,9 @@ async def upload_file_async(
 
                 # clean the output and upload to blob storage
                 cleaned_result = clean_output(result.text_content)
-                await converted_blob_client.upload_blob(cleaned_result, overwrite=overwrite)
+                await converted_blob_client.upload_blob(
+                    cleaned_result, overwrite=overwrite
+                )
 
                 # update the file cache
                 await update_cache(filename, file_stream, container_client)
