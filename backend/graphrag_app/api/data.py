@@ -83,18 +83,21 @@ async def upload_file_async(
     with upload_file.file as file_stream:
         try:
             if not await check_cache(file_stream, container_client):
-                # extract text from file and upload to Azure Blob Storage
+                # extract text from file using MarkItDown
                 md = MarkItDown()
                 stream_info = StreamInfo(
                     extension=extension,
                 )
-                file_stream.file._file.seek(0)
-                file_stream = file_stream.file._file
+                file_stream._file.seek(0)
+                file_stream = file_stream._file
                 result = md.convert_stream(
                     stream=file_stream,
                     stream_info=stream_info,
                 )
-                await converted_blob_client.upload_blob(result.text_content, overwrite=overwrite)
+
+                # clean the output and upload to blob storage
+                cleaned_result = clean_output(result.text_content)
+                await converted_blob_client.upload_blob(cleaned_result, overwrite=overwrite)
 
                 # update the file cache
                 await update_cache(filename, file_stream, container_client)
@@ -103,36 +106,16 @@ async def upload_file_async(
                 status_code=500,
                 detail=f"Error uploading file '{filename}' to container '{container_client.container_name}'.",
             )
+        
 
-
-class Cleaner:
-    def __init__(self, file):
-        self.file = file
-        self.name = file.name
-        self.changes = 0
-
-    def clean(self, val, replacement=""):
-        # fmt: off
-        _illegal_xml_chars_RE = re.compile(
+def clean_output(val: str, replacement: str = ""):
+    """Remove illegal XML characters from a string."""
+    # fmt: off
+    _illegal_xml_chars_RE = re.compile(
             "[\x00-\x08\x0b\x0c\x0e-\x1F\uD800-\uDFFF\uFFFE\uFFFF]"
         )
-        # fmt: on
-        self.changes += len(_illegal_xml_chars_RE.findall(val))
-        return _illegal_xml_chars_RE.sub(replacement, val)
-
-    def read(self, n: int = -1):
-        return self.clean(self.file.read(n).decode()).encode(
-            encoding="utf-8", errors="strict"
-        )
-
-    def name(self):
-        return self.file.name
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        self.file.close()
+    # fmt: on
+    return _illegal_xml_chars_RE.sub(replacement, val)
 
 
 @data_route.post(
@@ -162,13 +145,10 @@ async def upload_files(
         HTTPException: If the container name is invalid or if any error occurs during the upload process.
     """
     try:
-        # clean files - remove illegal XML characters
-        files = [UploadFile(Cleaner(f.file), filename=f.filename) for f in files]
-
+        # create the initial cache if it doesn't exist
         blob_container_client = await get_blob_container_client(
             sanitized_container_name
         )
-
         await create_cache(blob_container_client)
 
         # upload files in batches of 1000 to avoid exceeding Azure Storage API limits
