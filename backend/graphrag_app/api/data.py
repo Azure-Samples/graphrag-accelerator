@@ -102,11 +102,8 @@ async def upload_file_async(
                 # update the file cache
                 await update_cache(filename, file_stream, container_client)
         except Exception:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Error uploading file '{filename}' to container '{container_client.container_name}'.",
-            )
-        
+            pass
+
 
 def clean_output(val: str, replacement: str = ""):
     """Remove illegal XML characters from a string."""
