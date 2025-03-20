@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 
 import asyncio
+import os
 import re
 import traceback
 from math import ceil
@@ -14,6 +15,7 @@ from fastapi import (
     HTTPException,
     UploadFile,
 )
+from markitdown import MarkItDown, StreamInfo
 
 from graphrag_app.logger.load_logger import load_pipeline_logger
 from graphrag_app.typing.models import (
@@ -21,11 +23,14 @@ from graphrag_app.typing.models import (
     StorageNameList,
 )
 from graphrag_app.utils.common import (
+    check_cache,
+    create_cache,
     delete_cosmos_container_item_if_exist,
     delete_storage_container_if_exist,
     get_blob_container_client,
     get_cosmos_container_store_client,
     sanitize_name,
+    update_cache,
 )
 
 data_route = APIRouter(
@@ -67,45 +72,49 @@ async def upload_file_async(
     upload_file: UploadFile, container_client: ContainerClient, overwrite: bool = True
 ) -> None:
     """
-    Asynchronously upload a file to the specified blob container.
+    Asynchronously convert and upload a file to the specified blob container.
     Silently ignore errors that occur when overwrite=False.
     """
-    blob_client = container_client.get_blob_client(upload_file.filename)
+    filename = upload_file.filename
+    extension = os.path.splitext(filename)[1]
+    converted_filename = filename.replace(extension, ".txt")
+    converted_blob_client = container_client.get_blob_client(converted_filename)
+
     with upload_file.file as file_stream:
         try:
-            await blob_client.upload_blob(file_stream, overwrite=overwrite)
+            if not await check_cache(file_stream, container_client):
+                # extract text from file using MarkItDown
+                md = MarkItDown()
+                stream_info = StreamInfo(
+                    extension=extension,
+                )
+                file_stream._file.seek(0)
+                file_stream = file_stream._file
+                result = md.convert_stream(
+                    stream=file_stream,
+                    stream_info=stream_info,
+                )
+
+                # clean the output and upload to blob storage
+                cleaned_result = clean_output(result.text_content)
+                await converted_blob_client.upload_blob(
+                    cleaned_result, overwrite=overwrite
+                )
+
+                # update the file cache
+                await update_cache(filename, file_stream, container_client)
         except Exception:
             pass
 
 
-class Cleaner:
-    def __init__(self, file):
-        self.file = file
-        self.name = file.name
-        self.changes = 0
-
-    def clean(self, val, replacement=""):
-        # fmt: off
-        _illegal_xml_chars_RE = re.compile(
+def clean_output(val: str, replacement: str = ""):
+    """Remove illegal XML characters from a string."""
+    # fmt: off
+    _illegal_xml_chars_RE = re.compile(
             "[\x00-\x08\x0b\x0c\x0e-\x1F\uD800-\uDFFF\uFFFE\uFFFF]"
         )
-        # fmt: on
-        self.changes += len(_illegal_xml_chars_RE.findall(val))
-        return _illegal_xml_chars_RE.sub(replacement, val)
-
-    def read(self, n):
-        return self.clean(self.file.read(n).decode()).encode(
-            encoding="utf-8", errors="strict"
-        )
-
-    def name(self):
-        return self.file.name
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        self.file.close()
+    # fmt: on
+    return _illegal_xml_chars_RE.sub(replacement, val)
 
 
 @data_route.post(
@@ -135,13 +144,13 @@ async def upload_files(
         HTTPException: If the container name is invalid or if any error occurs during the upload process.
     """
     try:
-        # clean files - remove illegal XML characters
-        files = [UploadFile(Cleaner(f.file), filename=f.filename) for f in files]
-
-        # upload files in batches of 1000 to avoid exceeding Azure Storage API limits
+        # create the initial cache if it doesn't exist
         blob_container_client = await get_blob_container_client(
             sanitized_container_name
         )
+        await create_cache(blob_container_client)
+
+        # upload files in batches of 1000 to avoid exceeding Azure Storage API limits
         batch_size = 1000
         num_batches = ceil(len(files) / batch_size)
         for i in range(num_batches):
