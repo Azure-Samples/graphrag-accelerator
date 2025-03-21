@@ -1,8 +1,9 @@
+#!/usr/bin/env bash
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-#!/usr/bin/env bash
 
 # set -ux # uncomment this line to debug
+# TODO: use https://www.shellcheck.net to lint this script and make recommended updates
 
 aksNamespace="graphrag"
 
@@ -212,8 +213,8 @@ checkRequiredTools () {
         patch=0
         JQ_VERSION="$major.$minor.$patch"
     fi
-    YQ_VERSION=`yq --version | awk '{print substr($4,2)}'`
-    AZ_VERSION=`az version -o json | jq -r '.["azure-cli"]'`
+    YQ_VERSION=$(yq --version | awk '{print substr($4,2)}')
+    AZ_VERSION=$(az version -o json | jq -r '.["azure-cli"]')
     versionCheck "jq" $JQ_VERSION "1.6.0"
     versionCheck "yq" $YQ_VERSION "4.40.7"
     versionCheck "az cli" $AZ_VERSION "2.55.0"
