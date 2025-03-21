@@ -20,7 +20,7 @@ Managed Identity
 @minLength(1)
 @maxLength(64)
 @description('Name of the resource group that GraphRAG will be deployed in.')
-param resourceGroupName string
+param resourceGroupName string = az.resourceGroup().name
 
 // optional parameters with reasonable defaults unless explicitly overridden (most names will be auto-generated if not provided)
 @description('Unique name to append to each resource')
@@ -51,7 +51,7 @@ param restoreAPIM bool = false
 param deployAoai bool = true
 
 @description('Whether or not to deploy a new ACR resource instead of connecting to an existing service.')
-param deployAcr bool = true
+param deployAcr bool = false
 // if existing ACR is used, the login server must be provided
 param existingAcrLoginServer string = ''
 param graphragImageName string = 'graphrag'
