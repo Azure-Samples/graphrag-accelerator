@@ -11,6 +11,7 @@ from azure.cosmos import (
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient
 from azure.storage.blob.aio import BlobServiceClient as BlobServiceClientAsync
+from pathlib import PurePosixPath
 
 ENDPOINT_ERROR_MSG = "Could not find connection string in environment variables"
 
@@ -115,6 +116,9 @@ class AzureClientManager:
             _BlobServiceClientSingletonAsync.get_instance()
         )
 
+        # parse account hostname from the azure storage connection string or blob url
+        self.storage_account_hostname = PurePosixPath(self.storage_blob_url).parts[1]
+        
         # parse account name from the azure storage connection string or blob url
         if self.storage_connection_string:
             meta_info = {}
@@ -127,12 +131,8 @@ class AzureClientManager:
                 meta_info[m[0]] = m[1]
             self.storage_account_name = meta_info["AccountName"]
         else:
-            self.storage_account_name = self.storage_blob_url.split("//")[1].split(".")[
-                0
-            ]
+            self.storage_account_name = self.storage_account_hostname.split(".")[0]
 
-        # parse account hostname from the azure storage connection string or blob url
-        self.storage_account_hostname = self._blob_service_client.url.split("//")[1]
 
     def get_blob_service_client(self) -> BlobServiceClient:
         """

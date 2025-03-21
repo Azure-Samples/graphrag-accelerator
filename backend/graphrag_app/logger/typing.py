@@ -5,10 +5,7 @@ import logging
 from enum import Enum
 from typing import Literal
 
-from graphrag.index.config.reporting import (
-    PipelineReportingConfig,
-    PipelineReportingConfigTypes,
-)
+from graphrag.logger.base import StatusLogger
 from pydantic import Field as pydantic_Field
 
 
@@ -19,9 +16,7 @@ class Logger(Enum):
     APP_INSIGHTS = (4, "app_insights")
 
 
-class PipelineAppInsightsReportingConfig(
-    PipelineReportingConfig[Literal["app_insights"]]
-):
+class PipelineAppInsightsLogger(StatusLogger):
     """Represents the ApplicationInsights reporting configuration for the pipeline."""
 
     type: Literal["app_insights"] = Logger.APP_INSIGHTS.name.lower()
@@ -45,6 +40,6 @@ class PipelineAppInsightsReportingConfig(
 
 
 # add the new type to the existing PipelineReportingConfigTypes
-PipelineReportingConfigTypes = (
-    PipelineReportingConfigTypes | PipelineAppInsightsReportingConfig
-)
+# StatusLogger = (
+#     StatusLogger | PipelineAppInsightsReportingConfig
+# )

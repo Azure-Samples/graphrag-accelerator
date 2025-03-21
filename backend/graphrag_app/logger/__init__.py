@@ -9,16 +9,16 @@ from graphrag_app.logger.load_logger import load_pipeline_logger
 from graphrag_app.logger.pipeline_job_updater import PipelineJobUpdater
 from graphrag_app.logger.typing import (
     Logger,
-    PipelineAppInsightsReportingConfig,
-    PipelineReportingConfigTypes,
+    PipelineAppInsightsLogger,
+    # PipelineReportingConfigTypes,
 )
 
 __all__ = [
     "Logger",
     "ApplicationInsightsWorkflowCallbacks",
     "ConsoleWorkflowCallbacks",
-    "PipelineAppInsightsReportingConfig",
+    "PipelineAppInsightsLogger",
     "PipelineJobUpdater",
-    "PipelineReportingConfigTypes",
+    # "PipelineReportingConfigTypes",
     "load_pipeline_logger",
 ]
