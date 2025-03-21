@@ -3,9 +3,9 @@
 This guide walks through the process to convert the graphrag solution accelerator into a managed app.
 
 ### Prerequisites
-1. Create an ACR and push the relevant docker image to the registry.
-1. This managed app uses a storage account to deploy. Please take note of the storage account name and SAS key for later.
-1. When publishing the managed app , enable anonymous access on the blob storage container where the app code will be accessed.
+1. Create an ACR and push the graphrag backend docker image to the registry.
+1. This managed app [uses a storage account to deploy](https://learn.microsoft.com/en-us/azure/azure-resource-manager/managed-applications/publish-service-catalog-bring-your-own-storage?tabs=azure-powershell) an Azure Managed App Definition. Please take note of the storage account name and SAS key for later.
+1. When publishing the managed app , enable anonymous access on the storage container where the app code will be accessed.
 
 ### Steps to build Managed App
 
@@ -72,7 +72,7 @@ managed-app-deployment-pkg.zip
 └── openapi.json
 ```
 
-This zip file should be uploaded to an Azure Storage location in preparation for the next step.
+Upload the zip file to an Azure Storage location in preparation for the next step.
 
 ### 5. Create a Service Catalog Managed App Definition
 

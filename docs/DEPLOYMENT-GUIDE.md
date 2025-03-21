@@ -47,8 +47,10 @@ az provider show --namespace Microsoft.Compute -o table
 ## Installation
 
 ### 1. Azure OpenAI Quota
-As a prerequisit to deployment, you will either need access to an already deployed Azure OpenAI (AOAI) resource or have available quota in your subscription. If an existing AOAI resource is not used, the deployment code in this accelerator will deploy an AOAI resource with some default model choices.
-Documentation on how to deploy an AOAI service can be found [here](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/create-resource?pivots=web-portal). Ensure deployments for the `gpt-4 turbo` model and `text-embedding-ada-002` embedding model are setup. Take note of the model deployment name and model name.
+As a prerequisite to deployment, you will either need access to an already deployed Azure OpenAI (AOAI) resource or have available quota. If an existing AOAI resource is not used, the deployment code in this accelerator will deploy an AOAI resource with some default model choices.
+Documentation on how to deploy an AOAI service can be found [here](https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/create-resource?pivots=web-portal).
+
+Take note of the model deployment name and model name.
 Note that the AOAI instance **must** be in the same subscription that you plan to deploy this solution accelerator in.
 
 As a starting point, we recommend the following quota thresholds be setup for this solution accelerator to run.
@@ -95,7 +97,7 @@ In the `deploy.parameters.json` file, provide values for the following required 
 `GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME`   | text-embedding-ada-002                         | No  | Deployment name of the Azure OpenAI embedding model.
 `GRAPHRAG_EMBEDDING_MODEL_QUOTA`       | 300                                            | No  | TPM quota of the embedding model in units of 1000 (i.e. 10 = 10,000 TPM). Only required if deploying a new AOAI instance (i.e. `GRAPHRAG_API_BASE` is left undefined).
 `GRAPHRAG_IMAGE`                       | graphrag:backend                               | No  | The name and tag of the graphrag docker image in the container registry. Will default to `graphrag:backend` and be hosted at `my_container_registry_name>.azurecr.io/graphrag:backend`.
-`CONTAINER_REGISTRY_NAME`              | <container_registry_name>                      | No  | Name of an Azure Container Registry where the `graphrag` backend docker image will be hosted. Leave off `.azurecr.io` from the name. If not provided, a unique name will be generated (recommended).
+`CONTAINER_REGISTRY_LOGIN_SERVER`      | <container_registry_name>.azurecr.io           | No  | Endpoint of an existing Azure Container Registry where the `GRAPHRAG_IMAGE` docker image is hosted. If not provided, a unique name will be generated (recommended).
 `COGNITIVE_SERVICES_AUDIENCE`          | `https://cognitiveservices.azure.com/.default` | No  | Endpoint for cognitive services identity authorization. Should be defined for deployments in other Azure clouds.
 `APIM_NAME`                            | <auto_generated_unique_name>                   | No  | Hostname of the API. Must be a globally unique name. The API will be accessible at `https://<APIM_NAME>.azure-api.net`.
 `APIM_TIER`                            | Developer                                      | No  | The [APIM tier](https://azure.microsoft.com/en-us/pricing/details/api-management) to use. Can be either `Developer` or `StandardV2`.
