@@ -1,12 +1,12 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-param backendUrl string
+param apiManagementName string
 param name string
-param apimname string
+param backendUrl string
 
 resource api 'Microsoft.ApiManagement/service/apis@2023-09-01-preview' = {
-  name: '${apimname}/${name}'
+  name: '${apiManagementName}/${name}'
   properties: {
     displayName: 'GraphRAG'
     apiRevision: '1'
@@ -24,7 +24,7 @@ resource api 'Microsoft.ApiManagement/service/apis@2023-09-01-preview' = {
     }
     isCurrent: true
     format: 'openapi+json'
-    value: string(loadJsonContent('graphrag-openapi.json')) // local file will be dynamically created by deployment script
+    value: string(loadJsonContent('openapi.json')) // local file will be dynamically created by deployment script
   }
   resource apiPolicy 'policies@2022-08-01' = {
     name: 'policy'

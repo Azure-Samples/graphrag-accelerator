@@ -20,13 +20,12 @@ Managed Identity
 @minLength(1)
 @maxLength(64)
 @description('Name of the resource group that GraphRAG will be deployed in.')
-param resourceGroup string
+param resourceGroupName string = az.resourceGroup().name
 
+// optional parameters with reasonable defaults unless explicitly overridden (most names will be auto-generated if not provided)
 @description('Unique name to append to each resource')
 param resourceBaseName string = ''
-var resourceBaseNameFinal = !empty(resourceBaseName)
-  ? resourceBaseName
-  : toLower(uniqueString('${subscription().id}/resourceGroups/${resourceGroup}'))
+var resourceBaseNameFinal = !empty(resourceBaseName) ? resourceBaseName : toLower(uniqueString(az.resourceGroup().id))
 
 @description('Cloud region for all resources')
 param location string = az.resourceGroup().location
@@ -48,16 +47,67 @@ param enablePrivateEndpoints bool = true
 @description('Whether to restore the API Management instance.')
 param restoreAPIM bool = false
 
-// optional parameters that will default to a generated name if not provided
+@description('Whether or not to deploy a new AOAI resource instead of connecting to an existing service.')
+param deployAoai bool = true
+
+@description('Whether or not to deploy a new ACR resource instead of connecting to an existing service.')
+param deployAcr bool = false
+// if existing ACR is used, the login server must be provided
+param existingAcrLoginServer string = ''
+param graphragImageName string = 'graphrag'
+param graphragImageVersion string = 'latest'
+
 param apimTier string = 'Developer'
 param apimName string = ''
-param acrName string = ''
 param storageAccountName string = ''
 param cosmosDbName string = ''
 param aiSearchName string = ''
+param utcString string = utcNow()
+
+//
+// start AOAI parameters
+//
+@description('Name of the AOAI LLM model to use. Must match official model id. For more information: https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models')
+@allowed(['gpt-4', 'gpt-4o', 'gpt-4o-mini'])
+param llmModelName string = 'gpt-4o'
+
+@description('Deployment name of the AOAI LLM model to use. For more information: https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models')
+param llmModelDeploymentName string = 'gpt-4o'
+
+@description('Model version of the AOAI LLM model to use.')
+@allowed(['2024-08-06', 'turbo-2024-04-09'])
+param llmModelVersion string = '2024-08-06'
+
+@description('Quota of the AOAI LLM model to use.')
+@minValue(1)
+param llmModelQuota int = 1
+
+@description('Name of the AOAI embedding model to use. Must match official model id. For more information: https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models')
+@allowed(['text-embedding-ada-002', 'text-embedding-3-large'])
+param embeddingModelName string = 'text-embedding-ada-002'
+
+@description('Deployment name of the AOAI embedding model to use. Must match official model id. For more information: https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models')
+param embeddingModelDeploymentName string = 'text-embedding-ada-002'
+
+@description('Model version of the AOAI embedding model to use.')
+@allowed(['2', '1'])
+param embeddingModelVersion string = '2'
+
+@description('Quota of the AOAI embedding model to use.')
+@minValue(1)
+param embeddingModelQuota int = 1
+//
+// end AOAI parameters
+//
+
+@description('This parameter will only get defined during a managed app deployment.')
+param publicStorageAccountName string = ''
+@secure()
+@description('This parameter will only get defined during a managed app deployment.')
+param publicStorageAccountKey string = ''
 
 var abbrs = loadJsonContent('abbreviations.json')
-var tags = { 'azd-env-name': resourceGroup }
+var tags = { 'azd-env-name': resourceGroupName }
 var workloadIdentityName = '${abbrs.managedIdentityUserAssignedIdentities}${resourceBaseNameFinal}'
 var aksServiceAccountName = '${aksNamespace}-workload-sa'
 var workloadIdentitySubject = 'system:serviceaccount:${aksNamespace}:${aksServiceAccountName}'
@@ -69,17 +119,17 @@ var appUrl = 'http://${appHostname}'
 
 @description('Role definitions for various RBAC roles that will be assigned at deployment time. Learn more: https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles')
 var roles = {
-  privateDnsZoneContributor: resourceId(
+  acrPull: resourceId(
     'Microsoft.Authorization/roleDefinitions',
-    'b12aa53e-6015-4669-85d0-8515ebb3ae7f' // Private DNS Zone Contributor Role
+    '7f951dda-4ed3-4680-a7ca-43fe172d538d' // ACR Pull Role
   )
   networkContributor: resourceId(
     'Microsoft.Authorization/roleDefinitions',
     '4d97b98b-1d4f-4787-a291-c67834d212e7' // Network Contributor Role
   )
-  acrPull: resourceId(
+  privateDnsZoneContributor: resourceId(
     'Microsoft.Authorization/roleDefinitions',
-    '7f951dda-4ed3-4680-a7ca-43fe172d538d' // ACR Pull Role
+    'b12aa53e-6015-4669-85d0-8515ebb3ae7f' // Private DNS Zone Contributor Role
   )
 }
 
@@ -93,6 +143,7 @@ module aksWorkloadIdentityRBAC 'core/rbac/workload-identity-rbac.bicep' = {
     appInsightsName: appInsights.outputs.name
     cosmosDbName: cosmosdb.outputs.name
     storageName: storage.outputs.name
+    aoaiName: deployAoai ? aoai.outputs.name : ''
   }
 }
 
@@ -148,10 +199,26 @@ module vnet 'core/vnet/vnet.bicep' = {
   }
 }
 
-module acr 'core/acr/acr.bicep' = {
+module aoai 'core/aoai/aoai.bicep' = if (deployAoai) {
+  name: 'aoai-deployment'
+  params: {
+    openAiName: '${abbrs.cognitiveServicesAccounts}${resourceBaseNameFinal}'
+    location: location
+    llmModelName: llmModelName
+    llmModelDeploymentName: llmModelDeploymentName
+    llmModelVersion: llmModelVersion
+    llmTpmQuota: llmModelQuota
+    embeddingModelName: embeddingModelName
+    embeddingModelDeploymentName: embeddingModelDeploymentName
+    embeddingModelVersion: embeddingModelVersion
+    embeddingTpmQuota: embeddingModelQuota
+  }
+}
+
+module acr 'core/acr/acr.bicep' = if (deployAcr) {
   name: 'acr-deployment'
   params: {
-    registryName: !empty(acrName) ? acrName : '${abbrs.containerRegistryRegistries}${resourceBaseNameFinal}'
+    registryName: '${abbrs.containerRegistryRegistries}${resourceBaseNameFinal}'
     location: location
   }
 }
@@ -233,10 +300,19 @@ module apim 'core/apim/apim.bicep' = {
   }
 }
 
-module graphragApi 'core/apim/apim.graphrag-documentation.bicep' = {
+module graphragDocsApi 'core/apim/apim.graphrag-docs-api.bicep' = {
+  name: 'graphrag-docs-api-deployment'
+  params: {
+    apiManagementName: apim.outputs.name
+    backendUrl: appUrl
+  }
+}
+
+module graphragApi 'core/apim/apim.graphrag-api.bicep' = if (!empty(publicStorageAccountName) && !empty(publicStorageAccountKey)) {
   name: 'graphrag-api-deployment'
   params: {
-    apimname: apim.outputs.name
+    name: 'GraphRag'
+    apiManagementName: apim.outputs.name
     backendUrl: appUrl
   }
 }
@@ -330,30 +406,86 @@ module privateLinkScopePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (
   }
 }
 
+// the following deploymentScript module will only be deployed when performing a managed app deployment
+module deploymentScript 'core/scripts/deployment-script.bicep' = if (!empty(publicStorageAccountName) && !empty(publicStorageAccountKey)) {
+  name: utcString
+  params: {
+    name: 'graphragscript'
+    location: location
+    tenantid: tenant().tenantId
+    subscriptionId: subscription().id
+    script_file: loadTextContent('managed-app/artifacts/scripts/updategraphrag.sh')
+    public_storage_account_name: publicStorageAccountName
+    public_storage_account_key: publicStorageAccountKey
+    utcValue: utcString
+    ai_search_name: aiSearch.name
+    azure_location: location
+    azure_acr_login_server: deployAcr ? acr.outputs.loginServer : existingAcrLoginServer
+    azure_aks_name: aks.outputs.name
+    azure_aks_controlplanefqdn: aks.outputs.controlPlaneFqdn
+    azure_aks_managed_rg: aks.outputs.managedResourceGroup
+    azure_aks_service_account_name: aksServiceAccountName
+    azure_aoai_endpoint: aoai.outputs.endpoint
+    azure_aoai_llm_model: aoai.outputs.llmModel
+    azure_aoai_llm_model_deployment_name: aoai.outputs.llmModelDeploymentName
+    azure_aoai_llm_model_api_version: aoai.outputs.llmModelApiVersion
+    azure_aoai_embedding_model: aoai.outputs.embeddingModel
+    azure_aoai_embedding_model_deployment_name: aoai.outputs.embeddingModelDeploymentName
+    azure_aoai_embedding_model_api_version: aoai.outputs.embeddingModelApiVersion
+    azure_apim_gateway_url: apim.outputs.apimGatewayUrl
+    azure_apim_name: apim.outputs.name
+    azure_app_hostname: appHostname
+    azure_app_url: appUrl
+    azure_app_insights_connection_string: appInsights.outputs.connectionString
+    azure_cosmosdb_endpoint: cosmosdb.outputs.endpoint
+    azure_cosmosdb_name: cosmosdb.outputs.name
+    azure_cosmosdb_id: cosmosdb.outputs.id
+    azure_dns_zone_name: privateDnsZone.outputs.name
+    azure_storage_account: storage.outputs.name
+    azure_storage_account_blob_url: storage.outputs.primaryEndpoints.blob
+    azure_workload_identity_client_id: workloadIdentity.outputs.clientId
+    azure_workload_identity_principal_id: workloadIdentity.outputs.principalId
+    azure_workload_identity_name: workloadIdentity.outputs.name
+    image_name: graphragImageName
+    image_version: graphragImageVersion
+    managed_identity_aks: aks.outputs.systemIdentity
+  }
+}
+
 output deployer_principal_id string = deployer().objectId
 output azure_location string = location
 output azure_tenant_id string = tenant().tenantId
 output azure_ai_search_name string = aiSearch.outputs.name
-output azure_acr_login_server string = acr.outputs.loginServer
-output azure_acr_name string = acr.outputs.name
+output azure_acr_login_server string = deployAcr ? acr.outputs.loginServer : existingAcrLoginServer
+output azure_acr_name string = deployAcr ? acr.outputs.name : ''
 output azure_aks_name string = aks.outputs.name
 output azure_aks_controlplanefqdn string = aks.outputs.controlPlaneFqdn
 output azure_aks_managed_rg string = aks.outputs.managedResourceGroup
 output azure_aks_service_account_name string = aksServiceAccountName
-output azure_storage_account string = storage.outputs.name
-output azure_storage_account_blob_url string = storage.outputs.primaryEndpoints.blob
+// conditionally output AOAI endpoint information if it was deployed
+output azure_aoai_endpoint string = deployAoai ? aoai.outputs.endpoint : ''
+output azure_aoai_llm_model string = deployAoai ? aoai.outputs.llmModel : ''
+output azure_aoai_llm_model_deployment_name string = deployAoai ? aoai.outputs.llmModelDeploymentName : ''
+output azure_aoai_llm_model_quota int = deployAoai ? aoai.outputs.llmModelQuota : 0
+output azure_aoai_llm_model_api_version string = deployAoai ? aoai.outputs.llmModelApiVersion : ''
+output azure_aoai_embedding_model string = deployAoai ? aoai.outputs.embeddingModel : ''
+output azure_aoai_embedding_model_deployment_name string = deployAoai ? aoai.outputs.embeddingModelDeploymentName : ''
+output azure_aoai_embedding_model_quota int = deployAoai ? aoai.outputs.embeddingModelQuota : 0
+output azure_aoai_embedding_model_api_version string = deployAoai ? aoai.outputs.embeddingModelApiVersion : ''
+output azure_apim_gateway_url string = apim.outputs.apimGatewayUrl
+output azure_apim_name string = apim.outputs.name
+output azure_app_hostname string = appHostname
+output azure_app_url string = appUrl
+output azure_app_insights_connection_string string = appInsights.outputs.connectionString
 output azure_cosmosdb_endpoint string = cosmosdb.outputs.endpoint
 output azure_cosmosdb_name string = cosmosdb.outputs.name
 output azure_cosmosdb_id string = cosmosdb.outputs.id
-output azure_app_insights_connection_string string = appInsights.outputs.connectionString
-output azure_apim_name string = apim.outputs.name
-output azure_apim_gateway_url string = apim.outputs.apimGatewayUrl
 output azure_dns_zone_name string = privateDnsZone.outputs.name
-output azure_app_hostname string = appHostname
-output azure_app_url string = appUrl
-output azure_workload_identity_client_id string = workloadIdentity.outputs.clientId
-output azure_workload_identity_principal_id string = workloadIdentity.outputs.principalId
-output azure_workload_identity_name string = workloadIdentity.outputs.name
 output azure_private_dns_zones array = enablePrivateEndpoints
   ? union(privatelinkPrivateDns.outputs.privateDnsZones, [privateDnsZone.outputs.name])
   : []
+output azure_storage_account string = storage.outputs.name
+output azure_storage_account_blob_url string = storage.outputs.primaryEndpoints.blob
+output azure_workload_identity_client_id string = workloadIdentity.outputs.clientId
+output azure_workload_identity_principal_id string = workloadIdentity.outputs.principalId
+output azure_workload_identity_name string = workloadIdentity.outputs.name
