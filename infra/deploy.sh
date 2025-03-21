@@ -17,7 +17,7 @@ PUBLISHER_EMAIL="publisher@microsoft.com"
 PUBLISHER_NAME="publisher"
 RESOURCE_BASE_NAME=""
 COGNITIVE_SERVICES_AUDIENCE="https://cognitiveservices.azure.com/.default"
-CONTAINER_REGISTRY_NAME=""
+CONTAINER_REGISTRY_LOGIN_SERVER=""
 GRAPHRAG_API_BASE=""
 GRAPHRAG_API_VERSION="2023-03-15-preview"
 GRAPHRAG_LLM_MODEL="gpt-4"
@@ -44,7 +44,7 @@ optionalParams=(
     PUBLISHER_NAME
     RESOURCE_BASE_NAME
     COGNITIVE_SERVICES_AUDIENCE
-    CONTAINER_REGISTRY_NAME
+    CONTAINER_REGISTRY_LOGIN_SERVER
     GRAPHRAG_API_BASE
     GRAPHRAG_API_VERSION
     GRAPHRAG_LLM_MODEL
@@ -171,6 +171,11 @@ versionCheck () {
 }
 
 checkRequiredTools () {
+    local JQ_VERSION
+    local major minor patch
+    local YQ_VERSION
+    local AZ_VERSION
+
     printf "Checking for required tools... "
 
     which sed > /dev/null
@@ -198,8 +203,7 @@ checkRequiredTools () {
     exitIfCommandFailed $? "curl is required, exiting..."
 
     # minimum version check for jq, yq, and az cli
-    local JQ_VERSION=$(jq --version | cut -d'-' -f2)
-    local major minor patch
+    JQ_VERSION=$(jq --version | cut -d'-' -f2)
     IFS='.' read -r major minor patch <<< "$JQ_VERSION"
     if [ -z $patch ]; then
         # NOTE: older acceptable versions of jq report a version
@@ -208,8 +212,8 @@ checkRequiredTools () {
         patch=0
         JQ_VERSION="$major.$minor.$patch"
     fi
-    local YQ_VERSION=`yq --version | awk '{print substr($4,2)}'`
-    local AZ_VERSION=`az version -o json | jq -r '.["azure-cli"]'`
+    YQ_VERSION=`yq --version | awk '{print substr($4,2)}'`
+    AZ_VERSION=`az version -o json | jq -r '.["azure-cli"]'`
     versionCheck "jq" $JQ_VERSION "1.6.0"
     versionCheck "yq" $YQ_VERSION "4.40.7"
     versionCheck "az cli" $AZ_VERSION "2.55.0"
@@ -218,8 +222,9 @@ checkRequiredTools () {
 
 checkRequiredParams () {
     local paramsFile=$1
+    local paramValue
     for param in "${requiredParams[@]}"; do
-        local paramValue=$(jq -r .$param < $paramsFile)
+        paramValue=$(jq -r .$param < $paramsFile)
         if [ -z "$paramValue" ] || [ "$paramValue" == "null" ]; then
             echo "Parameter $param is required, exiting..."
             exit 1
@@ -272,33 +277,41 @@ createResourceGroupIfNotExists () {
 
 getAksCredentials () {
     local rg=$1
-    local aks=$2
+    local aks_name
+    local principalId
+    local scope
+
     printf "Getting AKS credentials... "
-    az aks get-credentials -g $rg -n $aks --overwrite-existing > /dev/null 2>&1
+    aks_name=$(jq -r .azure_aks_name.value <<< $AZURE_DEPLOY_OUTPUTS)
+    az aks get-credentials -g $rg -n $aks_name --overwrite-existing > /dev/null 2>&1
     exitIfCommandFailed $? "Error getting AKS credentials, exiting..."
     kubelogin convert-kubeconfig -l azurecli
     exitIfCommandFailed $? "Error logging into AKS, exiting..."
     # get principal/object id of the signed in user
-    local principalId=$(az ad signed-in-user show --output json | jq -r .id)
+    principalId=$(az ad signed-in-user show --output json | jq -r .id)
     exitIfValueEmpty $principalId "Principal ID of deployer not found"
     # assign "Azure Kubernetes Service RBAC Admin" role to deployer
-    local scope=$(az aks show --resource-group $rg --name $aks --query "id" -o tsv)
+    scope=$(az aks show --resource-group $rg --name $aks_name --query "id" -o tsv)
     exitIfValueEmpty "$scope" "Unable to get AKS scope, exiting..."
     az role assignment create --role "Azure Kubernetes Service RBAC Cluster Admin" --assignee-object-id $principalId --scope $scope
     exitIfCommandFailed $? "Error assigning 'Azure Kubernetes Service RBAC Cluster Admin' role to deployer, exiting..."
-    kubectl config set-context $aks --namespace=$aksNamespace
+    kubectl config set-context $aks_name --namespace=$aksNamespace
     printf "Done\n"
 }
 
 checkForApimSoftDelete () {
+    local apimName
+    local location
+    local deleted_service_list_results
+
     printf "Checking if APIM was soft-deleted... "
     # This is an optional step to check if an APIM instance previously existed in the
     # resource group and is in a soft-deleted state. If so, purge it before deploying
     # a new APIM instance to prevent conflicts with the new deployment.
-    local RESULTS=$(az apim deletedservice list -o json --query "[?contains(serviceId, 'resourceGroups/$RESOURCE_GROUP/')].{name:name, location:location}")
+    deleted_service_list_results=$(az apim deletedservice list -o json --query "[?contains(serviceId, 'resourceGroups/$RESOURCE_GROUP/')].{name:name, location:location}")
     exitIfCommandFailed $? "Error checking for soft-deleted APIM instances, exiting..."
-    local apimName=$(jq -r .[0].name <<< $RESULTS)
-    local location=$(jq -r .[0].location <<< $RESULTS)
+    apimName=$(jq -r .[0].name <<< $deleted_service_list_results)
+    location=$(jq -r .[0].location <<< $deleted_service_list_results)
     # jq returns "null" if a value is not found
     if [ -z "$apimName" ] || [[ "$apimName" == "null" ]] || [ -z "$location" ] || [[ "$location" == "null" ]]; then
         printf "Done.\n"
@@ -312,27 +325,45 @@ checkForApimSoftDelete () {
 }
 
 deployAzureResources () {
+    local deployAoai
+    local deployAcr
+    local graphragImageName
+    local graphragImageVersion
+
     echo "Deploying Azure resources..."
     # only deploy AOAI if the user did not provide links to an existing AOAI service
-    local deployAoai="true"
+    deployAoai="true"
     if [ -n "$GRAPHRAG_API_BASE" ]; then
         deployAoai="false"
     fi
-    local datetime="`date +%Y-%m-%d_%H-%M-%S`"
-    local deployName="graphrag-deploy-$datetime"
+    deployAcr="true"
+    if [ -n "$CONTAINER_REGISTRY_LOGIN_SERVER" ]; then
+        deployAcr="false"
+    fi
+    graphragImageName=$(sed -rn "s/([^:]+).*/\1/p" <<< "$GRAPHRAG_IMAGE")
+    graphragImageVersion=$(sed -rn "s/[^:]+:(.*)/\1/p" <<< "$GRAPHRAG_IMAGE")
+    exitIfValueEmpty "$graphragImageName" "Unable to parse graphrag docker image name, exiting..."
+    exitIfValueEmpty "$graphragImageVersion" "Unable to parse graphrag docker image version, exiting..."
+
+    local datetime deployName AZURE_DEPLOY_RESULTS
+    datetime="`date +%Y-%m-%d_%H-%M-%S`"
+    deployName="graphrag-deploy-$datetime"
     echo "Deployment name: $deployName"
-    local AZURE_DEPLOY_RESULTS=$(az deployment group create --name "$deployName" \
+    AZURE_DEPLOY_RESULTS=$(az deployment group create --name "$deployName" \
         --no-prompt \
         --resource-group $RESOURCE_GROUP \
         --template-file ./main.bicep \
-        --parameters "resourceGroup=$RESOURCE_GROUP" \
+        --parameters "resourceGroupName=$RESOURCE_GROUP" \
         --parameters "resourceBaseName=$RESOURCE_BASE_NAME" \
         --parameters "apimName=$APIM_NAME" \
         --parameters "apimTier=$APIM_TIER" \
         --parameters "apiPublisherEmail=$PUBLISHER_EMAIL" \
         --parameters "apiPublisherName=$PUBLISHER_NAME" \
         --parameters "enablePrivateEndpoints=$ENABLE_PRIVATE_ENDPOINTS" \
-        --parameters "acrName=$CONTAINER_REGISTRY_NAME" \
+        --parameters "deployAcr=$deployAcr" \
+        --parameters "existingAcrLoginServer=$CONTAINER_REGISTRY_LOGIN_SERVER" \
+        --parameters "graphragImageName=$graphragImageName" \
+        --parameters "graphragImageVersion=$graphragImageVersion" \
         --parameters "deployAoai=$deployAoai" \
         --parameters "llmModelName=$GRAPHRAG_LLM_MODEL" \
         --parameters "llmModelDeploymentName=$GRAPHRAG_LLM_DEPLOYMENT_NAME" \
@@ -346,21 +377,29 @@ deployAzureResources () {
     # errors in deployment may not be caught by exitIfCommandFailed function so we also check the output for errors
     exitIfCommandFailed $? "Error deploying Azure resources..."
     exitIfValueEmpty "$AZURE_DEPLOY_RESULTS" "Error deploying Azure resources..."
-    AZURE_OUTPUTS=$(jq -r .properties.outputs <<< $AZURE_DEPLOY_RESULTS)
+    AZURE_DEPLOY_OUTPUTS=$(jq -r .properties.outputs <<< $AZURE_DEPLOY_RESULTS)
     exitIfCommandFailed $? "Error parsing outputs from Azure deployment..."
-    exitIfValueEmpty "$AZURE_OUTPUTS" "Error parsing outputs from Azure deployment..."
+    exitIfValueEmpty "$AZURE_DEPLOY_OUTPUTS" "Error parsing outputs from Azure deployment..."
 
     # Must assign RBAC roles to the aks workload managed identity if AOAI was not part of the deployment (i.e. user chose to utilize an AOAI resource external to this deployment)
     if [ -n "$GRAPHRAG_API_BASE" ]; then
         assignAOAIRolesToManagedIdentity
     fi
+
+    # Must assign ACRPull role to aks if ACR was not part of the deployment (i.e. user chose to utilize an ACR resource external to this deployment)
+    if [ -n "$CONTAINER_REGISTRY_LOGIN_SERVER" ]; then
+        assignACRPullRoleToAKS $RESOURCE_GROUP $CONTAINER_REGISTRY_LOGIN_SERVER
+    fi
 }
 
 assignAOAIRolesToManagedIdentity() {
+    local servicePrincipalId
+    local scope
+
     printf "Assigning roles 'Cognitive Services OpenAI Contributor' and 'Cognitive Services Usages Reader' to aks managed identity... "
-    local scope=$(az cognitiveservices account list --query "[?contains(properties.endpoint, '$GRAPHRAG_API_BASE')].id" -o tsv)
+    scope=$(az cognitiveservices account list --query "[?contains(properties.endpoint, '$GRAPHRAG_API_BASE')].id" -o tsv)
     exitIfValueEmpty "$scope" "Unable to get AOAI resource id based on GRAPHRAG_API_BASE, exiting..."
-    local servicePrincipalId=$(jq -r .azure_workload_identity_principal_id.value <<< $AZURE_OUTPUTS)
+    servicePrincipalId=$(jq -r .azure_workload_identity_principal_id.value <<< $AZURE_DEPLOY_OUTPUTS)
     exitIfValueEmpty "$servicePrincipalId" "Unable to parse service principal id from azure outputs, exiting..."
     az role assignment create --only-show-errors \
         --role "Cognitive Services OpenAI Contributor" \
@@ -375,6 +414,22 @@ assignAOAIRolesToManagedIdentity() {
     printf "Done.\n"
 }
 
+assignACRPullRoleToAKS() {
+    local rg=$1
+    local registry=$2
+    local aks_name kubelet_id acr_id
+
+    echo "Assigning 'ACRPull' role to AKS..."
+    aks_name=$(jq -r .azure_aks_name.value <<< $AZURE_DEPLOY_OUTPUTS)
+    exitIfValueEmpty "$aks_name" "Unable to parse aks name from azure outputs, exiting..."
+    kubelet_id=$(az aks show --resource-group $rg --name $aks_name --query identityProfile.kubeletidentity.objectId --output tsv)
+    exitIfValueEmpty "$kubelet_id" "Unable to retrieve AKS kubelet id, exiting..."
+    acr_id=$(az acr show --name $registry --query id -o tsv)
+    exitIfValueEmpty "$acr_id" "Unable to retrieve ACR id, exiting..."
+    az role assignment create --role "AcrPull" --assignee $kubelet_id --scope $acr_id
+    exitIfCommandFailed $? "Error assigning ACRPull role to AKS, exiting..."
+}
+
 validateSKUs() {
     # Run SKU validation functions unless skip flag is set
     local location=$1
@@ -387,94 +442,111 @@ validateSKUs() {
 
 checkSKUAvailability() {
     # Function to validate that the required SKUs are not restricted for the given region
-    printf "Checking cloud region for VM sku availability... "
     local location=$1
-    local sku_checklist=("standard_d4s_v5" "standard_d8s_v5" "standard_e8s_v5")
+    local sku_checklist
+    local sku_check_result
+    local sku_validation_listing
+
+    sku_checklist=("standard_d4s_v5" "standard_d8s_v5" "standard_e8s_v5")
+    printf "Checking cloud region for VM sku availability... "
     for sku in ${sku_checklist[@]}; do
-        local sku_check_result=$(
+        sku_check_result=$(
             az vm list-skus --location $location --size $sku --output json
         )
-        local sku_validation_listing=$(jq -r .[0].name <<< $sku_check_result)
+        sku_validation_listing=$(jq -r .[0].name <<< $sku_check_result)
         exitIfValueEmpty $sku_validation_listing "SKU $sku is restricted for location $location under the current subscription."
     done
     printf "Done.\n"
 }
 
 checkSKUQuotas() {
+    local location=$1
+    local vm_usage_report
+
     # Function to validation that the SKU quotas would not be exceeded during deployment
     printf "Checking Location for SKU Quota Usage... "
-    local location=$1
-    local vm_usage_report=$(
+    vm_usage_report=$(
         az vm list-usage --location $location -o json
     )
 
     # Check quota for Standard DSv5 Family vCPUs
-    local dsv5_usage_report=$(jq -c '.[] | select(.localName | contains("Standard DSv5 Family vCPUs"))' <<< $vm_usage_report)
-    local dsv5_limit=$(jq -r .limit <<< $dsv5_usage_report)
-    local dsv5_currVal=$(jq -r .currentValue <<< $dsv5_usage_report)
-    local dsv5_reqVal=$(expr $dsv5_currVal + 12)
+    local dsv5_usage_report dsv5_limit dsv5_currVal dsv5_reqVal
+    dsv5_usage_report=$(jq -c '.[] | select(.localName | contains("Standard DSv5 Family vCPUs"))' <<< $vm_usage_report)
+    dsv5_limit=$(jq -r .limit <<< $dsv5_usage_report)
+    dsv5_currVal=$(jq -r .currentValue <<< $dsv5_usage_report)
+    dsv5_reqVal=$(expr $dsv5_currVal + 12)
     exitIfThresholdExceeded $dsv5_reqVal $dsv5_limit "Not enough Standard DSv5 Family vCPU quota for deployment. At least 12 vCPU is required."
 
     # Check quota for Standard ESv5 Family vCPUs
-    local esv5_usage_report=$(jq -c '.[] | select(.localName | contains("Standard ESv5 Family vCPUs"))' <<< $vm_usage_report)
-    local esv5_limit=$(jq -r .limit <<< $esv5_usage_report)
-    local esv5_currVal=$(jq -r .currentValue <<< $esv5_usage_report)
-    local esv5_reqVal=$(expr $esv5_currVal + 8)
+    local esv5_usage_report esv5_limit esv5_currVal esv5_reqVal
+    esv5_usage_report=$(jq -c '.[] | select(.localName | contains("Standard ESv5 Family vCPUs"))' <<< $vm_usage_report)
+    esv5_limit=$(jq -r .limit <<< $esv5_usage_report)
+    esv5_currVal=$(jq -r .currentValue <<< $esv5_usage_report)
+    esv5_reqVal=$(expr $esv5_currVal + 8)
     exitIfThresholdExceeded $esv5_reqVal $esv5_limit "Not enough Standard ESv5 Family vCPU quota for deployment. At least 8 vCPU is required."
     printf "Done.\n"
 }
 
 installGraphRAGHelmChart () {
+    local containerRegistryServer=""
+    local graphragImageName graphragImageVersion
+    local workloadId serviceAccountName appInsightsConnectionString aiSearchName cosmosEndpoint appHostname storageAccountBlobUrl
+    local graphragApiBase graphragApiVersion graphragLlmModel graphragLlmModelDeployment graphragEmbeddingModel graphragEmbeddingModelDeployment
+
     echo "Deploying graphrag helm chart... "
-    local workloadId=$(jq -r .azure_workload_identity_client_id.value <<< $AZURE_OUTPUTS)
+    workloadId=$(jq -r .azure_workload_identity_client_id.value <<< $AZURE_DEPLOY_OUTPUTS)
     exitIfValueEmpty "$workloadId" "Unable to parse workload id from Azure outputs, exiting..."
 
-    local serviceAccountName=$(jq -r .azure_aks_service_account_name.value <<< $AZURE_OUTPUTS)
+    serviceAccountName=$(jq -r .azure_aks_service_account_name.value <<< $AZURE_DEPLOY_OUTPUTS)
     exitIfValueEmpty "$serviceAccountName" "Unable to parse service account name from Azure outputs, exiting..."
 
-    local appInsightsConnectionString=$(jq -r .azure_app_insights_connection_string.value <<< $AZURE_OUTPUTS)
+    appInsightsConnectionString=$(jq -r .azure_app_insights_connection_string.value <<< $AZURE_DEPLOY_OUTPUTS)
     exitIfValueEmpty "$appInsightsConnectionString" "Unable to parse app insights connection string from Azure outputs, exiting..."
 
-    local aiSearchName=$(jq -r .azure_ai_search_name.value <<< $AZURE_OUTPUTS)
+    aiSearchName=$(jq -r .azure_ai_search_name.value <<< $AZURE_DEPLOY_OUTPUTS)
     exitIfValueEmpty "$aiSearchName" "Unable to parse AI search name from Azure outputs, exiting..."
 
-    local cosmosEndpoint=$(jq -r .azure_cosmosdb_endpoint.value <<< $AZURE_OUTPUTS)
+    cosmosEndpoint=$(jq -r .azure_cosmosdb_endpoint.value <<< $AZURE_DEPLOY_OUTPUTS)
     exitIfValueEmpty "$cosmosEndpoint" "Unable to parse CosmosDB endpoint from Azure outputs, exiting..."
 
-    local graphragHostname=$(jq -r .azure_app_hostname.value <<< $AZURE_OUTPUTS)
-    exitIfValueEmpty "$graphragHostname" "Unable to parse graphrag hostname from deployment outputs, exiting..."
+    appHostname=$(jq -r .azure_app_hostname.value <<< $AZURE_DEPLOY_OUTPUTS)
+    exitIfValueEmpty "$appHostname" "Unable to parse graphrag hostname from deployment outputs, exiting..."
 
-    local storageAccountBlobUrl=$(jq -r .azure_storage_account_blob_url.value <<< $AZURE_OUTPUTS)
+    storageAccountBlobUrl=$(jq -r .azure_storage_account_blob_url.value <<< $AZURE_DEPLOY_OUTPUTS)
     exitIfValueEmpty "$storageAccountBlobUrl" "Unable to parse storage account blob url from deployment outputs, exiting..."
 
-    local containerRegistryName=$(jq -r .azure_acr_login_server.value <<< $AZURE_OUTPUTS)
-    exitIfValueEmpty "$containerRegistryName" "Unable to parse container registry url from deployment outputs, exiting..."
-
-    local graphragImageName=$(sed -rn "s/([^:]+).*/\1/p" <<< "$GRAPHRAG_IMAGE")
-    local graphragImageVersion=$(sed -rn "s/[^:]+:(.*)/\1/p" <<< "$GRAPHRAG_IMAGE")
+    # retrieve container registry info either from the deployment or from user provided input
+    if [ -n "$CONTAINER_REGISTRY_LOGIN_SERVER" ]; then
+        containerRegistryServer="$CONTAINER_REGISTRY_LOGIN_SERVER"
+    else
+        containerRegistryServer=$(jq -r .azure_acr_login_server.value <<< $AZURE_DEPLOY_OUTPUTS)
+    fi
+    exitIfValueEmpty "$containerRegistryServer" "Unable to parse container registry url from deployment outputs, exiting..."
+    graphragImageName=$(sed -rn "s/([^:]+).*/\1/p" <<< "$GRAPHRAG_IMAGE")
+    graphragImageVersion=$(sed -rn "s/[^:]+:(.*)/\1/p" <<< "$GRAPHRAG_IMAGE")
     exitIfValueEmpty "$graphragImageName" "Unable to parse graphrag docker image name, exiting..."
     exitIfValueEmpty "$graphragImageVersion" "Unable to parse graphrag docker image version, exiting..."
 
     # retrieve AOAOI values either from the deployment or from user provided input
     if [ -n "$GRAPHRAG_API_BASE" ]; then
-        local graphragApiBase="$GRAPHRAG_API_BASE"
-        local graphragApiVersion="$GRAPHRAG_API_VERSION"
-        local graphragLlmModel="$GRAPHRAG_LLM_MODEL"
-        local graphragLlmModelDeployment="$GRAPHRAG_LLM_DEPLOYMENT_NAME"
-        local graphragEmbeddingModel="$GRAPHRAG_EMBEDDING_MODEL"
-        local graphragEmbeddingModelDeployment="$GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME"
+        graphragApiBase="$GRAPHRAG_API_BASE"
+        graphragApiVersion="$GRAPHRAG_API_VERSION"
+        graphragLlmModel="$GRAPHRAG_LLM_MODEL"
+        graphragLlmModelDeployment="$GRAPHRAG_LLM_DEPLOYMENT_NAME"
+        graphragEmbeddingModel="$GRAPHRAG_EMBEDDING_MODEL"
+        graphragEmbeddingModelDeployment="$GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME"
     else
-        local graphragApiBase=$(jq -r .azure_aoai_endpoint.value <<< $AZURE_OUTPUTS)
+        graphragApiBase=$(jq -r .azure_aoai_endpoint.value <<< $AZURE_DEPLOY_OUTPUTS)
         exitIfValueEmpty "$graphragApiBase" "Unable to parse AOAI endpoint from deployment outputs, exiting..."
-        local graphragApiVersion=$(jq -r .azure_aoai_llm_model_api_version.value <<< $AZURE_OUTPUTS)
+        graphragApiVersion=$(jq -r .azure_aoai_llm_model_api_version.value <<< $AZURE_DEPLOY_OUTPUTS)
         exitIfValueEmpty "$graphragApiVersion" "Unable to parse AOAI model api version from deployment outputs, exiting..."
-        local graphragLlmModel=$(jq -r .azure_aoai_llm_model.value <<< $AZURE_OUTPUTS)
+        graphragLlmModel=$(jq -r .azure_aoai_llm_model.value <<< $AZURE_DEPLOY_OUTPUTS)
         exitIfValueEmpty "$graphragLlmModel" "Unable to parse LLM model name from deployment outputs, exiting..."
-        local graphragLlmModelDeployment=$(jq -r .azure_aoai_llm_model_deployment_name.value <<< $AZURE_OUTPUTS)
+        graphragLlmModelDeployment=$(jq -r .azure_aoai_llm_model_deployment_name.value <<< $AZURE_DEPLOY_OUTPUTS)
         exitIfValueEmpty "$graphragLlmModelDeployment" "Unable to parse LLM model deployment name from deployment outputs, exiting..."
-        local graphragEmbeddingModel=$(jq -r .azure_aoai_embedding_model.value <<< $AZURE_OUTPUTS)
+        graphragEmbeddingModel=$(jq -r .azure_aoai_embedding_model.value <<< $AZURE_DEPLOY_OUTPUTS)
         exitIfValueEmpty "$graphragEmbeddingModel" "Unable to parse embedding model name from deployment outputs, exiting..."
-        local graphragEmbeddingModelDeployment=$(jq -r .azure_aoai_embedding_model_deployment_name.value <<< $AZURE_OUTPUTS)
+        graphragEmbeddingModelDeployment=$(jq -r .azure_aoai_embedding_model_deployment_name.value <<< $AZURE_DEPLOY_OUTPUTS)
         exitIfValueEmpty "$graphragEmbeddingModelDeployment" "Unable to parse embedding model deployment name from deployment outputs, exiting..."
     fi
 
@@ -489,9 +561,9 @@ installGraphRAGHelmChart () {
         --namespace $aksNamespace --create-namespace \
         --set "serviceAccount.name=$serviceAccountName" \
         --set "serviceAccount.annotations.azure\.workload\.identity/client-id=$workloadId" \
-        --set "master.image.repository=$containerRegistryName/$graphragImageName" \
+        --set "master.image.repository=$containerRegistryServer/$graphragImageName" \
         --set "master.image.tag=$graphragImageVersion" \
-        --set "ingress.host=$graphragHostname" \
+        --set "ingress.host=$appHostname" \
         --set "graphragConfig.AI_SEARCH_URL=https://$aiSearchName.$AISEARCH_ENDPOINT_SUFFIX" \
         --set "graphragConfig.AI_SEARCH_AUDIENCE=$AI_SEARCH_AUDIENCE" \
         --set "graphragConfig.APPLICATIONINSIGHTS_CONNECTION_STRING=$appInsightsConnectionString" \
@@ -505,7 +577,8 @@ installGraphRAGHelmChart () {
         --set "graphragConfig.COGNITIVE_SERVICES_AUDIENCE=$COGNITIVE_SERVICES_AUDIENCE" \
         --set "graphragConfig.STORAGE_ACCOUNT_BLOB_URL=$storageAccountBlobUrl"
 
-    local helmResult=$?
+    local helmResult
+    helmResult=$?
     "$reset_x" && set +x
     exitIfCommandFailed $helmResult "Error deploying helm chart, exiting..."
 }
@@ -513,6 +586,8 @@ installGraphRAGHelmChart () {
 waitForExternalIp () {
     local -i maxTries=14
     local available="false"
+    local TMP_GRAPHRAG_SERVICE_IP
+
     printf "Checking for GraphRAG external IP"
     for ((i=0;i < $maxTries; i++)); do
         TMP_GRAPHRAG_SERVICE_IP=$(kubectl get ingress --namespace graphrag graphrag -o json | jq -r .status.loadBalancer.ingress[0].ip)
@@ -536,6 +611,7 @@ waitForGraphragBackend () {
     local backendSwaggerUrl=$1
     local -i maxTries=20
     local available="false"
+
     printf "Checking for GraphRAG API availability..."
     for ((i=0;i < $maxTries; i++)); do
         az rest --method get --url $backendSwaggerUrl > /dev/null 2>&1
@@ -557,7 +633,9 @@ waitForGraphragBackend () {
 deployDnsRecord () {
     waitForExternalIp
     exitIfValueEmpty "$GRAPHRAG_SERVICE_IP" "Unable to get GraphRAG external IP."
-    local dnsZoneName=$(jq -r .azure_dns_zone_name.value <<< $AZURE_OUTPUTS)
+
+    local dnsZoneName
+    dnsZoneName=$(jq -r .azure_dns_zone_name.value <<< $AZURE_DEPLOY_OUTPUTS)
     exitIfValueEmpty "$dnsZoneName" "Error parsing DNS zone name from azure outputs, exiting..."
     az deployment group create --only-show-errors --no-prompt \
         --name graphrag-dns-deployment \
@@ -570,13 +648,15 @@ deployDnsRecord () {
 }
 
 deployGraphragAPI () {
+    local apimGatewayUrl apimName backendSwaggerUrl graphragUrl
+
     echo "Registering GraphRAG API with APIM..."
-    local apimGatewayUrl=$(jq -r .azure_apim_gateway_url.value <<< $AZURE_OUTPUTS)
+    apimGatewayUrl=$(jq -r .azure_apim_gateway_url.value <<< $AZURE_DEPLOY_OUTPUTS)
     exitIfValueEmpty "$apimGatewayUrl" "Unable to parse APIM gateway url from Azure outputs, exiting..."
-    local apimName=$(jq -r .azure_apim_name.value <<< $AZURE_OUTPUTS)
+    apimName=$(jq -r .azure_apim_name.value <<< $AZURE_DEPLOY_OUTPUTS)
     exitIfValueEmpty "$apimName" "Error parsing apim name from azure outputs, exiting..."
-    local backendSwaggerUrl="$apimGatewayUrl/manpage/openapi.json"
-    local graphragUrl=$(jq -r .azure_app_url.value <<< $AZURE_OUTPUTS)
+    backendSwaggerUrl="$apimGatewayUrl/manpage/openapi.json"
+    graphragUrl=$(jq -r .azure_app_url.value <<< $AZURE_DEPLOY_OUTPUTS)
     exitIfValueEmpty "$graphragUrl" "Error parsing GraphRAG URL from azure outputs, exiting..."
 
     waitForGraphragBackend $backendSwaggerUrl
@@ -605,15 +685,18 @@ grantDevAccessToAzureResources() {
     echo "Granting deployer developer access to Azure resources..."
 
     # get subscription id of the active subscription
-    local subscriptionId=$(az account show --output json | jq -r .id)
+    local subscriptionId
+    subscriptionId=$(az account show --output json | jq -r .id)
     exitIfValueEmpty $subscriptionId "Subscription ID not found"
 
     # get principal/object id of the signed in user
-    local principalId=$(az ad signed-in-user show --output json | jq -r .id)
+    local principalId
+    principalId=$(az ad signed-in-user show --output json | jq -r .id)
     exitIfValueEmpty $principalId "Principal ID of deployer not found"
 
     # assign storage account roles
-    local storageAccountName=$(az storage account list --resource-group $RESOURCE_GROUP --output json | jq -r .[0].name)
+    local storageAccountName
+    storageAccountName=$(az storage account list --resource-group $RESOURCE_GROUP --output json | jq -r .[0].name)
     exitIfValueEmpty $storageAccountName "Storage account not found"
     az role assignment create \
         --role "Storage Blob Data Contributor" \
@@ -621,7 +704,8 @@ grantDevAccessToAzureResources() {
         --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Storage/storageAccounts/$storageAccountName" > /dev/null
 
     # assign cosmos db role
-    local cosmosDbName=$(az cosmosdb list --resource-group $RESOURCE_GROUP -o json | jq -r .[0].name)
+    local cosmosDbName
+    cosmosDbName=$(az cosmosdb list --resource-group $RESOURCE_GROUP -o json | jq -r .[0].name)
     exitIfValueEmpty $cosmosDbName "CosmosDB account not found"
     az cosmosdb sql role assignment create \
         --account-name $cosmosDbName \
@@ -631,7 +715,8 @@ grantDevAccessToAzureResources() {
         --role-definition-id /subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.DocumentDB/databaseAccounts/graphrag/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002 > /dev/null
 
     # assign AI search roles
-    local searchServiceName=$(az search service list --resource-group $RESOURCE_GROUP -o json | jq -r .[0].name)
+    local searchServiceName
+    searchServiceName=$(az search service list --resource-group $RESOURCE_GROUP -o json | jq -r .[0].name)
     exitIfValueEmpty $searchServiceName "AI Search service not found"
     az role assignment create \
         --role "Contributor" \
@@ -647,11 +732,14 @@ grantDevAccessToAzureResources() {
         --scope "/subscriptions/$subscriptionId/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Search/searchServices/$searchServiceName" > /dev/null
 }
 
-deployDockerImageToACR() {
-    local containerRegistry=$(jq -r .azure_acr_login_server.value <<< $AZURE_OUTPUTS)
+deployDockerImageToInternalACR() {
+    local containerRegistry
+    containerRegistry=$(jq -r .azure_acr_login_server.value <<< $AZURE_DEPLOY_OUTPUTS)
     exitIfValueEmpty "$containerRegistry" "Unable to parse container registry from azure deployment outputs, exiting..."
     echo "Deploying docker image '${GRAPHRAG_IMAGE}' to container registry '${containerRegistry}'..."
-    local scriptDir="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" &> /dev/null && pwd 2> /dev/null; )";
+
+    local scriptDir
+    scriptDir="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" &> /dev/null && pwd 2> /dev/null; )";
     az acr build --only-show-errors \
         --registry $containerRegistry \
         --file $scriptDir/../docker/Dockerfile-backend \
@@ -728,12 +816,13 @@ createResourceGroupIfNotExists $LOCATION $RESOURCE_GROUP
 checkForApimSoftDelete
 deployAzureResources
 
-# Deploy the graphrag backend docker image to ACR
-deployDockerImageToACR
+# Deploy graphrag docker image to internal ACR if an external ACR was not provided
+if [ -z "$CONTAINER_REGISTRY_LOGIN_SERVER" ]; then
+    deployDockerImageToInternalACR
+fi
 
 # Retrieve AKS credentials and install GraphRAG helm chart
-AKS_NAME=$(jq -r .azure_aks_name.value <<< $AZURE_OUTPUTS)
-getAksCredentials $RESOURCE_GROUP $AKS_NAME
+getAksCredentials $RESOURCE_GROUP
 installGraphRAGHelmChart
 
 # Import and setup GraphRAG API in APIM

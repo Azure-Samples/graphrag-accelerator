@@ -20,7 +20,7 @@ Managed Identity
 @minLength(1)
 @maxLength(64)
 @description('Name of the resource group that GraphRAG will be deployed in.')
-param resourceGroup string
+param resourceGroupName string
 
 // optional parameters with reasonable defaults unless explicitly overridden (most names will be auto-generated if not provided)
 @description('Unique name to append to each resource')
@@ -47,18 +47,22 @@ param enablePrivateEndpoints bool = true
 @description('Whether to restore the API Management instance.')
 param restoreAPIM bool = false
 
-@description('The resource id of an existing AOAI service. Deployment of a new AOAI service will be skipped if this parameter is provided.')
+@description('Whether or not to deploy a new AOAI resource instead of connecting to an existing service.')
 param deployAoai bool = true
+
+@description('Whether or not to deploy a new ACR resource instead of connecting to an existing service.')
+param deployAcr bool = true
+// if existing ACR is used, the login server must be provided
+param existingAcrLoginServer string = ''
+param graphragImageName string = 'graphrag'
+param graphragImageVersion string = 'latest'
 
 param apimTier string = 'Developer'
 param apimName string = ''
-param acrName string = ''
 param storageAccountName string = ''
 param cosmosDbName string = ''
 param aiSearchName string = ''
 param utcString string = utcNow()
-param graphragImage string = 'graphragbackend'
-param graphragImageVersion string = 'latest'
 
 //
 // start AOAI parameters
@@ -103,7 +107,7 @@ param publicStorageAccountName string = ''
 param publicStorageAccountKey string = ''
 
 var abbrs = loadJsonContent('abbreviations.json')
-var tags = { 'azd-env-name': resourceGroup }
+var tags = { 'azd-env-name': resourceGroupName }
 var workloadIdentityName = '${abbrs.managedIdentityUserAssignedIdentities}${resourceBaseNameFinal}'
 var aksServiceAccountName = '${aksNamespace}-workload-sa'
 var workloadIdentitySubject = 'system:serviceaccount:${aksNamespace}:${aksServiceAccountName}'
@@ -211,10 +215,10 @@ module aoai 'core/aoai/aoai.bicep' = if (deployAoai) {
   }
 }
 
-module acr 'core/acr/acr.bicep' = {
+module acr 'core/acr/acr.bicep' = if (deployAcr) {
   name: 'acr-deployment'
   params: {
-    registryName: !empty(acrName) ? acrName : '${abbrs.containerRegistryRegistries}${resourceBaseNameFinal}'
+    registryName: '${abbrs.containerRegistryRegistries}${resourceBaseNameFinal}'
     location: location
   }
 }
@@ -402,6 +406,7 @@ module privateLinkScopePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (
   }
 }
 
+// the following deploymentScript module will only be deployed when performing a managed app deployment
 module deploymentScript 'core/scripts/deployment-script.bicep' = if (!empty(publicStorageAccountName) && !empty(publicStorageAccountKey)) {
   name: utcString
   params: {
@@ -413,11 +418,9 @@ module deploymentScript 'core/scripts/deployment-script.bicep' = if (!empty(publ
     public_storage_account_name: publicStorageAccountName
     public_storage_account_key: publicStorageAccountKey
     utcValue: utcString
-    acrserver: 'graphrag.azure.acr.io'
     ai_search_name: aiSearch.name
     azure_location: location
-    azure_acr_login_server: acr.outputs.loginServer
-    azure_acr_name: acr.outputs.name
+    azure_acr_login_server: deployAcr ? acr.outputs.loginServer : existingAcrLoginServer
     azure_aks_name: aks.outputs.name
     azure_aks_controlplanefqdn: aks.outputs.controlPlaneFqdn
     azure_aks_managed_rg: aks.outputs.managedResourceGroup
@@ -443,7 +446,7 @@ module deploymentScript 'core/scripts/deployment-script.bicep' = if (!empty(publ
     azure_workload_identity_client_id: workloadIdentity.outputs.clientId
     azure_workload_identity_principal_id: workloadIdentity.outputs.principalId
     azure_workload_identity_name: workloadIdentity.outputs.name
-    image_name: graphragImage
+    image_name: graphragImageName
     image_version: graphragImageVersion
     managed_identity_aks: aks.outputs.systemIdentity
   }
@@ -453,8 +456,8 @@ output deployer_principal_id string = deployer().objectId
 output azure_location string = location
 output azure_tenant_id string = tenant().tenantId
 output azure_ai_search_name string = aiSearch.outputs.name
-output azure_acr_login_server string = acr.outputs.loginServer
-output azure_acr_name string = acr.outputs.name
+output azure_acr_login_server string = deployAcr ? acr.outputs.loginServer : existingAcrLoginServer
+output azure_acr_name string = deployAcr ? acr.outputs.name : ''
 output azure_aks_name string = aks.outputs.name
 output azure_aks_controlplanefqdn string = aks.outputs.controlPlaneFqdn
 output azure_aks_managed_rg string = aks.outputs.managedResourceGroup

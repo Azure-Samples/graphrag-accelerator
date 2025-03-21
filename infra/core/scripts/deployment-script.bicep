@@ -4,11 +4,9 @@ param location string
 param subscriptionId string
 param tenantid string
 
-param acrserver string
-param azure_location string
-
 param azure_acr_login_server string
-param azure_acr_name string
+
+param azure_location string
 
 param azure_aks_name string
 param azure_aks_controlplanefqdn string
@@ -109,19 +107,11 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
       }
       {
         name: 'ACR_SERVER'
-        value: acrserver
+        value: azure_acr_login_server
       }
       {
         name: 'AZURE_LOCATION'
         value: azure_location
-      }
-      {
-        name: 'AZURE_ACR_LOGIN_SERVER'
-        value: azure_acr_login_server
-      }
-      {
-        name: 'AZURE_ACR_NAME'
-        value: azure_acr_name
       }
       {
         name: 'AZURE_AKS_NAME'
