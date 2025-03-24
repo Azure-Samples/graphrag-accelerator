@@ -408,47 +408,32 @@ module privateLinkScopePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (
 
 // the following deploymentScript module will only be deployed when performing a managed app deployment
 module deploymentScript 'core/scripts/deployment-script.bicep' = if (!empty(publicStorageAccountName) && !empty(publicStorageAccountKey)) {
-  name: utcString
+  name: 'deploy-script-deployment-${utcString}'
   params: {
-    name: 'graphragscript'
     location: location
-    tenantid: tenant().tenantId
-    subscriptionId: subscription().id
     script_file: loadTextContent('managed-app/artifacts/scripts/updategraphrag.sh')
     public_storage_account_name: publicStorageAccountName
     public_storage_account_key: publicStorageAccountKey
-    utcValue: utcString
+    acr_login_server: deployAcr ? acr.outputs.loginServer : existingAcrLoginServer
     ai_search_name: aiSearch.name
-    azure_location: location
-    azure_acr_login_server: deployAcr ? acr.outputs.loginServer : existingAcrLoginServer
-    azure_aks_name: aks.outputs.name
-    azure_aks_controlplanefqdn: aks.outputs.controlPlaneFqdn
-    azure_aks_managed_rg: aks.outputs.managedResourceGroup
-    azure_aks_service_account_name: aksServiceAccountName
-    azure_aoai_endpoint: aoai.outputs.endpoint
-    azure_aoai_llm_model: aoai.outputs.llmModel
-    azure_aoai_llm_model_deployment_name: aoai.outputs.llmModelDeploymentName
-    azure_aoai_llm_model_api_version: aoai.outputs.llmModelApiVersion
-    azure_aoai_embedding_model: aoai.outputs.embeddingModel
-    azure_aoai_embedding_model_deployment_name: aoai.outputs.embeddingModelDeploymentName
-    azure_aoai_embedding_model_api_version: aoai.outputs.embeddingModelApiVersion
-    azure_apim_gateway_url: apim.outputs.apimGatewayUrl
-    azure_apim_name: apim.outputs.name
-    azure_app_hostname: appHostname
-    azure_app_url: appUrl
-    azure_app_insights_connection_string: appInsights.outputs.connectionString
-    azure_cosmosdb_endpoint: cosmosdb.outputs.endpoint
-    azure_cosmosdb_name: cosmosdb.outputs.name
-    azure_cosmosdb_id: cosmosdb.outputs.id
-    azure_dns_zone_name: privateDnsZone.outputs.name
-    azure_storage_account: storage.outputs.name
-    azure_storage_account_blob_url: storage.outputs.primaryEndpoints.blob
-    azure_workload_identity_client_id: workloadIdentity.outputs.clientId
-    azure_workload_identity_principal_id: workloadIdentity.outputs.principalId
-    azure_workload_identity_name: workloadIdentity.outputs.name
+    aks_name: aks.outputs.name
+    aks_service_account_name: aksServiceAccountName
+    aoai_endpoint: aoai.outputs.endpoint
+    aoai_llm_model: aoai.outputs.llmModel
+    aoai_llm_model_deployment_name: aoai.outputs.llmModelDeploymentName
+    aoai_llm_model_api_version: aoai.outputs.llmModelApiVersion
+    aoai_embedding_model: aoai.outputs.embeddingModel
+    aoai_embedding_model_deployment_name: aoai.outputs.embeddingModelDeploymentName
+    aoai_embedding_model_api_version: aoai.outputs.embeddingModelApiVersion
+    app_hostname: appHostname
+    app_insights_connection_string: appInsights.outputs.connectionString
+    cosmosdb_endpoint: cosmosdb.outputs.endpoint
     image_name: graphragImageName
     image_version: graphragImageVersion
-    managed_identity_aks: aks.outputs.systemIdentity
+    aks_managed_identity: aks.outputs.systemIdentity
+    storage_account_blob_url: storage.outputs.primaryEndpoints.blob
+    utcValue: utcString
+    workload_identity_client_id: workloadIdentity.outputs.clientId
   }
 }
 
