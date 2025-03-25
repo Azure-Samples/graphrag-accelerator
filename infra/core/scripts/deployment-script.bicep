@@ -44,10 +44,6 @@ var rbacClusterAdminRoleDefinitionId = resourceId(
   'Microsoft.Authorization/roleDefinitions',
   'b1ff04bb-8a4e-4dc4-8eb5-8693973ce19b' // Azure Kubernetes Service RBAC Cluster Admin Role
 )
-// var containerRegistryRepositoryContributorRoleDefinitionId = resourceId(
-//   'Microsoft.Authorization/roleDefinitions',
-//   '2efddaa5-3f1f-4df3-97df-af3f13818f4c' // Container Registry Repository Contributor Role
-// )
 
 resource aksCluster 'Microsoft.ContainerService/managedClusters@2024-09-02-preview' existing = {
   name: aks_name
@@ -57,29 +53,6 @@ resource scriptIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-0
   name: 'deployment-script-identity-${uniqueString(resourceGroup().id)}'
   location: location
 }
-
-// var splitId = split(acr_id, '/')
-// @description('Assign Container Registry Repository Contributor role to the deployment script identity to access ACR.')
-// module acrPullRoleAssignment 'acr-pull-role-assignment.bicep' = {
-//   name: 'acrPull-role-assignment-deployment'
-//   scope: resourceGroup(splitId[2], splitId[4])
-//   params: {
-//     principalId: scriptIdentity.properties.principalId
-//     principalType: 'ServicePrincipal'
-//   }
-// }
-
-// var idToSplit = '/subscriptions/e93d3ee6-fac1-412f-92d6-bfb379e81af2/resourceGroups/alfran-redhat/providers/Microsoft.Compute/virtualMachines/adotfrank-rh'
-// @description('Assign Container Registry Repository Contributor role to the deployment script identity to access ACR.')
-// resource containerRegistryRepositoryContributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-//   name: guid(scriptIdentity.id, aksCluster.id, containerRegistryRepositoryContributorRoleDefinitionId)
-//   scope: resourceGroup(splitId[2], splitId[4])
-//   properties: {
-//     principalId: scriptIdentity.properties.principalId
-//     principalType: 'ServicePrincipal'
-//     roleDefinitionId: containerRegistryRepositoryContributorRoleDefinitionId
-//   }
-// }
 
 @description('Assign AKS Cluster Admin role to the deployment script identity to access AKS.')
 resource clusterAdminRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
