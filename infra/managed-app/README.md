@@ -3,7 +3,19 @@
 This guide walks through the process to convert the graphrag solution accelerator into a managed app.
 
 ### Prerequisites
-1. Create an ACR and push the graphrag backend docker image to the registry.
+1. Create an ACR
+1. Push both the graphrag backend docker image and the graphrag helm chart to the registry.
+asfd
+    ```shell
+    # push docker image
+    az acr login --name <registry>.azurecr.io
+    cd <repo_root>
+    az acr build --registry <registry>acurecr.io -f docker/Dockerfile-backend --image graphrag:latest .
+    # push helm chart
+    cd <repo_root>/infra/helm
+    helm package graphrag
+    helm push graphrag-<version>.tgz oci://<registry>.azurecr.io/helm
+    ```
 1. This managed app [uses a storage account to deploy](https://learn.microsoft.com/en-us/azure/azure-resource-manager/managed-applications/publish-service-catalog-bring-your-own-storage?tabs=azure-powershell) an Azure Managed App Definition. Please take note of the storage account name and SAS key for later.
 1. When publishing the managed app , enable anonymous access on the storage container where the app code will be accessed.
 
@@ -47,9 +59,6 @@ cd <repo_root_directory>/infra
 
 # get the openapi specification file
 curl --fail-with-body -o managed-app/openapi.json http://localhost:8080/manpage/openapi.json
-
-# add graphrag helm chart as an additional artifact
-cp -r helm/graphrag managed-app/artifacts/
 
 # zip up all files
 cd managed-app

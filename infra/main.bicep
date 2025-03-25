@@ -52,8 +52,16 @@ param deployAoai bool = true
 
 @description('Whether or not to deploy a new ACR resource instead of connecting to an existing service.')
 param deployAcr bool = false
-// if existing ACR is used, the login server must be provided
+// if existing ACR is used, the login server endpoint (i.e. <registry>.azurecr.io) must be provided
 param existingAcrLoginServer string = ''
+// @description('The complete ACR resource id. This is only used if an existing ACR is used.')
+// param acrId string = ''
+@description('The ACR token username. This is only used if an existing ACR is used.')
+param acrTokenName string = ''
+@secure()
+@description('The ACR token password. This is only used if an existing ACR is used.')
+param acrTokenPassword string = ''
+
 param graphragImageName string = 'graphrag'
 param graphragImageVersion string = 'latest'
 
@@ -101,10 +109,10 @@ param embeddingModelQuota int = 1
 //
 
 @description('This parameter will only get defined during a managed app deployment.')
-param publicStorageAccountName string = ''
+param managedAppStorageAccountName string = ''
 @secure()
 @description('This parameter will only get defined during a managed app deployment.')
-param publicStorageAccountKey string = ''
+param managedAppStorageAccountKey string = ''
 
 var abbrs = loadJsonContent('abbreviations.json')
 var tags = { 'azd-env-name': resourceGroupName }
@@ -308,7 +316,7 @@ module graphragDocsApi 'core/apim/apim.graphrag-docs-api.bicep' = {
   }
 }
 
-module graphragApi 'core/apim/apim.graphrag-api.bicep' = if (!empty(publicStorageAccountName) && !empty(publicStorageAccountKey)) {
+module graphragApi 'core/apim/apim.graphrag-api.bicep' = if (!empty(managedAppStorageAccountName) && !empty(managedAppStorageAccountKey)) {
   name: 'graphrag-api-deployment'
   params: {
     name: 'GraphRag'
@@ -406,17 +414,21 @@ module privateLinkScopePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (
   }
 }
 
-// the following deploymentScript module will only be deployed when performing a managed app deployment
-module deploymentScript 'core/scripts/deployment-script.bicep' = if (!empty(publicStorageAccountName) && !empty(publicStorageAccountKey)) {
+// the following deploymentScript will only get deployed during a managed app deployment
+// will not be deployed when performing a manual deployment with the deploy.sh script
+module deploymentScript 'core/scripts/deployment-script.bicep' = if (!empty(managedAppStorageAccountName) && !empty(managedAppStorageAccountKey)) {
   name: 'deploy-script-deployment-${utcString}'
   params: {
     location: location
     script_file: loadTextContent('managed-app/artifacts/scripts/updategraphrag.sh')
-    public_storage_account_name: publicStorageAccountName
-    public_storage_account_key: publicStorageAccountKey
-    acr_login_server: deployAcr ? acr.outputs.loginServer : existingAcrLoginServer
+    public_storage_account_name: managedAppStorageAccountName
+    public_storage_account_key: managedAppStorageAccountKey
+    acr_login_server: existingAcrLoginServer
+    acr_token_name: acrTokenName
+    acr_token_password: acrTokenPassword
     ai_search_name: aiSearch.name
     aks_name: aks.outputs.name
+    aks_kubelet_id: aks.outputs.kubeletPrincipalId
     aks_service_account_name: aksServiceAccountName
     aoai_endpoint: aoai.outputs.endpoint
     aoai_llm_model: aoai.outputs.llmModel
@@ -430,7 +442,6 @@ module deploymentScript 'core/scripts/deployment-script.bicep' = if (!empty(publ
     cosmosdb_endpoint: cosmosdb.outputs.endpoint
     image_name: graphragImageName
     image_version: graphragImageVersion
-    aks_managed_identity: aks.outputs.systemIdentity
     storage_account_blob_url: storage.outputs.primaryEndpoints.blob
     utcValue: utcString
     workload_identity_client_id: workloadIdentity.outputs.clientId

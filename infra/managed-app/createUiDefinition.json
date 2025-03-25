@@ -180,7 +180,7 @@
             "type": "Microsoft.Common.TextBox",
             "label": "LLM Model Quota (x1000)",
             "placeholder": "85",
-            "defaultValue": "85",
+            "defaultValue": "1",
             "toolTip": "LLM model quota to use.",
             "constraints": {
               "required": true,
@@ -215,7 +215,7 @@
             "type": "Microsoft.Common.TextBox",
             "label": "Embedding Model Quota (x1000)",
             "placeholder": "100",
-            "defaultValue": "100",
+            "defaultValue": "1",
             "toolTip": "Embedding model quota to use.",
             "constraints": {
               "required": true,
@@ -303,13 +303,18 @@
               },
               {
                 "name": "accountKey",
-                "type": "Microsoft.Common.TextBox",
-                "label": "Account Key or SAS Token",
+                "type": "Microsoft.Common.PasswordBox",
+                "label": {
+                  "password": "Account Key or SAS Token"
+                },
                 "toolTip": "Provide a valid key or SAS token associated with the storage account.",
                 "constraints": {
                   "required": true,
                   "regex": "^(?!\\s*$).+",
                   "validationMessage": "Must provide a valid key or SAS token."
+                },
+                "options": {
+                  "hideConfirmation": true
                 }
               }
             ]
@@ -339,10 +344,38 @@
                 }
               },
               {
+                "name": "acrTokenName",
+                "type": "Microsoft.Common.TextBox",
+                "label": "Token Name",
+                "toolTip": "Provide the name of a token to access the container registry that contains the graphrag docker image.",
+                "constraints": {
+                  "required": true,
+                  "regex": "^(?!\\s*$).+",
+                  "validationMessage": "Must provide a valid token name."
+                }
+              },
+              {
+                "name": "acrTokenPassword",
+                "type": "Microsoft.Common.PasswordBox",
+                "label": {
+                  "password": "Token Password"
+                },
+                "toolTip": "Provide a token password to access the container registry that contains the graphrag docker image.",
+                "constraints": {
+                  "required": true,
+                  "regex": "^(?!\\s*$).+",
+                  "validationMessage": "Must provide a valid token password."
+                },
+                "options": {
+                  "hideConfirmation": true
+                }
+              },
+              {
                 "name": "imageName",
                 "type": "Microsoft.Common.TextBox",
                 "label": "Docker Image Name",
                 "toolTip": "Provide the name of the graphrag docker image to use.",
+                "defaultValue": "graphrag",
                 "constraints": {
                   "required": true,
                   "regex": "^(?!\\s*$).+",
@@ -354,6 +387,7 @@
                 "type": "Microsoft.Common.TextBox",
                 "label": "Docker Image Version",
                 "toolTip": "Provide the version tag of the graphrag docker image to use.",
+                "defaultValue": "latest",
                 "constraints": {
                   "required": true,
                   "regex": "^(?!\\s*$).+",
@@ -379,9 +413,11 @@
       "embeddingModelDeploymentName": "[steps('aoaiSettings').embeddingModel]",
       "embeddingModelVersion": "[steps('aoaiSettings').embeddingModelVersion]",
       "embeddingModelQuota": "[int(steps('aoaiSettings').embeddingModelQuota)]",
-      "publicStorageAccountName": "[steps('advanced').storageSettings.accountName]",
-      "publicStorageAccountKey": "[steps('advanced').storageSettings.accountKey]",
+      "managedAppStorageAccountName": "[steps('advanced').storageSettings.accountName]",
+      "managedAppStorageAccountKey": "[steps('advanced').storageSettings.accountKey]",
       "existingAcrLoginServer": "[steps('advanced').containerRegistrySettings.endpoint]",
+      "acrTokenName": "[steps('advanced').containerRegistrySettings.acrTokenName]",
+      "acrTokenPassword": "[steps('advanced').containerRegistrySettings.acrTokenPassword]",
       "graphragImageName": "[steps('advanced').containerRegistrySettings.imageName]",
       "graphragImageVersion": "[steps('advanced').containerRegistrySettings.imageVersion]"
     }

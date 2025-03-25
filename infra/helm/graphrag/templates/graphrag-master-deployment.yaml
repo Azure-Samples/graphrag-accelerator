@@ -27,6 +27,10 @@ spec:
       serviceAccountName: {{ include "graphrag.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.master.podSecurityContext | nindent 8 }}
+      {{- with .Values.master.imagePullSecrets.name }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: {{ .Values.master.name }}
           securityContext:
