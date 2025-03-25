@@ -6,6 +6,7 @@ az aks install-cli --only-show-errors
 az login --identity
 
 # Get AKS credentials
+# requires "Azure Kubernetes Service Cluster Admin" role and "Azure Kubernetes Service RBAC Cluster Admin" role
 az aks get-credentials \
   --admin \
   --name $AKS_NAME  \
@@ -16,7 +17,9 @@ aksNamespace="graphrag"
 
 # Setup an image pull secret to access ACR
 # NOTE: use an image pull secret instead managed identity RBAC roles to seamlessly enable ACR access from any subscription/tenant
-kubectl create secret docker-registry regcred \
+# aksSecretName=""
+aksSecretName="regcred"
+kubectl create secret docker-registry $aksSecretName \
   --docker-server=$ACR_SERVER \
   --docker-username=$ACR_TOKEN_NAME \
   --docker-password=$ACR_TOKEN_PASSWORD \
@@ -37,7 +40,7 @@ helm upgrade -i graphrag ./graphrag -f ./graphrag/values.yaml \
     --namespace $aksNamespace --create-namespace \
     --set "serviceAccount.name=$AKS_SERVICE_ACCOUNT_NAME" \
     --set "serviceAccount.annotations.azure\.workload\.identity/client-id=$WORKLOAD_IDENTITY_CLIENT_ID" \
-    --set "master.imagePullSecrets.name=regcred" \
+    --set "master.imagePullSecrets.name=$aksSecretName" \
     --set "master.image.repository=$ACR_SERVER/$IMAGE_NAME" \
     --set "master.image.tag=$IMAGE_VERSION" \
     --set "ingress.host=$APP_HOSTNAME" \

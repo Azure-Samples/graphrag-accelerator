@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.34.1.11899",
-      "templateHash": "13206027702212354826"
+      "version": "0.34.44.8038",
+      "templateHash": "14019480951623677502"
     }
   },
   "parameters": {
@@ -132,6 +132,13 @@
     "utcString": {
       "type": "string",
       "defaultValue": "[utcNow()]"
+    },
+    "existingAoaiEndpoint": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Name of the existing AOAI endpoint to use."
+      }
     },
     "llmModelName": {
       "type": "string",
@@ -362,7 +369,7 @@
       "webSitesFunctions": "func-",
       "webStaticSites": "stapp-"
     },
-    "$fxv#1": "#!/bin/bash\n\n# Install kubectl\nset -e\naz aks install-cli --only-show-errors\naz login --identity\n\n# Get AKS credentials\naz aks get-credentials \\\n  --admin \\\n  --name $AKS_NAME  \\\n  --resource-group $RESOURCE_GROUP --only-show-errors\n\n# Define a namespace to install graphrag in\naksNamespace=\"graphrag\"\n\n# Setup an image pull secret to access ACR\n# NOTE: use an image pull secret instead managed identity RBAC roles to seamlessly enable ACR access from any subscription/tenant\nkubectl create secret docker-registry regcred \\\n  --docker-server=$ACR_SERVER \\\n  --docker-username=$ACR_TOKEN_NAME \\\n  --docker-password=$ACR_TOKEN_PASSWORD \\\n  --namespace $aksNamespace\n\n# Install helm\ncurl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 -o get_helm.sh -s\nchmod 700 get_helm.sh\n./get_helm.sh &>/dev/null\n\n# Login to ACR and retrieve helm chart\n# A token for the ACR should be generated ahead of time\nhelm registry login $ACR_SERVER --username $ACR_TOKEN_NAME --password $ACR_TOKEN_PASSWORD\nhelm pull \"oci://$ACR_SERVER/helm/graphrag\" --untar\n\n# Install the helm chart\nhelm upgrade -i graphrag ./graphrag -f ./graphrag/values.yaml \\\n    --namespace $aksNamespace --create-namespace \\\n    --set \"serviceAccount.name=$AKS_SERVICE_ACCOUNT_NAME\" \\\n    --set \"serviceAccount.annotations.azure\\.workload\\.identity/client-id=$WORKLOAD_IDENTITY_CLIENT_ID\" \\\n    --set \"master.imagePullSecrets.name=regcred\" \\\n    --set \"master.image.repository=$ACR_SERVER/$IMAGE_NAME\" \\\n    --set \"master.image.tag=$IMAGE_VERSION\" \\\n    --set \"ingress.host=$APP_HOSTNAME\" \\\n    --set \"graphragConfig.AI_SEARCH_URL=https://$AI_SEARCH_NAME.$AI_SEARCH_ENDPOINT_SUFFIX\" \\\n    --set \"graphragConfig.AI_SEARCH_AUDIENCE=$AI_SEARCH_AUDIENCE\" \\\n    --set \"graphragConfig.APPLICATIONINSIGHTS_CONNECTION_STRING=$APP_INSIGHTS_CONNECTION_STRING\" \\\n    --set \"graphragConfig.COGNITIVE_SERVICES_AUDIENCE=$COGNITIVE_SERVICES_AUDIENCE\" \\\n    --set \"graphragConfig.COSMOS_URI_ENDPOINT=$COSMOSDB_ENDPOINT\" \\\n    --set \"graphragConfig.GRAPHRAG_API_BASE=$OPENAI_ENDPOINT\" \\\n    --set \"graphragConfig.GRAPHRAG_API_VERSION=$AOAI_LLM_MODEL_API_VERSION\" \\\n    --set \"graphragConfig.GRAPHRAG_LLM_MODEL=$AOAI_LLM_MODEL\"\\\n    --set \"graphragConfig.GRAPHRAG_LLM_DEPLOYMENT_NAME=$AOAI_LLM_MODEL_DEPLOYMENT_NAME\" \\\n    --set \"graphragConfig.GRAPHRAG_EMBEDDING_MODEL=$AOAI_EMBEDDING_MODEL\" \\\n    --set \"graphragConfig.GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME=$AOAI_EMBEDDING_MODEL_DEPLOYMENT_NAME\" \\\n    --set \"graphragConfig.STORAGE_ACCOUNT_BLOB_URL=$STORAGE_ACCOUNT_BLOB_URL\"\n",
+    "$fxv#1": "#!/bin/bash\n\n# Install kubectl\nset -e\naz aks install-cli --only-show-errors\naz login --identity\n\n# Get AKS credentials\naz aks get-credentials \\\n  --admin \\\n  --name $AKS_NAME  \\\n  --resource-group $RESOURCE_GROUP --only-show-errors\n\n# Define a namespace to install graphrag in\naksNamespace=\"graphrag\"\n\n# Setup an image pull secret to access ACR\n# NOTE: use an image pull secret instead managed identity RBAC roles to seamlessly enable ACR access from any subscription/tenant\n# aksSecretName=\"\"\naksSecretName=\"regcred\"\nkubectl create secret docker-registry $aksSecretName \\\n  --docker-server=$ACR_SERVER \\\n  --docker-username=$ACR_TOKEN_NAME \\\n  --docker-password=$ACR_TOKEN_PASSWORD \\\n  --namespace $aksNamespace\n\n# Install helm\ncurl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 -o get_helm.sh -s\nchmod 700 get_helm.sh\n./get_helm.sh &>/dev/null\n\n# Login to ACR and retrieve helm chart\n# A token for the ACR should be generated ahead of time\nhelm registry login $ACR_SERVER --username $ACR_TOKEN_NAME --password $ACR_TOKEN_PASSWORD\nhelm pull \"oci://$ACR_SERVER/helm/graphrag\" --untar\n\n# Install the helm chart\nhelm upgrade -i graphrag ./graphrag -f ./graphrag/values.yaml \\\n    --namespace $aksNamespace --create-namespace \\\n    --set \"serviceAccount.name=$AKS_SERVICE_ACCOUNT_NAME\" \\\n    --set \"serviceAccount.annotations.azure\\.workload\\.identity/client-id=$WORKLOAD_IDENTITY_CLIENT_ID\" \\\n    --set \"master.imagePullSecrets.name=$aksSecretName\" \\\n    --set \"master.image.repository=$ACR_SERVER/$IMAGE_NAME\" \\\n    --set \"master.image.tag=$IMAGE_VERSION\" \\\n    --set \"ingress.host=$APP_HOSTNAME\" \\\n    --set \"graphragConfig.AI_SEARCH_URL=https://$AI_SEARCH_NAME.$AI_SEARCH_ENDPOINT_SUFFIX\" \\\n    --set \"graphragConfig.AI_SEARCH_AUDIENCE=$AI_SEARCH_AUDIENCE\" \\\n    --set \"graphragConfig.APPLICATIONINSIGHTS_CONNECTION_STRING=$APP_INSIGHTS_CONNECTION_STRING\" \\\n    --set \"graphragConfig.COGNITIVE_SERVICES_AUDIENCE=$COGNITIVE_SERVICES_AUDIENCE\" \\\n    --set \"graphragConfig.COSMOS_URI_ENDPOINT=$COSMOSDB_ENDPOINT\" \\\n    --set \"graphragConfig.GRAPHRAG_API_BASE=$OPENAI_ENDPOINT\" \\\n    --set \"graphragConfig.GRAPHRAG_API_VERSION=$AOAI_LLM_MODEL_API_VERSION\" \\\n    --set \"graphragConfig.GRAPHRAG_LLM_MODEL=$AOAI_LLM_MODEL\"\\\n    --set \"graphragConfig.GRAPHRAG_LLM_DEPLOYMENT_NAME=$AOAI_LLM_MODEL_DEPLOYMENT_NAME\" \\\n    --set \"graphragConfig.GRAPHRAG_EMBEDDING_MODEL=$AOAI_EMBEDDING_MODEL\" \\\n    --set \"graphragConfig.GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME=$AOAI_EMBEDDING_MODEL_DEPLOYMENT_NAME\" \\\n    --set \"graphragConfig.STORAGE_ACCOUNT_BLOB_URL=$STORAGE_ACCOUNT_BLOB_URL\"\n",
     "resourceBaseNameFinal": "[if(not(empty(parameters('resourceBaseName'))), parameters('resourceBaseName'), toLower(uniqueString(resourceGroup().id)))]",
     "abbrs": "[variables('$fxv#0')]",
     "tags": {
@@ -417,8 +424,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.34.1.11899",
-              "templateHash": "7685835869448538776"
+              "version": "0.34.44.8038",
+              "templateHash": "3844816623041303397"
             }
           },
           "parameters": {
@@ -658,8 +665,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.34.1.11899",
-              "templateHash": "14385078530453522702"
+              "version": "0.34.44.8038",
+              "templateHash": "13501588947783727553"
             }
           },
           "parameters": {
@@ -713,8 +720,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.34.1.11899",
-              "templateHash": "12381528142898097563"
+              "version": "0.34.44.8038",
+              "templateHash": "8055830016525407083"
             }
           },
           "parameters": {
@@ -791,8 +798,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.34.1.11899",
-              "templateHash": "2979054774071377261"
+              "version": "0.34.44.8038",
+              "templateHash": "13485881125105531793"
             }
           },
           "parameters": {
@@ -1100,8 +1107,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.34.1.11899",
-              "templateHash": "15701191326805774477"
+              "version": "0.34.44.8038",
+              "templateHash": "1707965760165332297"
             }
           },
           "parameters": {
@@ -1258,8 +1265,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.34.1.11899",
-              "templateHash": "7485242213795126841"
+              "version": "0.34.44.8038",
+              "templateHash": "18017396129568676423"
             }
           },
           "parameters": {
@@ -1413,7 +1420,7 @@
               "type": "int",
               "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts/deployments', parameters('openAiName'), parameters('llmModelDeploymentName')), '2024-10-01', 'full').sku.capacity]"
             },
-            "llmModelApiVersion": {
+            "llmModelVersion": {
               "type": "string",
               "value": "2024-10-01"
             },
@@ -1429,7 +1436,7 @@
               "type": "int",
               "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts/deployments', parameters('openAiName'), parameters('embeddingModelDeploymentName')), '2024-10-01', 'full').sku.capacity]"
             },
-            "embeddingModelApiVersion": {
+            "embeddingModelVersion": {
               "type": "string",
               "value": "2024-10-01"
             }
@@ -1461,8 +1468,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.34.1.11899",
-              "templateHash": "17920365745112937255"
+              "version": "0.34.44.8038",
+              "templateHash": "5249825089957305670"
             }
           },
           "parameters": {
@@ -1563,8 +1570,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.34.1.11899",
-              "templateHash": "831968000213844711"
+              "version": "0.34.44.8038",
+              "templateHash": "14995460784040875856"
             }
           },
           "parameters": {
@@ -1910,8 +1917,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.34.1.11899",
-              "templateHash": "1986030980644948823"
+              "version": "0.34.44.8038",
+              "templateHash": "17906019694324971263"
             }
           },
           "parameters": {
@@ -2141,8 +2148,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.34.1.11899",
-              "templateHash": "14987643178715350712"
+              "version": "0.34.44.8038",
+              "templateHash": "4729759158972494368"
             }
           },
           "parameters": {
@@ -2237,8 +2244,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.34.1.11899",
-              "templateHash": "12227244895201530738"
+              "version": "0.34.44.8038",
+              "templateHash": "842218857589381685"
             }
           },
           "parameters": {
@@ -2417,8 +2424,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.34.1.11899",
-              "templateHash": "8384550706001948224"
+              "version": "0.34.44.8038",
+              "templateHash": "15621097425161390791"
             }
           },
           "parameters": {
@@ -2540,8 +2547,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.34.1.11899",
-              "templateHash": "11947111824515329705"
+              "version": "0.34.44.8038",
+              "templateHash": "18156808235146552774"
             }
           },
           "parameters": {
@@ -2791,8 +2798,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.34.1.11899",
-              "templateHash": "867879185523420640"
+              "version": "0.34.44.8038",
+              "templateHash": "1475999716089380840"
             }
           },
           "parameters": {
@@ -2892,8 +2899,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.34.1.11899",
-              "templateHash": "6506113800247862088"
+              "version": "0.34.44.8038",
+              "templateHash": "6062782789806546452"
             }
           },
           "parameters": {
@@ -4123,8 +4130,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.34.1.11899",
-              "templateHash": "12080299299606815762"
+              "version": "0.34.44.8038",
+              "templateHash": "10328388848308358179"
             }
           },
           "parameters": {
@@ -4217,8 +4224,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.34.1.11899",
-              "templateHash": "17897788557652197755"
+              "version": "0.34.44.8038",
+              "templateHash": "7081181184999422075"
             }
           },
           "parameters": {
@@ -4296,8 +4303,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.34.1.11899",
-              "templateHash": "6302695696786529774"
+              "version": "0.34.44.8038",
+              "templateHash": "13460578716032017965"
             }
           },
           "parameters": {
@@ -4382,8 +4389,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.34.1.11899",
-                      "templateHash": "17190634829465735715"
+                      "version": "0.34.44.8038",
+                      "templateHash": "10417721594575908004"
                     }
                   },
                   "parameters": {
@@ -4500,8 +4507,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.34.1.11899",
-              "templateHash": "6904391549930632718"
+              "version": "0.34.44.8038",
+              "templateHash": "5085079052279481938"
             }
           },
           "parameters": {
@@ -4601,8 +4608,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.34.1.11899",
-              "templateHash": "13959857430167931778"
+              "version": "0.34.44.8038",
+              "templateHash": "7957361984829939297"
             }
           },
           "parameters": {
@@ -4712,8 +4719,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.34.1.11899",
-              "templateHash": "13959857430167931778"
+              "version": "0.34.44.8038",
+              "templateHash": "7957361984829939297"
             }
           },
           "parameters": {
@@ -4823,8 +4830,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.34.1.11899",
-              "templateHash": "13959857430167931778"
+              "version": "0.34.44.8038",
+              "templateHash": "7957361984829939297"
             }
           },
           "parameters": {
@@ -4932,8 +4939,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.34.1.11899",
-              "templateHash": "13959857430167931778"
+              "version": "0.34.44.8038",
+              "templateHash": "7957361984829939297"
             }
           },
           "parameters": {
@@ -5053,27 +5060,13 @@
           "aks_service_account_name": {
             "value": "[variables('aksServiceAccountName')]"
           },
-          "aoai_endpoint": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.endpoint.value]"
-          },
-          "aoai_llm_model": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.llmModel.value]"
-          },
-          "aoai_llm_model_deployment_name": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.llmModelDeploymentName.value]"
-          },
-          "aoai_llm_model_api_version": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.llmModelApiVersion.value]"
-          },
-          "aoai_embedding_model": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.embeddingModel.value]"
-          },
-          "aoai_embedding_model_deployment_name": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.embeddingModelDeploymentName.value]"
-          },
-          "aoai_embedding_model_api_version": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.embeddingModelApiVersion.value]"
-          },
+          "aoai_endpoint": "[if(parameters('deployAoai'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.endpoint.value), createObject('value', parameters('existingAoaiEndpoint')))]",
+          "aoai_llm_model": "[if(parameters('deployAoai'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.llmModel.value), createObject('value', parameters('llmModelName')))]",
+          "aoai_llm_model_deployment_name": "[if(parameters('deployAoai'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.llmModelDeploymentName.value), createObject('value', parameters('llmModelDeploymentName')))]",
+          "aoai_llm_model_version": "[if(parameters('deployAoai'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.llmModelVersion.value), createObject('value', parameters('llmModelVersion')))]",
+          "aoai_embedding_model": "[if(parameters('deployAoai'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.embeddingModel.value), createObject('value', parameters('embeddingModelName')))]",
+          "aoai_embedding_model_deployment_name": "[if(parameters('deployAoai'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.embeddingModelDeploymentName.value), createObject('value', parameters('embeddingModelDeploymentName')))]",
+          "aoai_embedding_model_version": "[if(parameters('deployAoai'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.embeddingModelVersion.value), createObject('value', parameters('embeddingModelVersion')))]",
           "app_hostname": {
             "value": "[variables('appHostname')]"
           },
@@ -5105,8 +5098,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.34.1.11899",
-              "templateHash": "13860002828955049166"
+              "version": "0.34.44.8038",
+              "templateHash": "18436017812478700853"
             }
           },
           "parameters": {
@@ -5154,7 +5147,7 @@
             "aoai_llm_model_deployment_name": {
               "type": "string"
             },
-            "aoai_llm_model_api_version": {
+            "aoai_llm_model_version": {
               "type": "string"
             },
             "aoai_embedding_model": {
@@ -5163,7 +5156,7 @@
             "aoai_embedding_model_deployment_name": {
               "type": "string"
             },
-            "aoai_embedding_model_api_version": {
+            "aoai_embedding_model_version": {
               "type": "string"
             },
             "app_hostname": {
@@ -5203,7 +5196,8 @@
           },
           "variables": {
             "clusterAdminRoleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', '0ab0b1a8-8aac-4efd-b8c2-3ee1fb270be8')]",
-            "rbacClusterAdminRoleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', 'b1ff04bb-8a4e-4dc4-8eb5-8693973ce19b')]"
+            "rbacClusterAdminRoleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', 'b1ff04bb-8a4e-4dc4-8eb5-8693973ce19b')]",
+            "rbacWriterRoleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', 'a7ffa36f-339b-4b5c-8bdf-e2c188b2c0eb')]"
           },
           "resources": [
             {
@@ -5244,6 +5238,23 @@
               ],
               "metadata": {
                 "description": "Assign AKS RBAC Cluster Admin role to the deployment script identity to access AKS."
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.ContainerService/managedClusters/{0}', parameters('aks_name'))]",
+              "name": "[guid(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('deployment-script-identity-{0}', uniqueString(resourceGroup().id))), resourceId('Microsoft.ContainerService/managedClusters', parameters('aks_name')), variables('rbacWriterRoleDefinitionId'))]",
+              "properties": {
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('deployment-script-identity-{0}', uniqueString(resourceGroup().id))), '2023-01-31').principalId]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('rbacWriterRoleDefinitionId')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('deployment-script-identity-{0}', uniqueString(resourceGroup().id)))]"
+              ],
+              "metadata": {
+                "description": "Assign AKS RBAC Writer role to the deployment script identity to access AKS."
               }
             },
             {
@@ -5313,7 +5324,7 @@
                   },
                   {
                     "name": "AOAI_LLM_MODEL_API_VERSION",
-                    "value": "[parameters('aoai_llm_model_api_version')]"
+                    "value": "[parameters('aoai_llm_model_version')]"
                   },
                   {
                     "name": "AOAI_EMBEDDING_MODEL",
@@ -5325,7 +5336,7 @@
                   },
                   {
                     "name": "AOAI_EMBEDDING_MODEL_API_VERSION",
-                    "value": "[parameters('aoai_embedding_model_api_version')]"
+                    "value": "[parameters('aoai_embedding_model_version')]"
                   },
                   {
                     "name": "APP_HOSTNAME",
@@ -5449,7 +5460,7 @@
     },
     "azure_aoai_llm_model_api_version": {
       "type": "string",
-      "value": "[if(parameters('deployAoai'), reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.llmModelApiVersion.value, '')]"
+      "value": "[if(parameters('deployAoai'), reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.llmModelVersion.value, '')]"
     },
     "azure_aoai_embedding_model": {
       "type": "string",
@@ -5465,7 +5476,7 @@
     },
     "azure_aoai_embedding_model_api_version": {
       "type": "string",
-      "value": "[if(parameters('deployAoai'), reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.embeddingModelApiVersion.value, '')]"
+      "value": "[if(parameters('deployAoai'), reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.embeddingModelVersion.value, '')]"
     },
     "azure_apim_gateway_url": {
       "type": "string",

@@ -134,6 +134,27 @@
         },
         "elements": [
           {
+            "name": "deployAoai",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Deploy new AOAI?",
+            "toolTip": "Whether or not to deploy a new AOAI.",
+            "defaultValue": false,
+            "constraints": {
+              "required": false
+            }
+          },
+          {
+            "name": "endpoint",
+            "type": "Microsoft.Common.TextBox",
+            "label": "AOAI Endpoint",
+            "toolTip": "Provide an existing AOAI endpoint.",
+            "constraints": {
+              "required": false,
+              "regex": "^(?!\\s*$).+",
+              "validationMessage": "Must provide a valid aoai endpoint."
+            }
+          },
+          {
             "name": "llmModel",
             "type": "Microsoft.Common.DropDown",
             "label": "LLM Model",
@@ -405,6 +426,8 @@
       "apiPublisherEmail": "[steps('apiSettings').apimPublisherEmail]",
       "enablePrivateEndpoints": "[steps('networking').enablePrivateEndpoints]",
       "apimTier": "[steps('apiSettings').apimTier]",
+      "deployAoai": "[steps('aoaiSettings').deployAoai]",
+      "existingAoaiEndpoint": "[steps('aoaiSettings').endpoint]",
       "llmModelName": "[steps('aoaiSettings').llmModel]",
       "llmModelDeploymentName": "[steps('aoaiSettings').llmModel]",
       "llmModelVersion": "[steps('aoaiSettings').llmModelVersion]",

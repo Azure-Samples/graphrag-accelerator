@@ -17,10 +17,10 @@ param aks_service_account_name string
 param aoai_endpoint string
 param aoai_llm_model string
 param aoai_llm_model_deployment_name string
-param aoai_llm_model_api_version string
+param aoai_llm_model_version string
 param aoai_embedding_model string
 param aoai_embedding_model_deployment_name string
-param aoai_embedding_model_api_version string
+param aoai_embedding_model_version string
 
 param app_hostname string
 param app_insights_connection_string string
@@ -43,6 +43,10 @@ var clusterAdminRoleDefinitionId = resourceId(
 var rbacClusterAdminRoleDefinitionId = resourceId(
   'Microsoft.Authorization/roleDefinitions',
   'b1ff04bb-8a4e-4dc4-8eb5-8693973ce19b' // Azure Kubernetes Service RBAC Cluster Admin Role
+)
+var rbacWriterRoleDefinitionId = resourceId(
+  'Microsoft.Authorization/roleDefinitions',
+  'a7ffa36f-339b-4b5c-8bdf-e2c188b2c0eb' // Azure Kubernetes Service RBAC Writer Role
 )
 
 resource aksCluster 'Microsoft.ContainerService/managedClusters@2024-09-02-preview' existing = {
@@ -73,6 +77,17 @@ resource rbacClusterAdminRoleAssignment 'Microsoft.Authorization/roleAssignments
     principalId: scriptIdentity.properties.principalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: rbacClusterAdminRoleDefinitionId
+  }
+}
+
+@description('Assign AKS RBAC Writer role to the deployment script identity to access AKS.')
+resource rbacWriterRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(scriptIdentity.id, aksCluster.id, rbacWriterRoleDefinitionId)
+  scope: aksCluster
+  properties: {
+    principalId: scriptIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: rbacWriterRoleDefinitionId
   }
 }
 
@@ -136,7 +151,7 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
       }
       {
         name: 'AOAI_LLM_MODEL_API_VERSION'
-        value: aoai_llm_model_api_version
+        value: aoai_llm_model_version
       }
       {
         name: 'AOAI_EMBEDDING_MODEL'
@@ -146,7 +161,7 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
         name: 'AOAI_EMBEDDING_MODEL_DEPLOYMENT_NAME'
         value: aoai_embedding_model_deployment_name
       }
-      { name: 'AOAI_EMBEDDING_MODEL_API_VERSION', value: aoai_embedding_model_api_version }
+      { name: 'AOAI_EMBEDDING_MODEL_API_VERSION', value: aoai_embedding_model_version }
       { name: 'APP_HOSTNAME', value: app_hostname }
       { name: 'APP_INSIGHTS_CONNECTION_STRING', value: app_insights_connection_string }
       {

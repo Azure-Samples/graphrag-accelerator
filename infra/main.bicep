@@ -75,6 +75,9 @@ param utcString string = utcNow()
 //
 // start AOAI parameters
 //
+@description('Name of the existing AOAI endpoint to use.')
+param existingAoaiEndpoint string = ''
+
 @description('Name of the AOAI LLM model to use. Must match official model id. For more information: https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models')
 @allowed(['gpt-4', 'gpt-4o', 'gpt-4o-mini'])
 param llmModelName string = 'gpt-4o'
@@ -430,13 +433,15 @@ module deploymentScript 'core/scripts/deployment-script.bicep' = if (!empty(mana
     aks_name: aks.outputs.name
     aks_kubelet_id: aks.outputs.kubeletPrincipalId
     aks_service_account_name: aksServiceAccountName
-    aoai_endpoint: aoai.outputs.endpoint
-    aoai_llm_model: aoai.outputs.llmModel
-    aoai_llm_model_deployment_name: aoai.outputs.llmModelDeploymentName
-    aoai_llm_model_api_version: aoai.outputs.llmModelApiVersion
-    aoai_embedding_model: aoai.outputs.embeddingModel
-    aoai_embedding_model_deployment_name: aoai.outputs.embeddingModelDeploymentName
-    aoai_embedding_model_api_version: aoai.outputs.embeddingModelApiVersion
+    aoai_endpoint: deployAoai ? aoai.outputs.endpoint : existingAoaiEndpoint
+    aoai_llm_model: deployAoai ? aoai.outputs.llmModel : llmModelName
+    aoai_llm_model_deployment_name: deployAoai ? aoai.outputs.llmModelDeploymentName : llmModelDeploymentName
+    aoai_llm_model_version: deployAoai ? aoai.outputs.llmModelVersion : llmModelVersion
+    aoai_embedding_model: deployAoai ? aoai.outputs.embeddingModel : embeddingModelName
+    aoai_embedding_model_deployment_name: deployAoai
+      ? aoai.outputs.embeddingModelDeploymentName
+      : embeddingModelDeploymentName
+    aoai_embedding_model_version: deployAoai ? aoai.outputs.embeddingModelVersion : embeddingModelVersion
     app_hostname: appHostname
     app_insights_connection_string: appInsights.outputs.connectionString
     cosmosdb_endpoint: cosmosdb.outputs.endpoint
@@ -463,11 +468,11 @@ output azure_aoai_endpoint string = deployAoai ? aoai.outputs.endpoint : ''
 output azure_aoai_llm_model string = deployAoai ? aoai.outputs.llmModel : ''
 output azure_aoai_llm_model_deployment_name string = deployAoai ? aoai.outputs.llmModelDeploymentName : ''
 output azure_aoai_llm_model_quota int = deployAoai ? aoai.outputs.llmModelQuota : 0
-output azure_aoai_llm_model_api_version string = deployAoai ? aoai.outputs.llmModelApiVersion : ''
+output azure_aoai_llm_model_api_version string = deployAoai ? aoai.outputs.llmModelVersion : ''
 output azure_aoai_embedding_model string = deployAoai ? aoai.outputs.embeddingModel : ''
 output azure_aoai_embedding_model_deployment_name string = deployAoai ? aoai.outputs.embeddingModelDeploymentName : ''
 output azure_aoai_embedding_model_quota int = deployAoai ? aoai.outputs.embeddingModelQuota : 0
-output azure_aoai_embedding_model_api_version string = deployAoai ? aoai.outputs.embeddingModelApiVersion : ''
+output azure_aoai_embedding_model_api_version string = deployAoai ? aoai.outputs.embeddingModelVersion : ''
 output azure_apim_gateway_url string = apim.outputs.apimGatewayUrl
 output azure_apim_name string = apim.outputs.name
 output azure_app_hostname string = appHostname
