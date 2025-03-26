@@ -27,21 +27,21 @@ kubectl create secret docker-registry $aksSecretName \
 
 # Assign AOAI RBAC roles to workload identity if an external AOAI resource was used
 echo "deploiAOAI $DEPLOY_AOAI"
-# if [ "${DEPLOY_AOAI,,}" == "false" ]; then
-#     scope=$(az cognitiveservices account list --query "[?contains(properties.endpoint, '$AOAI_ENDPOINT')].id" -o tsv)
-#     az role assignment create --only-show-errors \
-#         --role "Cognitive Services OpenAI Contributor" \
-#         --assignee "$WORKLOAD_IDENTITY_PRINCIPAL_ID" \
-#         --scope "$scope"
-#     exitIfCommandFailed $? "Error assigning 'Cognitive Services OpenAI Contributor' role to service principal, exiting..."
-#     az role assignment create --only-show-errors \
-#         --role "Cognitive Services Usages Reader" \
-#         --assignee "$WORKLOAD_IDENTITY_PRINCIPAL_ID" \
-#         --scope "$scope"
-#     echo "Assigned AOAI roles to workload identity"
-# else
-#     echo "Skipped AOAI role assignment"
-# fi
+if [ "${DEPLOY_AOAI,,}" == "false" ]; then
+    scope=$(az cognitiveservices account list --query "[?contains(properties.endpoint, '$AOAI_ENDPOINT')].id" -o tsv)
+    az role assignment create --only-show-errors \
+        --role "Cognitive Services OpenAI Contributor" \
+        --assignee "$WORKLOAD_IDENTITY_PRINCIPAL_ID" \
+        --scope "$scope"
+    exitIfCommandFailed $? "Error assigning 'Cognitive Services OpenAI Contributor' role to service principal, exiting..."
+    az role assignment create --only-show-errors \
+        --role "Cognitive Services Usages Reader" \
+        --assignee "$WORKLOAD_IDENTITY_PRINCIPAL_ID" \
+        --scope "$scope"
+    echo "Assigned AOAI roles to workload identity"
+else
+    echo "Skipped AOAI role assignment"
+fi
 
 # Install helm
 curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 -o get_helm.sh -s
