@@ -96,12 +96,19 @@ async def lifespan(app: FastAPI):
         ROOT_DIR = Path(__file__).resolve().parent.parent
         with (ROOT_DIR / "manifests/cronjob.yaml").open("r") as f:
             manifest = yaml.safe_load(f)
+        # set docker image name
         manifest["spec"]["jobTemplate"]["spec"]["template"]["spec"]["containers"][0][
             "image"
         ] = pod.spec.containers[0].image
+        # set service account name
         manifest["spec"]["jobTemplate"]["spec"]["template"]["spec"][
             "serviceAccountName"
         ] = pod.spec.service_account_name
+        # set image pull secrets only if they were provided as part of the deployment.
+        if hasattr(pod.spec, "image_pull_secrets"):
+            manifest["spec"]["jobTemplate"]["spec"]["template"]["spec"][
+                "imagePullSecrets"
+            ] = pod.spec.image_pull_secrets
         # retrieve list of existing cronjobs
         batch_v1 = client.BatchV1Api()
         namespace_cronjobs = batch_v1.list_namespaced_cron_job(

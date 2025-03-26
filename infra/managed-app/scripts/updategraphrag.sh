@@ -17,8 +17,8 @@ aksNamespace="graphrag"
 
 # Setup an image pull secret to access ACR
 # NOTE: use an image pull secret instead managed identity RBAC roles to seamlessly enable ACR access from any subscription/tenant
-# aksSecretName=""
 aksSecretName="regcred"
+kubectl create namespace $aksNamespace
 kubectl create secret docker-registry $aksSecretName \
   --docker-server=$ACR_SERVER \
   --docker-username=$ACR_TOKEN_NAME \
@@ -40,7 +40,7 @@ helm upgrade -i graphrag ./graphrag -f ./graphrag/values.yaml \
     --namespace $aksNamespace --create-namespace \
     --set "serviceAccount.name=$AKS_SERVICE_ACCOUNT_NAME" \
     --set "serviceAccount.annotations.azure\.workload\.identity/client-id=$WORKLOAD_IDENTITY_CLIENT_ID" \
-    --set "master.imagePullSecrets.name=$aksSecretName" \
+    --set "master.imagePullSecrets[0].name=$aksSecretName" \
     --set "master.image.repository=$ACR_SERVER/$IMAGE_NAME" \
     --set "master.image.tag=$IMAGE_VERSION" \
     --set "ingress.host=$APP_HOSTNAME" \

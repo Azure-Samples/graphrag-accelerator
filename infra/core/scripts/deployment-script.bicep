@@ -44,9 +44,9 @@ var rbacClusterAdminRoleDefinitionId = resourceId(
   'Microsoft.Authorization/roleDefinitions',
   'b1ff04bb-8a4e-4dc4-8eb5-8693973ce19b' // Azure Kubernetes Service RBAC Cluster Admin Role
 )
-var rbacWriterRoleDefinitionId = resourceId(
+var aksContributorRoleDefinitionId = resourceId(
   'Microsoft.Authorization/roleDefinitions',
-  'a7ffa36f-339b-4b5c-8bdf-e2c188b2c0eb' // Azure Kubernetes Service RBAC Writer Role
+  'ed7f3fbd-7b88-4dd4-9017-9adb7ce333f8' // Azure Kubernetes Service Contributor Role
 )
 
 resource aksCluster 'Microsoft.ContainerService/managedClusters@2024-09-02-preview' existing = {
@@ -80,14 +80,14 @@ resource rbacClusterAdminRoleAssignment 'Microsoft.Authorization/roleAssignments
   }
 }
 
-@description('Assign AKS RBAC Writer role to the deployment script identity to access AKS.')
-resource rbacWriterRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(scriptIdentity.id, aksCluster.id, rbacWriterRoleDefinitionId)
+@description('Assign AKS Contributor role to the deployment script identity to access AKS.')
+resource aksContributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(scriptIdentity.id, aksCluster.id, aksContributorRoleDefinitionId)
   scope: aksCluster
   properties: {
     principalId: scriptIdentity.properties.principalId
     principalType: 'ServicePrincipal'
-    roleDefinitionId: rbacWriterRoleDefinitionId
+    roleDefinitionId: aksContributorRoleDefinitionId
   }
 }
 

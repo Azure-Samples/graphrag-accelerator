@@ -423,7 +423,7 @@ module deploymentScript 'core/scripts/deployment-script.bicep' = if (!empty(mana
   name: 'deploy-script-deployment-${utcString}'
   params: {
     location: location
-    script_file: loadTextContent('managed-app/artifacts/scripts/updategraphrag.sh')
+    script_file: loadTextContent('managed-app/scripts/updategraphrag.sh')
     public_storage_account_name: managedAppStorageAccountName
     public_storage_account_key: managedAppStorageAccountKey
     acr_login_server: existingAcrLoginServer
