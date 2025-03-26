@@ -68,14 +68,8 @@ tar -a -cf managed-app-deployment-pkg.zip createUiDefinition.json mainTemplate.j
 The deployment package should have the following file structure:
 ```bash
 managed-app-deployment-pkg.zip
-├── artifacts
-│   ├── graphrag
-│   │   ├── Chart.yaml
-│   │   ├── LICENSE
-│   │   ├── templates
-│   │   └── values.yaml
-│   └── scripts
-│       └── updategraphrag.sh
+├── scripts
+│   └── install-graphrag.sh
 ├── createUiDefinition.json
 ├── mainTemplate.json
 └── openapi.json
