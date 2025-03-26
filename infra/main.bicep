@@ -4,13 +4,16 @@
 /*
 This bicep script can be used as a starting point and customized to fit the specific needs of an Azure environment.
 
-The script should be executed as a group deployment using Azure CLI (az deployment group ...)
+The script should be executed as a resource group deployment using Azure CLI (az deployment group ...)
 
 The script will deploy the following resources in a specified resource group:
 AI Search
+Application Insights
+Azure OpenAI (optional)
+Azure Container Registry (optional)
 CosmosDB
 Blob Storage
-AKS
+Azure Kubernetes Service
 API Management
 Log Analytics
 Private Endpoints
@@ -31,12 +34,15 @@ var resourceBaseNameFinal = !empty(resourceBaseName) ? resourceBaseName : toLowe
 param location string = az.resourceGroup().location
 
 @minLength(1)
-@description('Name of the publisher of the API Management instance.')
+@description('Name of the publisher of the API Management service.')
 param apiPublisherName string = 'Microsoft'
 
 @minLength(1)
-@description('Email address of the publisher of the API Management instance.')
+@description('Email address of the publisher of the API Management service.')
 param apiPublisherEmail string = 'publisher@microsoft.com'
+
+@description('Whether or not to restore the API Management service from a soft-deleted state.')
+param restoreAPIM bool = false
 
 @description('The AKS namespace to install GraphRAG in.')
 param aksNamespace string = 'graphrag'
@@ -44,26 +50,23 @@ param aksNamespace string = 'graphrag'
 @description('Whether to use private endpoint connections or not.')
 param enablePrivateEndpoints bool = true
 
-@description('Whether to restore the API Management instance.')
-param restoreAPIM bool = false
-
-@description('Whether or not to deploy a new AOAI resource instead of connecting to an existing service.')
-param deployAoai bool = true
-
+//
+// start ACR parameters
+//
 @description('Whether or not to deploy a new ACR resource instead of connecting to an existing service.')
 param deployAcr bool = false
 // if existing ACR is used, the login server endpoint (i.e. <registry>.azurecr.io) must be provided
 param existingAcrLoginServer string = ''
-// @description('The complete ACR resource id. This is only used if an existing ACR is used.')
-// param acrId string = ''
 @description('The ACR token username. This is only used if an existing ACR is used.')
 param acrTokenName string = ''
 @secure()
 @description('The ACR token password. This is only used if an existing ACR is used.')
 param acrTokenPassword string = ''
-
 param graphragImageName string = 'graphrag'
 param graphragImageVersion string = 'latest'
+//
+// end ACR parameters
+//
 
 param apimTier string = 'Developer'
 param apimName string = ''
@@ -75,6 +78,9 @@ param utcString string = utcNow()
 //
 // start AOAI parameters
 //
+@description('Whether or not to deploy a new AOAI resource instead of connecting to an existing service.')
+param deployAoai bool = true
+
 @description('Name of the existing AOAI endpoint to use.')
 param existingAoaiEndpoint string = ''
 
@@ -123,7 +129,7 @@ var workloadIdentityName = '${abbrs.managedIdentityUserAssignedIdentities}${reso
 var aksServiceAccountName = '${aksNamespace}-workload-sa'
 var workloadIdentitySubject = 'system:serviceaccount:${aksNamespace}:${aksServiceAccountName}'
 
-// endpoint configuration
+// API endpoint configuration
 var dnsDomain = 'graphrag.io'
 var appHostname = 'graphrag.${dnsDomain}'
 var appUrl = 'http://${appHostname}'
@@ -423,7 +429,7 @@ module deploymentScript 'core/scripts/deployment-script.bicep' = if (!empty(mana
   name: 'deploy-script-deployment-${utcString}'
   params: {
     location: location
-    script_file: loadTextContent('managed-app/scripts/updategraphrag.sh')
+    script_file: loadTextContent('managed-app/scripts/install-graphrag.sh')
     public_storage_account_name: managedAppStorageAccountName
     public_storage_account_key: managedAppStorageAccountKey
     acr_login_server: existingAcrLoginServer
@@ -433,6 +439,7 @@ module deploymentScript 'core/scripts/deployment-script.bicep' = if (!empty(mana
     aks_name: aks.outputs.name
     aks_kubelet_id: aks.outputs.kubeletPrincipalId
     aks_service_account_name: aksServiceAccountName
+    deployAoai: deployAoai
     aoai_endpoint: deployAoai ? aoai.outputs.endpoint : existingAoaiEndpoint
     aoai_llm_model: deployAoai ? aoai.outputs.llmModel : llmModelName
     aoai_llm_model_deployment_name: deployAoai ? aoai.outputs.llmModelDeploymentName : llmModelDeploymentName
@@ -450,6 +457,7 @@ module deploymentScript 'core/scripts/deployment-script.bicep' = if (!empty(mana
     storage_account_blob_url: storage.outputs.primaryEndpoints.blob
     utcValue: utcString
     workload_identity_client_id: workloadIdentity.outputs.clientId
+    workload_identity_principal_id: workloadIdentity.outputs.principalId
   }
 }
 

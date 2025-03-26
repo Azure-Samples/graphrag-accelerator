@@ -14,6 +14,7 @@ param aks_name string
 param aks_kubelet_id string
 param aks_service_account_name string
 
+param deployAoai bool
 param aoai_endpoint string
 param aoai_llm_model string
 param aoai_llm_model_deployment_name string
@@ -30,6 +31,7 @@ param image_version string
 param script_file string
 param storage_account_blob_url string
 param workload_identity_client_id string
+param workload_identity_principal_id string
 param cognitive_services_audience string = 'https://cognitiveservices.azure.com/default'
 
 param public_storage_account_name string
@@ -142,6 +144,14 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
         value: aks_service_account_name
       }
       {
+        name: 'DEPLOY_AOAI'
+        value: string(deployAoai)
+      }
+      {
+        name: 'AOAI_ENDPOINT'
+        value: aoai_endpoint
+      }
+      {
         name: 'AOAI_LLM_MODEL'
         value: aoai_llm_model
       }
@@ -181,10 +191,6 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
         value: image_version
       }
       {
-        name: 'OPENAI_ENDPOINT'
-        value: aoai_endpoint
-      }
-      {
         name: 'RESOURCE_GROUP'
         value: resourceGroup().name
       }
@@ -192,6 +198,10 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
       {
         name: 'WORKLOAD_IDENTITY_CLIENT_ID'
         value: workload_identity_client_id
+      }
+      {
+        name: 'WORKLOAD_IDENTITY_PRINCIPAL_ID'
+        value: workload_identity_principal_id
       }
     ]
     cleanupPreference: 'OnSuccess'

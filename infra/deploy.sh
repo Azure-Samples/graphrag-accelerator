@@ -383,7 +383,7 @@ deployAzureResources () {
 
     # Must assign RBAC roles to the aks workload managed identity if AOAI was not part of the deployment (i.e. user chose to utilize an AOAI resource external to this deployment)
     if [ -n "$GRAPHRAG_API_BASE" ]; then
-        assignAOAIRolesToManagedIdentity
+        assignAOAIRbacRolesToManagedIdentity
     fi
 
     # Must assign ACRPull role to aks if ACR was not part of the deployment (i.e. user chose to utilize an ACR resource external to this deployment)
@@ -392,7 +392,7 @@ deployAzureResources () {
     fi
 }
 
-assignAOAIRolesToManagedIdentity() {
+assignAOAIRbacRolesToManagedIdentity() {
     local servicePrincipalId
     local scope
 
