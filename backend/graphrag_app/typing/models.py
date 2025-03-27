@@ -30,10 +30,23 @@ class EntityResponse(BaseModel):
     text_units: list[str]
 
 
-class GraphRequest(BaseModel):
+class IndexingConfigs(BaseModel):
+    index_name: str
+
+
+class GraphRequest(IndexingConfigs):
     index_name: str
     query: str
     community_level: int | None = None
+    response_type: str = "Multiple Paragraphs"
+
+
+class GraphGlobalRequest(GraphRequest):
+    dynamic_community_selection: bool = False
+
+
+class GraphLocalRequest(GraphRequest):
+    conversation_history_max_turns: int = 5
 
 
 class GraphResponse(BaseModel):

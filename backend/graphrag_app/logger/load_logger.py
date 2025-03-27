@@ -45,8 +45,6 @@ def load_pipeline_logger(
                 # ensure the root directory exists; if not, create it
                 blob_service_client = azure_client_manager.get_blob_service_client()
                 container_root = PurePosixPath(log_blob_name).parts[0]
-                print(f"container_root={container_root}")
-                print(f"container_exist={blob_service_client.get_container_client(container_root).exists()}")
                 if not blob_service_client.get_container_client(
                     container_root
                 ).exists():
