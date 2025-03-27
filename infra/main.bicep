@@ -253,6 +253,7 @@ module aks 'core/aks/aks.bicep' = {
     location: location
     graphragVMSize: 'standard_d8s_v5' // 8 vcpu, 32 GB memory
     graphragIndexingVMSize: 'standard_e8s_v5' // 8 vcpus, 64 GB memory
+    clusterAdmins: [deployer().objectId]
     logAnalyticsWorkspaceId: log.outputs.id
     subnetId: vnet.outputs.aksSubnetId
     privateDnsZoneName: privateDnsZone.outputs.name

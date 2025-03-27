@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.34.44.8038",
-      "templateHash": "11464666546623391003"
+      "templateHash": "18043172027332156734"
     }
   },
   "parameters": {
@@ -55,19 +55,13 @@
         "description": "Whether or not to restore the API Management service from a soft-deleted state."
       }
     },
-    "aksNamespace": {
+    "apimTier": {
       "type": "string",
-      "defaultValue": "graphrag",
-      "metadata": {
-        "description": "The AKS namespace to install GraphRAG in."
-      }
+      "defaultValue": "Developer"
     },
-    "enablePrivateEndpoints": {
-      "type": "bool",
-      "defaultValue": true,
-      "metadata": {
-        "description": "Whether to use private endpoint connections or not."
-      }
+    "apimName": {
+      "type": "string",
+      "defaultValue": ""
     },
     "deployAcr": {
       "type": "bool",
@@ -102,30 +96,6 @@
       "type": "string",
       "defaultValue": "latest"
     },
-    "apimTier": {
-      "type": "string",
-      "defaultValue": "Developer"
-    },
-    "apimName": {
-      "type": "string",
-      "defaultValue": ""
-    },
-    "storageAccountName": {
-      "type": "string",
-      "defaultValue": ""
-    },
-    "cosmosDbName": {
-      "type": "string",
-      "defaultValue": ""
-    },
-    "aiSearchName": {
-      "type": "string",
-      "defaultValue": ""
-    },
-    "utcString": {
-      "type": "string",
-      "defaultValue": "[utcNow()]"
-    },
     "deployAoai": {
       "type": "bool",
       "defaultValue": true,
@@ -133,11 +103,11 @@
         "description": "Whether or not to deploy a new AOAI resource instead of connecting to an existing service."
       }
     },
-    "existingAoaiEndpoint": {
+    "existingAoaiId": {
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "Name of the existing AOAI endpoint to use."
+        "description": "Resource id of an existing AOAI resource."
       }
     },
     "llmModelName": {
@@ -215,6 +185,17 @@
         "description": "Quota of the AOAI embedding model to use."
       }
     },
+    "aksNamespace": {
+      "type": "string",
+      "defaultValue": "graphrag",
+      "metadata": {
+        "description": "The AKS namespace to install GraphRAG in."
+      }
+    },
+    "utcString": {
+      "type": "string",
+      "defaultValue": "[utcNow()]"
+    },
     "managedAppStorageAccountName": {
       "type": "string",
       "defaultValue": "",
@@ -227,6 +208,13 @@
       "defaultValue": "",
       "metadata": {
         "description": "This parameter will only get defined during a managed app deployment."
+      }
+    },
+    "enablePrivateEndpoints": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Whether to use private endpoint connections or not."
       }
     }
   },
@@ -369,18 +357,18 @@
       "webSitesFunctions": "func-",
       "webStaticSites": "stapp-"
     },
-    "$fxv#1": "#!/bin/bash\n\n# Install kubectl\nset -e\naz aks install-cli --only-show-errors\naz login --identity\n\n# Get AKS credentials\n# requires \"Azure Kubernetes Service Cluster Admin\" role and \"Azure Kubernetes Service RBAC Cluster Admin\" role\naz aks get-credentials \\\n  --admin \\\n  --name $AKS_NAME  \\\n  --resource-group $RESOURCE_GROUP --only-show-errors\n\n# Define a namespace to install graphrag in\naksNamespace=\"graphrag\"\n\n# Setup an image pull secret for AKS to access ACR\n# NOTE: use an image pull secret instead of managed identity RBAC roles to seamlessly enable ACR access from any subscription/tenant\naksSecretName=\"regcred\"\nkubectl create namespace $aksNamespace\nkubectl create secret docker-registry $aksSecretName \\\n  --docker-server=$ACR_SERVER \\\n  --docker-username=$ACR_TOKEN_NAME \\\n  --docker-password=$ACR_TOKEN_PASSWORD \\\n  --namespace $aksNamespace\n\n# Assign AOAI RBAC roles to workload identity if an external AOAI resource was used\necho \"deploiAOAI $DEPLOY_AOAI\"\n# if [ $DEPLOY_AOAI == \"false\" ]; then\n#     scope=$(az cognitiveservices account list --query \"[?contains(properties.endpoint, '$AOAI_ENDPOINT')].id\" -o tsv)\n#     az role assignment create --only-show-errors \\\n#         --role \"Cognitive Services OpenAI Contributor\" \\\n#         --assignee \"$WORKLOAD_IDENTITY_PRINCIPAL_ID\" \\\n#         --scope \"$scope\"\n#     exitIfCommandFailed $? \"Error assigning 'Cognitive Services OpenAI Contributor' role to service principal, exiting...\"\n#     az role assignment create --only-show-errors \\\n#         --role \"Cognitive Services Usages Reader\" \\\n#         --assignee \"$WORKLOAD_IDENTITY_PRINCIPAL_ID\" \\\n#         --scope \"$scope\"\n#     echo \"Assigned AOAI roles to workload identity\"\n# else\n#     echo \"Skipped AOAI role assignment\"\n# fi\n\n# Install helm\ncurl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 -o get_helm.sh -s\nchmod 700 get_helm.sh\n./get_helm.sh &>/dev/null\n\n# Login to ACR and retrieve helm chart\n# A token for the ACR should be generated ahead of time\nhelm registry login $ACR_SERVER --username $ACR_TOKEN_NAME --password $ACR_TOKEN_PASSWORD\nhelm pull \"oci://$ACR_SERVER/helm/graphrag\" --untar\n\n# Install the helm chart\nhelm upgrade -i graphrag ./graphrag -f ./graphrag/values.yaml \\\n    --namespace $aksNamespace --create-namespace \\\n    --set \"serviceAccount.name=$AKS_SERVICE_ACCOUNT_NAME\" \\\n    --set \"serviceAccount.annotations.azure\\.workload\\.identity/client-id=$WORKLOAD_IDENTITY_CLIENT_ID\" \\\n    --set \"master.imagePullSecrets[0].name=$aksSecretName\" \\\n    --set \"master.image.repository=$ACR_SERVER/$IMAGE_NAME\" \\\n    --set \"master.image.tag=$IMAGE_VERSION\" \\\n    --set \"ingress.host=$APP_HOSTNAME\" \\\n    --set \"graphragConfig.AI_SEARCH_URL=https://$AI_SEARCH_NAME.$AI_SEARCH_ENDPOINT_SUFFIX\" \\\n    --set \"graphragConfig.AI_SEARCH_AUDIENCE=$AI_SEARCH_AUDIENCE\" \\\n    --set \"graphragConfig.APPLICATIONINSIGHTS_CONNECTION_STRING=$APP_INSIGHTS_CONNECTION_STRING\" \\\n    --set \"graphragConfig.COGNITIVE_SERVICES_AUDIENCE=$COGNITIVE_SERVICES_AUDIENCE\" \\\n    --set \"graphragConfig.COSMOS_URI_ENDPOINT=$COSMOSDB_ENDPOINT\" \\\n    --set \"graphragConfig.GRAPHRAG_API_BASE=$AOAI_ENDPOINT\" \\\n    --set \"graphragConfig.GRAPHRAG_API_VERSION=$AOAI_LLM_MODEL_API_VERSION\" \\\n    --set \"graphragConfig.GRAPHRAG_LLM_MODEL=$AOAI_LLM_MODEL\"\\\n    --set \"graphragConfig.GRAPHRAG_LLM_DEPLOYMENT_NAME=$AOAI_LLM_MODEL_DEPLOYMENT_NAME\" \\\n    --set \"graphragConfig.GRAPHRAG_EMBEDDING_MODEL=$AOAI_EMBEDDING_MODEL\" \\\n    --set \"graphragConfig.GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME=$AOAI_EMBEDDING_MODEL_DEPLOYMENT_NAME\" \\\n    --set \"graphragConfig.STORAGE_ACCOUNT_BLOB_URL=$STORAGE_ACCOUNT_BLOB_URL\"\n",
+    "$fxv#1": "#!/bin/bash\n\n# Install kubectl\nset -e\naz aks install-cli --only-show-errors\naz login --identity\n\n# Get AKS credentials\n# requires \"Azure Kubernetes Service Cluster Admin\" role and \"Azure Kubernetes Service RBAC Cluster Admin\" role\naz aks get-credentials \\\n  --admin \\\n  --name $AKS_NAME  \\\n  --resource-group $RESOURCE_GROUP --only-show-errors\n\n# Define a namespace to install graphrag in\naksNamespace=\"graphrag\"\n\n# Setup an image pull secret for AKS to access ACR\n# NOTE: use an image pull secret instead of managed identity RBAC roles to seamlessly enable ACR access from any subscription/tenant\naksSecretName=\"regcred\"\nkubectl create namespace $aksNamespace\nkubectl create secret docker-registry $aksSecretName \\\n  --docker-server=$ACR_SERVER \\\n  --docker-username=$ACR_TOKEN_NAME \\\n  --docker-password=$ACR_TOKEN_PASSWORD \\\n  --namespace $aksNamespace\n\n# Install helm\ncurl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 -o get_helm.sh -s\nchmod 700 get_helm.sh\n./get_helm.sh &>/dev/null\n\n# Login to ACR and retrieve helm chart\n# A token for the ACR should be generated ahead of time\nhelm registry login $ACR_SERVER --username $ACR_TOKEN_NAME --password $ACR_TOKEN_PASSWORD\nhelm pull \"oci://$ACR_SERVER/helm/graphrag\" --untar\n\n# Install the helm chart\nhelm upgrade -i graphrag ./graphrag -f ./graphrag/values.yaml \\\n    --namespace $aksNamespace --create-namespace \\\n    --set \"serviceAccount.name=$AKS_SERVICE_ACCOUNT_NAME\" \\\n    --set \"serviceAccount.annotations.azure\\.workload\\.identity/client-id=$WORKLOAD_IDENTITY_CLIENT_ID\" \\\n    --set \"master.imagePullSecrets[0].name=$aksSecretName\" \\\n    --set \"master.image.repository=$ACR_SERVER/$IMAGE_NAME\" \\\n    --set \"master.image.tag=$IMAGE_VERSION\" \\\n    --set \"ingress.host=$APP_HOSTNAME\" \\\n    --set \"graphragConfig.AI_SEARCH_URL=https://$AI_SEARCH_NAME.$AI_SEARCH_ENDPOINT_SUFFIX\" \\\n    --set \"graphragConfig.AI_SEARCH_AUDIENCE=$AI_SEARCH_AUDIENCE\" \\\n    --set \"graphragConfig.APPLICATIONINSIGHTS_CONNECTION_STRING=$APP_INSIGHTS_CONNECTION_STRING\" \\\n    --set \"graphragConfig.COGNITIVE_SERVICES_AUDIENCE=$COGNITIVE_SERVICES_AUDIENCE\" \\\n    --set \"graphragConfig.COSMOS_URI_ENDPOINT=$COSMOSDB_ENDPOINT\" \\\n    --set \"graphragConfig.GRAPHRAG_API_BASE=$AOAI_ENDPOINT\" \\\n    --set \"graphragConfig.GRAPHRAG_API_VERSION=$AOAI_LLM_MODEL_API_VERSION\" \\\n    --set \"graphragConfig.GRAPHRAG_LLM_MODEL=$AOAI_LLM_MODEL\"\\\n    --set \"graphragConfig.GRAPHRAG_LLM_DEPLOYMENT_NAME=$AOAI_LLM_MODEL_DEPLOYMENT_NAME\" \\\n    --set \"graphragConfig.GRAPHRAG_EMBEDDING_MODEL=$AOAI_EMBEDDING_MODEL\" \\\n    --set \"graphragConfig.GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME=$AOAI_EMBEDDING_MODEL_DEPLOYMENT_NAME\" \\\n    --set \"graphragConfig.STORAGE_ACCOUNT_BLOB_URL=$STORAGE_ACCOUNT_BLOB_URL\"\n",
     "resourceBaseNameFinal": "[if(not(empty(parameters('resourceBaseName'))), parameters('resourceBaseName'), toLower(uniqueString(resourceGroup().id)))]",
-    "abbrs": "[variables('$fxv#0')]",
-    "tags": {
-      "azd-env-name": "[parameters('resourceGroupName')]"
-    },
     "workloadIdentityName": "[format('{0}{1}', variables('abbrs').managedIdentityUserAssignedIdentities, variables('resourceBaseNameFinal'))]",
     "aksServiceAccountName": "[format('{0}-workload-sa', parameters('aksNamespace'))]",
     "workloadIdentitySubject": "[format('system:serviceaccount:{0}:{1}', parameters('aksNamespace'), variables('aksServiceAccountName'))]",
     "dnsDomain": "graphrag.io",
     "appHostname": "[format('graphrag.{0}', variables('dnsDomain'))]",
     "appUrl": "[format('http://{0}', variables('appHostname'))]",
+    "abbrs": "[variables('$fxv#0')]",
+    "tags": {
+      "azd-env-name": "[parameters('resourceGroupName')]"
+    },
     "roles": {
       "acrPull": "[resourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
       "networkContributor": "[resourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7')]",
@@ -416,7 +404,7 @@
           "storageName": {
             "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storage-deployment'), '2022-09-01').outputs.name.value]"
           },
-          "aoaiName": "[if(parameters('deployAoai'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.name.value), createObject('value', ''))]"
+          "aoaiId": "[if(parameters('deployAoai'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.id.value), createObject('value', parameters('existingAoaiId')))]"
         },
         "template": {
           "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
@@ -425,7 +413,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.34.44.8038",
-              "templateHash": "3844816623041303397"
+              "templateHash": "6129128531675460135"
             }
           },
           "parameters": {
@@ -472,7 +460,7 @@
                 "description": "Name of an existing Azure Storage resource."
               }
             },
-            "aoaiName": {
+            "aoaiId": {
               "type": "string",
               "metadata": {
                 "description": "Name of an existing AOAI resource."
@@ -492,7 +480,8 @@
               "monitoringMetricsPublisher": "3913510d-42f4-4e42-8a64-420c390055eb",
               "storageBlobDataContributor": "ba92f5b4-2d11-453d-a403-e96b0029c9fe",
               "sqlDBContributor": "9b7fa17d-e63e-47b0-bb0a-15c516ac86ec"
-            }
+            },
+            "splitId": "[split(parameters('aoaiId'), '/')]"
           },
           "resources": [
             {
@@ -504,30 +493,6 @@
                 "principalId": "[parameters('principalId')]",
                 "principalType": "[parameters('principalType')]",
                 "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('roleIds').contributor)]"
-              }
-            },
-            {
-              "condition": "[not(empty(parameters('aoaiName')))]",
-              "type": "Microsoft.Authorization/roleAssignments",
-              "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', parameters('aoaiName'))]",
-              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('aoaiName')), parameters('principalId'), parameters('principalType'), variables('roleIds').cognitiveServicesOpenAIContributor)]",
-              "properties": {
-                "principalId": "[parameters('principalId')]",
-                "principalType": "[parameters('principalType')]",
-                "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('roleIds').cognitiveServicesOpenAIContributor)]"
-              }
-            },
-            {
-              "condition": "[not(empty(parameters('aoaiName')))]",
-              "type": "Microsoft.Authorization/roleAssignments",
-              "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', parameters('aoaiName'))]",
-              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('aoaiName')), parameters('principalId'), parameters('principalType'), variables('roleIds').cognitiveServicesUsagesReader)]",
-              "properties": {
-                "principalId": "[parameters('principalId')]",
-                "principalType": "[parameters('principalType')]",
-                "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('roleIds').cognitiveServicesUsagesReader)]"
               }
             },
             {
@@ -616,8 +581,108 @@
                 "roleDefinitionId": "[format('{0}/sqlRoleDefinitions/{1}', resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDbName')), variables('roleIds').cosmosDbBuiltInDataContributor)]",
                 "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDbName'))]"
               }
+            },
+            {
+              "type": "Microsoft.Resources/deployments",
+              "apiVersion": "2022-09-01",
+              "name": "aoai-rbac-assignments",
+              "subscriptionId": "[variables('splitId')[2]]",
+              "resourceGroup": "[variables('splitId')[4]]",
+              "properties": {
+                "expressionEvaluationOptions": {
+                  "scope": "inner"
+                },
+                "mode": "Incremental",
+                "parameters": {
+                  "name": {
+                    "value": "[variables('splitId')[8]]"
+                  },
+                  "roleAssignments": {
+                    "value": [
+                      {
+                        "principalId": "[parameters('principalId')]",
+                        "principalType": "[parameters('principalType')]",
+                        "roleDefinitionId": "[variables('roleIds').cognitiveServicesOpenAIContributor]"
+                      },
+                      {
+                        "principalId": "[parameters('principalId')]",
+                        "principalType": "[parameters('principalType')]",
+                        "roleDefinitionId": "[variables('roleIds').cognitiveServicesUsagesReader]"
+                      }
+                    ]
+                  }
+                },
+                "template": {
+                  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                  "contentVersion": "1.0.0.0",
+                  "metadata": {
+                    "_generator": {
+                      "name": "bicep",
+                      "version": "0.34.44.8038",
+                      "templateHash": "834539931010705876"
+                    }
+                  },
+                  "parameters": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "roleAssignments": {
+                      "type": "array",
+                      "defaultValue": [],
+                      "metadata": {
+                        "description": "Array of objects with fields principalId, principalType, roleDefinitionId"
+                      }
+                    }
+                  },
+                  "resources": [
+                    {
+                      "copy": {
+                        "name": "roleAssignment",
+                        "count": "[length(parameters('roleAssignments'))]"
+                      },
+                      "type": "Microsoft.Authorization/roleAssignments",
+                      "apiVersion": "2022-04-01",
+                      "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', parameters('name'))]",
+                      "name": "[guid(resourceGroup().id, parameters('roleAssignments')[copyIndex()].principalId, parameters('roleAssignments')[copyIndex()].principalType, parameters('roleAssignments')[copyIndex()].roleDefinitionId)]",
+                      "properties": {
+                        "principalId": "[parameters('roleAssignments')[copyIndex()].principalId]",
+                        "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', parameters('roleAssignments')[copyIndex()].roleDefinitionId)]",
+                        "principalType": "[parameters('roleAssignments')[copyIndex()].principalType]"
+                      }
+                    }
+                  ],
+                  "outputs": {
+                    "name": {
+                      "type": "string",
+                      "value": "[parameters('name')]"
+                    },
+                    "id": {
+                      "type": "string",
+                      "value": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('name'))]"
+                    },
+                    "endpoint": {
+                      "type": "string",
+                      "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('name')), '2024-10-01').endpoint]"
+                    }
+                  }
+                }
+              }
             }
-          ]
+          ],
+          "outputs": {
+            "aoaiName": {
+              "type": "string",
+              "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('splitId')[2], variables('splitId')[4]), 'Microsoft.Resources/deployments', 'aoai-rbac-assignments'), '2022-09-01').outputs.name.value]"
+            },
+            "aoaiId": {
+              "type": "string",
+              "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('splitId')[2], variables('splitId')[4]), 'Microsoft.Resources/deployments', 'aoai-rbac-assignments'), '2022-09-01').outputs.id.value]"
+            },
+            "aoaiEndpoint": {
+              "type": "string",
+              "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', variables('splitId')[2], variables('splitId')[4]), 'Microsoft.Resources/deployments', 'aoai-rbac-assignments'), '2022-09-01').outputs.endpoint.value]"
+            }
+          }
         }
       },
       "dependsOn": [
@@ -1905,7 +1970,9 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "cosmosDbName": "[if(not(empty(parameters('cosmosDbName'))), createObject('value', parameters('cosmosDbName')), createObject('value', format('{0}{1}', variables('abbrs').documentDBDatabaseAccounts, variables('resourceBaseNameFinal'))))]",
+          "cosmosDbName": {
+            "value": "[format('{0}{1}', variables('abbrs').documentDBDatabaseAccounts, variables('resourceBaseNameFinal'))]"
+          },
           "location": {
             "value": "[parameters('location')]"
           },
@@ -2136,7 +2203,9 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "name": "[if(not(empty(parameters('aiSearchName'))), createObject('value', parameters('aiSearchName')), createObject('value', format('{0}{1}', variables('abbrs').searchSearchServices, variables('resourceBaseNameFinal'))))]",
+          "name": {
+            "value": "[format('{0}{1}', variables('abbrs').searchSearchServices, variables('resourceBaseNameFinal'))]"
+          },
           "location": {
             "value": "[parameters('location')]"
           },
@@ -2220,7 +2289,9 @@
         },
         "mode": "Incremental",
         "parameters": {
-          "name": "[if(not(empty(parameters('storageAccountName'))), createObject('value', parameters('storageAccountName')), createObject('value', format('{0}{1}', variables('abbrs').storageStorageAccounts, replace(variables('resourceBaseNameFinal'), '-', ''))))]",
+          "name": {
+            "value": "[format('{0}{1}', variables('abbrs').storageStorageAccounts, replace(variables('resourceBaseNameFinal'), '-', ''))]"
+          },
           "location": {
             "value": "[parameters('location')]"
           },
@@ -5020,7 +5091,7 @@
       "condition": "[and(not(empty(parameters('managedAppStorageAccountName'))), not(empty(parameters('managedAppStorageAccountKey'))))]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
-      "name": "[format('deploy-script-deployment-{0}', parameters('utcString'))]",
+      "name": "[format('deployScript-deployment-{0}', parameters('utcString'))]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
@@ -5054,22 +5125,20 @@
           "aks_name": {
             "value": "[reference(resourceId('Microsoft.Resources/deployments', 'aks-deployment'), '2022-09-01').outputs.name.value]"
           },
-          "aks_kubelet_id": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'aks-deployment'), '2022-09-01').outputs.kubeletPrincipalId.value]"
-          },
           "aks_service_account_name": {
             "value": "[variables('aksServiceAccountName')]"
           },
           "deployAoai": {
             "value": "[parameters('deployAoai')]"
           },
-          "aoai_endpoint": "[if(parameters('deployAoai'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.endpoint.value), createObject('value', parameters('existingAoaiEndpoint')))]",
+          "aoai_endpoint": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'aks-workload-identity-rbac-assignments'), '2022-09-01').outputs.aoaiEndpoint.value]"
+          },
           "aoai_llm_model": "[if(parameters('deployAoai'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.llmModel.value), createObject('value', parameters('llmModelName')))]",
           "aoai_llm_model_deployment_name": "[if(parameters('deployAoai'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.llmModelDeploymentName.value), createObject('value', parameters('llmModelDeploymentName')))]",
           "aoai_llm_model_version": "[if(parameters('deployAoai'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.llmModelVersion.value), createObject('value', parameters('llmModelVersion')))]",
           "aoai_embedding_model": "[if(parameters('deployAoai'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.embeddingModel.value), createObject('value', parameters('embeddingModelName')))]",
           "aoai_embedding_model_deployment_name": "[if(parameters('deployAoai'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.embeddingModelDeploymentName.value), createObject('value', parameters('embeddingModelDeploymentName')))]",
-          "aoai_embedding_model_version": "[if(parameters('deployAoai'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.embeddingModelVersion.value), createObject('value', parameters('embeddingModelVersion')))]",
           "app_hostname": {
             "value": "[variables('appHostname')]"
           },
@@ -5093,9 +5162,6 @@
           },
           "workload_identity_client_id": {
             "value": "[reference(resourceId('Microsoft.Resources/deployments', 'workload-identity-deployment'), '2022-09-01').outputs.clientId.value]"
-          },
-          "workload_identity_principal_id": {
-            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'workload-identity-deployment'), '2022-09-01').outputs.principalId.value]"
           }
         },
         "template": {
@@ -5105,7 +5171,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.34.44.8038",
-              "templateHash": "6605307614518302183"
+              "templateHash": "6981701300266470883"
             }
           },
           "parameters": {
@@ -5138,9 +5204,6 @@
             "aks_name": {
               "type": "string"
             },
-            "aks_kubelet_id": {
-              "type": "string"
-            },
             "aks_service_account_name": {
               "type": "string"
             },
@@ -5165,9 +5228,6 @@
             "aoai_embedding_model_deployment_name": {
               "type": "string"
             },
-            "aoai_embedding_model_version": {
-              "type": "string"
-            },
             "app_hostname": {
               "type": "string"
             },
@@ -5190,9 +5250,6 @@
               "type": "string"
             },
             "workload_identity_client_id": {
-              "type": "string"
-            },
-            "workload_identity_principal_id": {
               "type": "string"
             },
             "cognitive_services_audience": {
@@ -5319,10 +5376,6 @@
                     "value": "[parameters('aks_name')]"
                   },
                   {
-                    "name": "AKS_KUBELET_ID",
-                    "value": "[parameters('aks_kubelet_id')]"
-                  },
-                  {
                     "name": "AKS_SERVICE_ACCOUNT_NAME",
                     "value": "[parameters('aks_service_account_name')]"
                   },
@@ -5353,10 +5406,6 @@
                   {
                     "name": "AOAI_EMBEDDING_MODEL_DEPLOYMENT_NAME",
                     "value": "[parameters('aoai_embedding_model_deployment_name')]"
-                  },
-                  {
-                    "name": "AOAI_EMBEDDING_MODEL_API_VERSION",
-                    "value": "[parameters('aoai_embedding_model_version')]"
                   },
                   {
                     "name": "APP_HOSTNAME",
@@ -5393,10 +5442,6 @@
                   {
                     "name": "WORKLOAD_IDENTITY_CLIENT_ID",
                     "value": "[parameters('workload_identity_client_id')]"
-                  },
-                  {
-                    "name": "WORKLOAD_IDENTITY_PRINCIPAL_ID",
-                    "value": "[parameters('workload_identity_principal_id')]"
                   }
                 ],
                 "cleanupPreference": "OnSuccess",
@@ -5413,6 +5458,7 @@
       "dependsOn": [
         "[resourceId('Microsoft.Resources/deployments', 'aisearch-deployment')]",
         "[resourceId('Microsoft.Resources/deployments', 'aks-deployment')]",
+        "[resourceId('Microsoft.Resources/deployments', 'aks-workload-identity-rbac-assignments')]",
         "[resourceId('Microsoft.Resources/deployments', 'aoai-deployment')]",
         "[resourceId('Microsoft.Resources/deployments', 'app-insights-deployment')]",
         "[resourceId('Microsoft.Resources/deployments', 'cosmosdb-deployment')]",
@@ -5464,15 +5510,15 @@
     },
     "azure_aoai_endpoint": {
       "type": "string",
-      "value": "[if(parameters('deployAoai'), reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.endpoint.value, '')]"
+      "value": "[if(parameters('deployAoai'), reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.endpoint.value, reference(resourceId('Microsoft.Resources/deployments', 'aks-workload-identity-rbac-assignments'), '2022-09-01').outputs.aoaiEndpoint.value)]"
     },
     "azure_aoai_llm_model": {
       "type": "string",
-      "value": "[if(parameters('deployAoai'), reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.llmModel.value, '')]"
+      "value": "[if(parameters('deployAoai'), reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.llmModel.value, parameters('llmModelName'))]"
     },
     "azure_aoai_llm_model_deployment_name": {
       "type": "string",
-      "value": "[if(parameters('deployAoai'), reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.llmModelDeploymentName.value, '')]"
+      "value": "[if(parameters('deployAoai'), reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.llmModelDeploymentName.value, parameters('llmModelDeploymentName'))]"
     },
     "azure_aoai_llm_model_quota": {
       "type": "int",
@@ -5480,15 +5526,15 @@
     },
     "azure_aoai_llm_model_api_version": {
       "type": "string",
-      "value": "[if(parameters('deployAoai'), reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.llmModelVersion.value, '')]"
+      "value": "[if(parameters('deployAoai'), reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.llmModelVersion.value, parameters('llmModelVersion'))]"
     },
     "azure_aoai_embedding_model": {
       "type": "string",
-      "value": "[if(parameters('deployAoai'), reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.embeddingModel.value, '')]"
+      "value": "[if(parameters('deployAoai'), reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.embeddingModel.value, parameters('embeddingModelName'))]"
     },
     "azure_aoai_embedding_model_deployment_name": {
       "type": "string",
-      "value": "[if(parameters('deployAoai'), reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.embeddingModelDeploymentName.value, '')]"
+      "value": "[if(parameters('deployAoai'), reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.embeddingModelDeploymentName.value, parameters('embeddingModelDeploymentName'))]"
     },
     "azure_aoai_embedding_model_quota": {
       "type": "int",
@@ -5496,7 +5542,7 @@
     },
     "azure_aoai_embedding_model_api_version": {
       "type": "string",
-      "value": "[if(parameters('deployAoai'), reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.embeddingModelVersion.value, '')]"
+      "value": "[if(parameters('deployAoai'), reference(resourceId('Microsoft.Resources/deployments', 'aoai-deployment'), '2022-09-01').outputs.embeddingModelVersion.value, parameters('embeddingModelVersion'))]"
     },
     "azure_apim_gateway_url": {
       "type": "string",
