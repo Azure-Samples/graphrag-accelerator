@@ -138,24 +138,26 @@
             "type": "Microsoft.Common.CheckBox",
             "label": "Deploy new AOAI?",
             "toolTip": "Whether or not to deploy a new AOAI.",
-            "defaultValue": false,
+            "defaultValue": true,
             "constraints": {
               "required": false
             }
           },
           {
-            "name": "endpoint",
-            "type": "Microsoft.Common.TextBox",
-            "label": "AOAI Endpoint",
-            "toolTip": "Provide an existing AOAI endpoint.",
-            "constraints": {
-              "required": false,
-              "regex": "^(?!\\s*$).+",
-              "validationMessage": "Must provide a valid aoai endpoint."
-            }
+            "_comment": "For more information: https://learn.microsoft.com/en-us/azure/azure-resource-manager/managed-applications/microsoft-solutions-resourceselector",
+            "name": "aoaiSelector",
+            "type": "Microsoft.Solutions.ResourceSelector",
+            "label": "Select existing AOAI",
+            "resourceType": "Microsoft.CognitiveServices/accounts",
+            "options": {
+              "filter": {
+                "subscription": "onBasics"
+              }
+            },
+            "visible": "[equals(steps('aoaiSettings').deployAoai, false)]"
           },
           {
-            "name": "llmModel",
+            "name": "llmModelName",
             "type": "Microsoft.Common.DropDown",
             "label": "LLM Model",
             "defaultValue": "gpt-4o",
@@ -174,6 +176,18 @@
               "required": true
             },
             "visible": true
+          },
+          {
+            "name": "llmModelDeploymentName",
+            "type": "Microsoft.Common.TextBox",
+            "label": "LLM Model Deployment",
+            "toolTip": "Model deployment name to use.",
+            "defaultValue": "gpt-4o",
+            "constraints": {
+              "required": true,
+              "regex": "^(?!\\s*$).+",
+              "validationMessage": "Must provide a valid model deployment name."
+            }
           },
           {
             "name": "llmModelVersion",
@@ -211,7 +225,7 @@
             "visible": true
           },
           {
-            "name": "embeddingModel",
+            "name": "embeddingModelName",
             "type": "Microsoft.Common.DropDown",
             "label": "Embedding Model",
             "defaultValue": "text-embedding-ada-002",
@@ -230,6 +244,18 @@
               "required": true
             },
             "visible": true
+          },
+          {
+            "name": "embeddingModelDeploymentName",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Embedding Model Deployment",
+            "toolTip": "Model deployment name to use.",
+            "defaultValue": "text-embedding-ada-002",
+            "constraints": {
+              "required": true,
+              "regex": "^(?!\\s*$).+",
+              "validationMessage": "Must provide a valid model deployment name."
+            }
           },
           {
             "name": "embeddingModelQuota",
@@ -312,27 +338,29 @@
                 }
               },
               {
-                "name": "accountName",
-                "type": "Microsoft.Common.TextBox",
-                "label": "Account Name",
-                "toolTip": "Provide the name of an existing storage account with public access.",
-                "constraints": {
-                  "required": true,
-                  "regex": "^(?!\\s*$).+",
-                  "validationMessage": "Must provide a valid storage account name."
-                }
+                "_comment": "For more information: https://learn.microsoft.com/en-us/azure/azure-resource-manager/managed-applications/microsoft-solutions-resourceselector",
+                "name": "storageSelector",
+                "type": "Microsoft.Solutions.ResourceSelector",
+                "label": "Storage Account",
+                "resourceType": "Microsoft.Storage/storageAccounts",
+                "options": {
+                  "filter": {
+                    "subscription": "onBasics"
+                  }
+                },
+                "visible": true
               },
               {
                 "name": "accountKey",
                 "type": "Microsoft.Common.PasswordBox",
                 "label": {
-                  "password": "Account Key or SAS Token"
+                  "password": "Account Access Key"
                 },
-                "toolTip": "Provide a valid key or SAS token associated with the storage account.",
+                "toolTip": "Provide a valid account key associated with the storage account.",
                 "constraints": {
                   "required": true,
                   "regex": "^(?!\\s*$).+",
-                  "validationMessage": "Must provide a valid key or SAS token."
+                  "validationMessage": "Must provide a valid account key."
                 },
                 "options": {
                   "hideConfirmation": true
@@ -427,16 +455,16 @@
       "enablePrivateEndpoints": "[steps('networking').enablePrivateEndpoints]",
       "apimTier": "[steps('apiSettings').apimTier]",
       "deployAoai": "[steps('aoaiSettings').deployAoai]",
-      "existingAoaiEndpoint": "[steps('aoaiSettings').endpoint]",
-      "llmModelName": "[steps('aoaiSettings').llmModel]",
-      "llmModelDeploymentName": "[steps('aoaiSettings').llmModel]",
+      "existingAoaiId": "[steps('aoaiSettings').aoaiSelector.id]",
+      "llmModelName": "[steps('aoaiSettings').llmModelName]",
+      "llmModelDeploymentName": "[steps('aoaiSettings').llmModelDeploymentName]",
       "llmModelVersion": "[steps('aoaiSettings').llmModelVersion]",
       "llmModelQuota": "[int(steps('aoaiSettings').llmModelQuota)]",
-      "embeddingModelName": "[steps('aoaiSettings').embeddingModel]",
-      "embeddingModelDeploymentName": "[steps('aoaiSettings').embeddingModel]",
+      "embeddingModelName": "[steps('aoaiSettings').embeddingModelName]",
+      "embeddingModelDeploymentName": "[steps('aoaiSettings').embeddingModelDeploymentName]",
       "embeddingModelVersion": "[steps('aoaiSettings').embeddingModelVersion]",
       "embeddingModelQuota": "[int(steps('aoaiSettings').embeddingModelQuota)]",
-      "managedAppStorageAccountName": "[steps('advanced').storageSettings.accountName]",
+      "managedAppStorageAccountName": "[steps('advanced').storageSettings.storageSelector.name]",
       "managedAppStorageAccountKey": "[steps('advanced').storageSettings.accountKey]",
       "existingAcrLoginServer": "[steps('advanced').containerRegistrySettings.endpoint]",
       "acrTokenName": "[steps('advanced').containerRegistrySettings.acrTokenName]",

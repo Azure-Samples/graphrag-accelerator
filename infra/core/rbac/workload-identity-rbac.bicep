@@ -20,9 +20,8 @@ param cosmosDbName string
 @description('Name of an existing Azure Storage resource.')
 param storageName string
 
-// NOTE: The following parameter is optional. If not provided, the role assignments for the AOAI resource will be skipped.
 @description('Name of an existing AOAI resource.')
-param aoaiName string
+param aoaiId string
 
 @description('Role definitions for various roles that will be assigned. Learn more: https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles')
 var roleIds = {
@@ -40,9 +39,6 @@ var roleIds = {
 }
 
 // get references to existing resources
-resource aoai 'Microsoft.CognitiveServices/accounts@2024-10-01' existing = if (!empty(aoaiName)) {
-  name: aoaiName
-}
 resource aiSearch 'Microsoft.Search/searchServices@2024-03-01-preview' existing = {
   name: aiSearchName
 }
@@ -57,6 +53,29 @@ resource storage 'Microsoft.Storage/storageAccounts@2023-01-01' existing = {
 }
 
 // make RBAC role assignments to each resource
+
+// assign RBAC roles to an AOAI service regardless of what scope is required
+var splitId = split(aoaiId, '/')
+module aoaiRBAC 'aoai-rbac.bicep' = {
+  name: 'aoai-rbac-assignments'
+  scope: resourceGroup(splitId[2], splitId[4])
+  params: {
+    name: splitId[8]
+    roleAssignments: [
+      {
+        principalId: principalId
+        principalType: principalType
+        roleDefinitionId: roleIds.cognitiveServicesOpenAIContributor
+      }
+      {
+        principalId: principalId
+        principalType: principalType
+        roleDefinitionId: roleIds.cognitiveServicesUsagesReader
+      }
+    ]
+  }
+}
+
 resource contributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   // note: the guid must be globally unique and deterministic across Azure
   name: guid(aiSearch.id, principalId, principalType, roleIds.contributor)
@@ -65,28 +84,6 @@ resource contributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2022
     principalId: principalId
     principalType: principalType
     roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', roleIds.contributor)
-  }
-}
-
-resource cognitiveServicesOpenAIContributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(aoaiName)) {
-  // note: the guid must be globally unique and deterministic across Azure
-  name: guid(aoai.id, principalId, principalType, roleIds.cognitiveServicesOpenAIContributor)
-  scope: aoai
-  properties: {
-    principalId: principalId
-    principalType: principalType
-    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', roleIds.cognitiveServicesOpenAIContributor)
-  }
-}
-
-resource cognitiveServicesUsagesReaderRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(aoaiName)) {
-  // note: the guid must be globally unique and deterministic across Azure
-  name: guid(aoai.id, principalId, principalType, roleIds.cognitiveServicesUsagesReader)
-  scope: aoai
-  properties: {
-    principalId: principalId
-    principalType: principalType
-    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', roleIds.cognitiveServicesUsagesReader)
   }
 }
 
@@ -213,3 +210,8 @@ resource sqlRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignm
 //     scope: cosmosDb.id
 //   }
 // }
+
+// pass back the name, id, and endpoint of the AOAI resource for other modules to use
+output aoaiName string = aoaiRBAC.outputs.name
+output aoaiId string = aoaiRBAC.outputs.id
+output aoaiEndpoint string = aoaiRBAC.outputs.endpoint

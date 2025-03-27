@@ -1,0 +1,19 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/viewdefinition/0.0.1-preview/ViewDefinition.json#",
+    "contentVersion": "0.0.0.1",
+    "views": [
+        {
+            "kind": "Overview",
+            "properties": {
+                "header": "Welcome to GraphRAG!",
+                "description": "Enabling customers to build and leverage the power of knowledge graphs every day.",
+                "commands": [
+                    {
+                        "displayName": "Test Action",
+                        "path": "testAction"
+                    }
+                ]
+            }
+        }
+    ]
+}

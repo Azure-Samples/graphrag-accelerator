@@ -62,7 +62,7 @@ curl --fail-with-body -o managed-app/openapi.json http://localhost:8080/manpage/
 
 # zip up all files
 cd managed-app
-tar -a -cf managed-app-deployment-pkg.zip createUiDefinition.json mainTemplate.json openapi.json artifacts
+tar -a -cf managed-app-deployment-pkg.zip createUiDefinition.json viewDefinition.json mainTemplate.json openapi.json artifacts
 ```
 
 The deployment package should have the following file structure:
@@ -71,6 +71,7 @@ managed-app-deployment-pkg.zip
 ├── scripts
 │   └── install-graphrag.sh
 ├── createUiDefinition.json
+├── viewDefinition.json
 ├── mainTemplate.json
 └── openapi.json
 ```

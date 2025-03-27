@@ -11,7 +11,6 @@ param ai_search_name string
 param ai_search_endpoint_suffix string = 'search.windows.net'
 
 param aks_name string
-param aks_kubelet_id string
 param aks_service_account_name string
 
 param deployAoai bool
@@ -21,7 +20,6 @@ param aoai_llm_model_deployment_name string
 param aoai_llm_model_version string
 param aoai_embedding_model string
 param aoai_embedding_model_deployment_name string
-param aoai_embedding_model_version string
 
 param app_hostname string
 param app_insights_connection_string string
@@ -31,7 +29,6 @@ param image_version string
 param script_file string
 param storage_account_blob_url string
 param workload_identity_client_id string
-param workload_identity_principal_id string
 param cognitive_services_audience string = 'https://cognitiveservices.azure.com/default'
 
 param public_storage_account_name string
@@ -136,10 +133,6 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
         value: aks_name
       }
       {
-        name: 'AKS_KUBELET_ID'
-        value: aks_kubelet_id
-      }
-      {
         name: 'AKS_SERVICE_ACCOUNT_NAME'
         value: aks_service_account_name
       }
@@ -171,7 +164,6 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
         name: 'AOAI_EMBEDDING_MODEL_DEPLOYMENT_NAME'
         value: aoai_embedding_model_deployment_name
       }
-      { name: 'AOAI_EMBEDDING_MODEL_API_VERSION', value: aoai_embedding_model_version }
       { name: 'APP_HOSTNAME', value: app_hostname }
       { name: 'APP_INSIGHTS_CONNECTION_STRING', value: app_insights_connection_string }
       {
@@ -198,10 +190,6 @@ resource deploymentScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
       {
         name: 'WORKLOAD_IDENTITY_CLIENT_ID'
         value: workload_identity_client_id
-      }
-      {
-        name: 'WORKLOAD_IDENTITY_PRINCIPAL_ID'
-        value: workload_identity_principal_id
       }
     ]
     cleanupPreference: 'OnSuccess'

@@ -327,15 +327,18 @@ checkForApimSoftDelete () {
 
 deployAzureResources () {
     local deployAoai
+    local existingAoaiId=""
     local deployAcr
     local graphragImageName
     local graphragImageVersion
 
     echo "Deploying Azure resources..."
-    # only deploy AOAI if the user did not provide links to an existing AOAI service
+    # deploy AOAI if the user did not provide links to an existing AOAI service
     deployAoai="true"
     if [ -n "$GRAPHRAG_API_BASE" ]; then
         deployAoai="false"
+        existingAoaiId=$(az cognitiveservices account list --query "[?contains(properties.endpoint, '$GRAPHRAG_API_BASE')].id" -o tsv)
+        exitIfValueEmpty "$existingAoaiId" "Unable to get AOAI resource id from GRAPHRAG_API_BASE, exiting..."
     fi
     deployAcr="true"
     if [ -n "$CONTAINER_REGISTRY_LOGIN_SERVER" ]; then
@@ -365,6 +368,7 @@ deployAzureResources () {
         --parameters "graphragImageName=$graphragImageName" \
         --parameters "graphragImageVersion=$graphragImageVersion" \
         --parameters "deployAoai=$deployAoai" \
+        --parameters "existingAoaiId=$existingAoaiId" \
         --parameters "llmModelName=$GRAPHRAG_LLM_MODEL" \
         --parameters "llmModelDeploymentName=$GRAPHRAG_LLM_DEPLOYMENT_NAME" \
         --parameters "llmModelVersion=$GRAPHRAG_LLM_MODEL_VERSION" \
@@ -381,37 +385,10 @@ deployAzureResources () {
     exitIfCommandFailed $? "Error parsing outputs from Azure deployment..."
     exitIfValueEmpty "$AZURE_DEPLOY_OUTPUTS" "Error parsing outputs from Azure deployment..."
 
-    # Must assign RBAC roles to the aks workload managed identity if AOAI was not part of the deployment (i.e. user chose to utilize an AOAI resource external to this deployment)
-    if [ -n "$GRAPHRAG_API_BASE" ]; then
-        assignAOAIRbacRolesToManagedIdentity
-    fi
-
     # Must assign ACRPull role to aks if ACR was not part of the deployment (i.e. user chose to utilize an ACR resource external to this deployment)
     if [ -n "$CONTAINER_REGISTRY_LOGIN_SERVER" ]; then
         assignACRPullRoleToAKS $RESOURCE_GROUP $CONTAINER_REGISTRY_LOGIN_SERVER
     fi
-}
-
-assignAOAIRbacRolesToManagedIdentity() {
-    local servicePrincipalId
-    local scope
-
-    printf "Assigning roles 'Cognitive Services OpenAI Contributor' and 'Cognitive Services Usages Reader' to aks managed identity... "
-    scope=$(az cognitiveservices account list --query "[?contains(properties.endpoint, '$GRAPHRAG_API_BASE')].id" -o tsv)
-    exitIfValueEmpty "$scope" "Unable to get AOAI resource id based on GRAPHRAG_API_BASE, exiting..."
-    servicePrincipalId=$(jq -r .azure_workload_identity_principal_id.value <<< $AZURE_DEPLOY_OUTPUTS)
-    exitIfValueEmpty "$servicePrincipalId" "Unable to parse service principal id from azure outputs, exiting..."
-    az role assignment create --only-show-errors \
-        --role "Cognitive Services OpenAI Contributor" \
-        --assignee "$servicePrincipalId" \
-        --scope "$scope"
-    exitIfCommandFailed $? "Error assigning 'Cognitive Services OpenAI Contributor' role to service principal, exiting..."
-    az role assignment create --only-show-errors \
-        --role "Cognitive Services Usages Reader" \
-        --assignee "$servicePrincipalId" \
-        --scope "$scope"
-    exitIfCommandFailed $? "Error assigning 'Cognitive Services Usages Reader' role to service principal, exiting..."
-    printf "Done.\n"
 }
 
 assignACRPullRoleToAKS() {

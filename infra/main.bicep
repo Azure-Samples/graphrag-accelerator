@@ -33,6 +33,9 @@ var resourceBaseNameFinal = !empty(resourceBaseName) ? resourceBaseName : toLowe
 @description('Cloud region for all resources')
 param location string = az.resourceGroup().location
 
+//
+// start APIM parameters
+//
 @minLength(1)
 @description('Name of the publisher of the API Management service.')
 param apiPublisherName string = 'Microsoft'
@@ -43,12 +46,11 @@ param apiPublisherEmail string = 'publisher@microsoft.com'
 
 @description('Whether or not to restore the API Management service from a soft-deleted state.')
 param restoreAPIM bool = false
-
-@description('The AKS namespace to install GraphRAG in.')
-param aksNamespace string = 'graphrag'
-
-@description('Whether to use private endpoint connections or not.')
-param enablePrivateEndpoints bool = true
+param apimTier string = 'Developer'
+param apimName string = ''
+//
+// end APIM parameters
+//
 
 //
 // start ACR parameters
@@ -68,21 +70,14 @@ param graphragImageVersion string = 'latest'
 // end ACR parameters
 //
 
-param apimTier string = 'Developer'
-param apimName string = ''
-param storageAccountName string = ''
-param cosmosDbName string = ''
-param aiSearchName string = ''
-param utcString string = utcNow()
-
 //
 // start AOAI parameters
 //
 @description('Whether or not to deploy a new AOAI resource instead of connecting to an existing service.')
 param deployAoai bool = true
 
-@description('Name of the existing AOAI endpoint to use.')
-param existingAoaiEndpoint string = ''
+@description('Resource id of an existing AOAI resource.')
+param existingAoaiId string = ''
 
 @description('Name of the AOAI LLM model to use. Must match official model id. For more information: https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models')
 @allowed(['gpt-4', 'gpt-4o', 'gpt-4o-mini'])
@@ -117,22 +112,33 @@ param embeddingModelQuota int = 1
 // end AOAI parameters
 //
 
+//
+// start AKS parameters
+//
+@description('The AKS namespace to install GraphRAG in.')
+param aksNamespace string = 'graphrag'
+var workloadIdentityName = '${abbrs.managedIdentityUserAssignedIdentities}${resourceBaseNameFinal}'
+var aksServiceAccountName = '${aksNamespace}-workload-sa'
+var workloadIdentitySubject = 'system:serviceaccount:${aksNamespace}:${aksServiceAccountName}'
+var dnsDomain = 'graphrag.io'
+var appHostname = 'graphrag.${dnsDomain}'
+var appUrl = 'http://${appHostname}'
+//
+// end AKS parameters
+//
+
+var abbrs = loadJsonContent('abbreviations.json')
+var tags = { 'azd-env-name': resourceGroupName }
+param utcString string = utcNow()
+
 @description('This parameter will only get defined during a managed app deployment.')
 param managedAppStorageAccountName string = ''
 @secure()
 @description('This parameter will only get defined during a managed app deployment.')
 param managedAppStorageAccountKey string = ''
 
-var abbrs = loadJsonContent('abbreviations.json')
-var tags = { 'azd-env-name': resourceGroupName }
-var workloadIdentityName = '${abbrs.managedIdentityUserAssignedIdentities}${resourceBaseNameFinal}'
-var aksServiceAccountName = '${aksNamespace}-workload-sa'
-var workloadIdentitySubject = 'system:serviceaccount:${aksNamespace}:${aksServiceAccountName}'
-
-// API endpoint configuration
-var dnsDomain = 'graphrag.io'
-var appHostname = 'graphrag.${dnsDomain}'
-var appUrl = 'http://${appHostname}'
+@description('Whether to use private endpoint connections or not.')
+param enablePrivateEndpoints bool = true
 
 @description('Role definitions for various RBAC roles that will be assigned at deployment time. Learn more: https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles')
 var roles = {
@@ -160,7 +166,7 @@ module aksWorkloadIdentityRBAC 'core/rbac/workload-identity-rbac.bicep' = {
     appInsightsName: appInsights.outputs.name
     cosmosDbName: cosmosdb.outputs.name
     storageName: storage.outputs.name
-    aoaiName: deployAoai ? aoai.outputs.name : ''
+    aoaiId: deployAoai ? aoai.outputs.id : existingAoaiId
   }
 }
 
@@ -247,7 +253,6 @@ module aks 'core/aks/aks.bicep' = {
     location: location
     graphragVMSize: 'standard_d8s_v5' // 8 vcpu, 32 GB memory
     graphragIndexingVMSize: 'standard_e8s_v5' // 8 vcpus, 64 GB memory
-    clusterAdmins: [deployer().objectId]
     logAnalyticsWorkspaceId: log.outputs.id
     subnetId: vnet.outputs.aksSubnetId
     privateDnsZoneName: privateDnsZone.outputs.name
@@ -257,7 +262,7 @@ module aks 'core/aks/aks.bicep' = {
 module cosmosdb 'core/cosmosdb/cosmosdb.bicep' = {
   name: 'cosmosdb-deployment'
   params: {
-    cosmosDbName: !empty(cosmosDbName) ? cosmosDbName : '${abbrs.documentDBDatabaseAccounts}${resourceBaseNameFinal}'
+    cosmosDbName: '${abbrs.documentDBDatabaseAccounts}${resourceBaseNameFinal}'
     location: location
     publicNetworkAccess: enablePrivateEndpoints ? 'Disabled' : 'Enabled'
   }
@@ -266,7 +271,7 @@ module cosmosdb 'core/cosmosdb/cosmosdb.bicep' = {
 module aiSearch 'core/ai-search/ai-search.bicep' = {
   name: 'aisearch-deployment'
   params: {
-    name: !empty(aiSearchName) ? aiSearchName : '${abbrs.searchSearchServices}${resourceBaseNameFinal}'
+    name: '${abbrs.searchSearchServices}${resourceBaseNameFinal}'
     location: location
     publicNetworkAccess: enablePrivateEndpoints ? 'disabled' : 'enabled'
   }
@@ -275,9 +280,7 @@ module aiSearch 'core/ai-search/ai-search.bicep' = {
 module storage 'core/storage/storage.bicep' = {
   name: 'storage-deployment'
   params: {
-    name: !empty(storageAccountName)
-      ? storageAccountName
-      : '${abbrs.storageStorageAccounts}${replace(resourceBaseNameFinal, '-', '')}'
+    name: '${abbrs.storageStorageAccounts}${replace(resourceBaseNameFinal, '-', '')}'
     location: location
     publicNetworkAccess: enablePrivateEndpoints ? 'Disabled' : 'Enabled'
     tags: tags
@@ -423,10 +426,10 @@ module privateLinkScopePrivateEndpoint 'core/vnet/private-endpoint.bicep' = if (
   }
 }
 
-// the following deploymentScript will only get deployed during a managed app deployment
-// will not be deployed when performing a manual deployment with the deploy.sh script
+// The following deploymentScript is meant to only get deployed during a managed app deployment.
+// Will not be deployed when performing a manual deployment with the deploy.sh script
 module deploymentScript 'core/scripts/deployment-script.bicep' = if (!empty(managedAppStorageAccountName) && !empty(managedAppStorageAccountKey)) {
-  name: 'deploy-script-deployment-${utcString}'
+  name: 'deployScript-deployment-${utcString}'
   params: {
     location: location
     script_file: loadTextContent('managed-app/scripts/install-graphrag.sh')
@@ -437,10 +440,9 @@ module deploymentScript 'core/scripts/deployment-script.bicep' = if (!empty(mana
     acr_token_password: acrTokenPassword
     ai_search_name: aiSearch.name
     aks_name: aks.outputs.name
-    aks_kubelet_id: aks.outputs.kubeletPrincipalId
     aks_service_account_name: aksServiceAccountName
     deployAoai: deployAoai
-    aoai_endpoint: deployAoai ? aoai.outputs.endpoint : existingAoaiEndpoint
+    aoai_endpoint: aksWorkloadIdentityRBAC.outputs.aoaiEndpoint
     aoai_llm_model: deployAoai ? aoai.outputs.llmModel : llmModelName
     aoai_llm_model_deployment_name: deployAoai ? aoai.outputs.llmModelDeploymentName : llmModelDeploymentName
     aoai_llm_model_version: deployAoai ? aoai.outputs.llmModelVersion : llmModelVersion
@@ -448,7 +450,6 @@ module deploymentScript 'core/scripts/deployment-script.bicep' = if (!empty(mana
     aoai_embedding_model_deployment_name: deployAoai
       ? aoai.outputs.embeddingModelDeploymentName
       : embeddingModelDeploymentName
-    aoai_embedding_model_version: deployAoai ? aoai.outputs.embeddingModelVersion : embeddingModelVersion
     app_hostname: appHostname
     app_insights_connection_string: appInsights.outputs.connectionString
     cosmosdb_endpoint: cosmosdb.outputs.endpoint
@@ -457,7 +458,6 @@ module deploymentScript 'core/scripts/deployment-script.bicep' = if (!empty(mana
     storage_account_blob_url: storage.outputs.primaryEndpoints.blob
     utcValue: utcString
     workload_identity_client_id: workloadIdentity.outputs.clientId
-    workload_identity_principal_id: workloadIdentity.outputs.principalId
   }
 }
 
@@ -472,15 +472,21 @@ output azure_aks_controlplanefqdn string = aks.outputs.controlPlaneFqdn
 output azure_aks_managed_rg string = aks.outputs.managedResourceGroup
 output azure_aks_service_account_name string = aksServiceAccountName
 // conditionally output AOAI endpoint information if it was deployed
-output azure_aoai_endpoint string = deployAoai ? aoai.outputs.endpoint : ''
-output azure_aoai_llm_model string = deployAoai ? aoai.outputs.llmModel : ''
-output azure_aoai_llm_model_deployment_name string = deployAoai ? aoai.outputs.llmModelDeploymentName : ''
+output azure_aoai_endpoint string = deployAoai ? aoai.outputs.endpoint : aksWorkloadIdentityRBAC.outputs.aoaiEndpoint
+output azure_aoai_llm_model string = deployAoai ? aoai.outputs.llmModel : llmModelName
+output azure_aoai_llm_model_deployment_name string = deployAoai
+  ? aoai.outputs.llmModelDeploymentName
+  : llmModelDeploymentName
 output azure_aoai_llm_model_quota int = deployAoai ? aoai.outputs.llmModelQuota : 0
-output azure_aoai_llm_model_api_version string = deployAoai ? aoai.outputs.llmModelVersion : ''
-output azure_aoai_embedding_model string = deployAoai ? aoai.outputs.embeddingModel : ''
-output azure_aoai_embedding_model_deployment_name string = deployAoai ? aoai.outputs.embeddingModelDeploymentName : ''
+output azure_aoai_llm_model_api_version string = deployAoai ? aoai.outputs.llmModelVersion : llmModelVersion
+output azure_aoai_embedding_model string = deployAoai ? aoai.outputs.embeddingModel : embeddingModelName
+output azure_aoai_embedding_model_deployment_name string = deployAoai
+  ? aoai.outputs.embeddingModelDeploymentName
+  : embeddingModelDeploymentName
 output azure_aoai_embedding_model_quota int = deployAoai ? aoai.outputs.embeddingModelQuota : 0
-output azure_aoai_embedding_model_api_version string = deployAoai ? aoai.outputs.embeddingModelVersion : ''
+output azure_aoai_embedding_model_api_version string = deployAoai
+  ? aoai.outputs.embeddingModelVersion
+  : embeddingModelVersion
 output azure_apim_gateway_url string = apim.outputs.apimGatewayUrl
 output azure_apim_name string = apim.outputs.name
 output azure_app_hostname string = appHostname
