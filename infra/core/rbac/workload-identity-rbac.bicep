@@ -20,7 +20,7 @@ param cosmosDbName string
 @description('Name of an existing Azure Storage resource.')
 param storageName string
 
-@description('Name of an existing AOAI resource.')
+@description('ID of an existing AOAI resource.')
 param aoaiId string
 
 @description('Role definitions for various roles that will be assigned. Learn more: https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles')

@@ -14,7 +14,7 @@ resource aoai 'Microsoft.CognitiveServices/accounts@2024-10-01' existing = {
 resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
   for role in roleAssignments: {
     // note: the guid must be globally unique and deterministic (reproducible) across Azure
-    name: guid(resourceGroup().id, role.principalId, role.principalType, role.roleDefinitionId)
+    name: guid(aoai.id, role.principalId, role.principalType, role.roleDefinitionId)
     scope: aoai
     properties: {
       principalId: role.principalId
