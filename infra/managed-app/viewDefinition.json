@@ -6,7 +6,7 @@
             "kind": "Overview",
             "properties": {
                 "header": "Welcome to GraphRAG!",
-                "description": "Enabling customers to build and leverage the power of knowledge graphs every day.",
+                "description": "Enabling customers to build and leverage the power of knowledge graphs every day...",
                 "commands": [
                     {
                         "displayName": "Test Action",
