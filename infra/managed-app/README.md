@@ -5,7 +5,6 @@ This guide walks through the process to convert the graphrag solution accelerato
 ### Prerequisites
 1. Create an ACR
 1. Push both the graphrag backend docker image and the graphrag helm chart to the registry.
-asfd
     ```shell
     # push docker image
     az acr login --name <registry>.azurecr.io
@@ -17,7 +16,8 @@ asfd
     helm push graphrag-<version>.tgz oci://<registry>.azurecr.io/helm
     ```
 1. This managed app [uses a storage account to deploy](https://learn.microsoft.com/en-us/azure/azure-resource-manager/managed-applications/publish-service-catalog-bring-your-own-storage?tabs=azure-powershell) an Azure Managed App Definition. Please take note of the storage account name and SAS key for later.
-1. When publishing the managed app , enable anonymous access on the storage container where the app code will be accessed.
+1. Enable anonymous access on the blob container that will host the managed app deployment package code (a zip file).
+1. The Azure built-in service principle `Managed Applications on Behalf Application` must be granted the role of `Contributor` and `Role Based Access Control Administrator` on any Azure subscription where the app will get deployed.
 
 ### Steps to build Managed App
 
@@ -38,13 +38,13 @@ az bicep build --file main.bicep --outfile managed-app/mainTemplate.json
 
 ### 3. Create & test the Azure portal interface
 
-Use the [Azure Portal Sandbox](https://portal.azure.com/#blade/Microsoft_Azure_CreateUIDef/SandboxBlade) to test and make any UI changes that are defined in [createUiDefinition.json](createUiDefinition.json). To make additional changes to the Azure portal experience, start by reading some [documentation](https://learn.microsoft.com/en-us/azure/azure-resource-manager/managed-applications/create-uidefinition-overview) and copying the contents of `createUiDefinition.json` into the sandbox environment.
+Use the [Azure Portal Sandbox](https://portal.azure.com/#blade/Microsoft_Azure_CreateUIDef/SandboxBlade) to test and make any UI changes defined in [createUiDefinition.json](createUiDefinition.json). To make additional changes to the Azure portal experience, start by consulting the [documentation](https://learn.microsoft.com/en-us/azure/azure-resource-manager/managed-applications/create-uidefinition-overview) and copying the contents of `createUiDefinition.json` into the sandbox environment.
 
 ### 4. Prepare the deployment package
 
-A *deployment package* is a zip file comprised of several files. This includes the json files from the previous steps along with any additional code relevant to the deployment (i.e. artifacts)
+A *deployment package* is a zip file comprised of several files. This includes the ARM template and other json files from the previous steps, along with any additional code relevant to the deployment (i.e. artifacts)
 
-Note that the file names for the json files (`mainTemplate.json` and `createUiDefinition.json`) should not be modified and are case-sensitive. Azure expects these files as part of a managed app deployment package.
+File names for the json files (`mainTemplate.json` and `createUiDefinition.json`) should not be modified and are case-sensitive. Azure expects these files to be included in the final managed app deployment package.
 
 A local copy of the backend docker image needs to be built in order to retrieve a copy of the openapi.json spec associated with GraphRAG's REST API. This api spec file will become part of the final deployment package.
 ```shell
@@ -62,7 +62,7 @@ curl --fail-with-body -o managed-app/openapi.json http://localhost:8080/manpage/
 
 # zip up all files
 cd managed-app
-tar -a -cf managed-app-deployment-pkg.zip createUiDefinition.json viewDefinition.json mainTemplate.json openapi.json artifacts
+tar -a -cf managed-app-deployment-pkg.zip createUiDefinition.json viewDefinition.json mainTemplate.json openapi.json scripts
 ```
 
 The deployment package should have the following file structure:
@@ -91,9 +91,9 @@ There are two deployment options to consider when deploying a managed app. As an
     1. In the Azure Portal, find and click on the managed app definition resource created in the previous step.
     2. A button option `Deploy from definition` will be available.
     3. Click on it and proceed through the same setup experience (defined by the `createUiDefinitions.json` file) that a consumer would experience when installing the managed app.
-    4. Follow-on work is needed to [publish the app](https://learn.microsoft.com/en-us/partner-center/marketplace-offers/plan-azure-application-offer) as an official app in the Azure Marketplace
+    4. Additional work is needed to [publish the app](https://learn.microsoft.com/en-us/partner-center/marketplace-offers/plan-azure-application-offer) as an official app in the Azure Marketplace
 
 * 1-click Deployment Button
-If `mainTemplate.json` is hosted somewhere publicly (i.e. on Github), a deployment button can be created that deploys the app when clicked, like in the example below.
+If `mainTemplate.json` is hosted somewhere publicly (i.e. on Github), a deployment button can be created that deploys the app when clicked, like the the example below.
 
     [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure-Samples%2Fgraphrag-accelerator%2Frefs%2Fheads%2Fharjit-managed-app%2Finfra%2FmainTemplate.json)

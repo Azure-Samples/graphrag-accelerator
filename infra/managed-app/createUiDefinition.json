@@ -134,18 +134,18 @@
         },
         "elements": [
           {
-            "name": "deployAoai",
+            "name": "deployNewAoai",
             "type": "Microsoft.Common.CheckBox",
             "label": "Deploy new AOAI?",
             "toolTip": "Whether or not to deploy a new AOAI.",
-            "defaultValue": true,
+            "defaultValue": false,
             "constraints": {
               "required": false
             }
           },
           {
-            "_comment": "For more information: https://learn.microsoft.com/en-us/azure/azure-resource-manager/managed-applications/microsoft-solutions-resourceselector",
             "name": "aoaiSelector",
+            "_comment": "For more information: https://learn.microsoft.com/en-us/azure/azure-resource-manager/managed-applications/microsoft-solutions-resourceselector",
             "type": "Microsoft.Solutions.ResourceSelector",
             "label": "Select existing AOAI",
             "resourceType": "Microsoft.CognitiveServices/accounts",
@@ -154,7 +154,25 @@
                 "subscription": "onBasics"
               }
             },
-            "visible": "[equals(steps('aoaiSettings').deployAoai, false)]"
+            "visible": "[equals(steps('aoaiSettings').deployNewAoai, false)]"
+          },
+          {
+            "name": "getModels",
+            "_comment": "This element makes a REST call to the AOAI service and returns a list of available models for the deployer's chosen cloud region. For more information: https://learn.microsoft.com/en-us/rest/api/aiservices/accountmanagement/models/list",
+            "type": "Microsoft.Solutions.ArmApiControl",
+            "request": {
+              "method": "GET",
+              "path": "[concat(subscription().id, '/providers/Microsoft.CognitiveServices/locations/', location(), '/models?api-version=2024-10-01')]"
+            }
+          },
+          {
+            "name": "getModelDeployments",
+            "_comment": "This element makes a REST call to a selected AOAI resource and returns a list of current model deployments. For more information: https://learn.microsoft.com/en-us/rest/api/aiservices/accountmanagement/deployments/list",
+            "type": "Microsoft.Solutions.ArmApiControl",
+            "request": {
+              "method": "GET",
+              "path": "[concat(steps('aoaiSettings').aoaiSelector.id, '/deployments?api-version=2024-10-01')]"
+            }
           },
           {
             "name": "llmModelName",
@@ -163,31 +181,21 @@
             "defaultValue": "gpt-4o",
             "toolTip": "LLM model to use.",
             "constraints": {
-              "allowedValues": [
-                {
-                  "label": "gpt-4o",
-                  "value": "gpt-4o"
-                },
-                {
-                  "label": "gpt-4o-mini",
-                  "value": "gpt-4o-mini"
-                }
-              ],
-              "required": true
+              "required": true,
+              "allowedValues": "[map(steps('aoaiSettings').getModels.value, (item) => parse(concat('{\"label\":\"', item.model.name, '\",\"value\":\"', item.model.name, '\"}')))]"
             },
-            "visible": true
+            "visible": "[or(steps('aoaiSettings').deployNewAoai, not(empty(steps('aoaiSettings').aoaiSelector.id)))]"
           },
           {
             "name": "llmModelDeploymentName",
-            "type": "Microsoft.Common.TextBox",
+            "type": "Microsoft.Common.DropDown",
             "label": "LLM Model Deployment",
-            "toolTip": "Model deployment name to use.",
-            "defaultValue": "gpt-4o",
+            "toolTip": "Select a LLM model deployment to use.",
             "constraints": {
-              "required": true,
-              "regex": "^(?!\\s*$).+",
-              "validationMessage": "Must provide a valid model deployment name."
-            }
+              "required": false,
+              "allowedValues": "[map(steps('aoaiSettings').getModelDeployments.value, (item) => parse(concat('{\"label\":\"', item.name, '\",\"value\":\"', item.name, '\"}')))]"
+            },
+            "visible": "[and(equals(steps('aoaiSettings').deployNewAoai, false), not(empty(steps('aoaiSettings').aoaiSelector.id)))]"
           },
           {
             "name": "llmModelVersion",
@@ -208,7 +216,7 @@
               ],
               "required": true
             },
-            "visible": true
+            "visible": "[or(steps('aoaiSettings').deployNewAoai, not(empty(steps('aoaiSettings').aoaiSelector.id)))]"
           },
           {
             "name": "llmModelQuota",
@@ -222,7 +230,7 @@
               "regex": "^[1-9][0-9]*$",
               "validationMessage": "Must provide a valid amount (> 0) of LLM model quota."
             },
-            "visible": true
+            "visible": "[or(steps('aoaiSettings').deployNewAoai, not(empty(steps('aoaiSettings').aoaiSelector.id)))]"
           },
           {
             "name": "embeddingModelName",
@@ -231,45 +239,21 @@
             "defaultValue": "text-embedding-ada-002",
             "toolTip": "Embedding model to use.",
             "constraints": {
-              "allowedValues": [
-                {
-                  "label": "text-embedding-ada-002",
-                  "value": "text-embedding-ada-002"
-                },
-                {
-                  "label": "text-embedding-3-large",
-                  "value": "text-embedding-3-large"
-                }
-              ],
-              "required": true
+              "required": true,
+              "allowedValues": "[map(steps('aoaiSettings').getModels.value, (item) => parse(concat('{\"label\":\"', item.model.name, '\",\"value\":\"', item.model.name, '\"}')))]"
             },
-            "visible": true
+            "visible": "[or(steps('aoaiSettings').deployNewAoai, not(empty(steps('aoaiSettings').aoaiSelector.id)))]"
           },
           {
             "name": "embeddingModelDeploymentName",
-            "type": "Microsoft.Common.TextBox",
+            "type": "Microsoft.Common.DropDown",
             "label": "Embedding Model Deployment",
-            "toolTip": "Model deployment name to use.",
-            "defaultValue": "text-embedding-ada-002",
+            "toolTip": "Select am embedding model deployment to use.",
             "constraints": {
-              "required": true,
-              "regex": "^(?!\\s*$).+",
-              "validationMessage": "Must provide a valid model deployment name."
-            }
-          },
-          {
-            "name": "embeddingModelQuota",
-            "type": "Microsoft.Common.TextBox",
-            "label": "Embedding Model Quota (x1000)",
-            "placeholder": "100",
-            "defaultValue": "1",
-            "toolTip": "Embedding model quota to use.",
-            "constraints": {
-              "required": true,
-              "regex": "^[1-9][0-9]*$",
-              "validationMessage": "Must provide a valid amount (> 0) of embedding model quota."
+              "required": false,
+              "allowedValues": "[map(steps('aoaiSettings').getModelDeployments.value, (item) => parse(concat('{\"label\":\"', item.name, '\",\"value\":\"', item.name, '\"}')))]"
             },
-            "visible": true
+            "visible": "[and(equals(steps('aoaiSettings').deployNewAoai, false), not(empty(steps('aoaiSettings').aoaiSelector.id)))]"
           },
           {
             "name": "embeddingModelVersion",
@@ -290,7 +274,21 @@
               ],
               "required": true
             },
-            "visible": true
+            "visible": "[or(steps('aoaiSettings').deployNewAoai, not(empty(steps('aoaiSettings').aoaiSelector.id)))]"
+          },
+          {
+            "name": "embeddingModelQuota",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Embedding Model Quota (x1000)",
+            "placeholder": "100",
+            "defaultValue": "1",
+            "toolTip": "Embedding model quota to use.",
+            "constraints": {
+              "required": true,
+              "regex": "^[1-9][0-9]*$",
+              "validationMessage": "Must provide a valid amount (> 0) of embedding model quota."
+            },
+            "visible": "[or(steps('aoaiSettings').deployNewAoai, not(empty(steps('aoaiSettings').aoaiSelector.id)))]"
           }
         ]
       },
@@ -454,14 +452,14 @@
       "apiPublisherEmail": "[steps('apiSettings').apimPublisherEmail]",
       "enablePrivateEndpoints": "[steps('networking').enablePrivateEndpoints]",
       "apimTier": "[steps('apiSettings').apimTier]",
-      "deployAoai": "[steps('aoaiSettings').deployAoai]",
+      "deployAoai": "[steps('aoaiSettings').deployNewAoai]",
       "existingAoaiId": "[steps('aoaiSettings').aoaiSelector.id]",
       "llmModelName": "[steps('aoaiSettings').llmModelName]",
-      "llmModelDeploymentName": "[steps('aoaiSettings').llmModelDeploymentName]",
+      "llmModelDeploymentName": "[if(steps('aoaiSettings').deployNewAoai, steps('aoaiSettings').llmModelName, steps('aoaiSettings').llmModelDeploymentName)]",
       "llmModelVersion": "[steps('aoaiSettings').llmModelVersion]",
       "llmModelQuota": "[int(steps('aoaiSettings').llmModelQuota)]",
       "embeddingModelName": "[steps('aoaiSettings').embeddingModelName]",
-      "embeddingModelDeploymentName": "[steps('aoaiSettings').embeddingModelDeploymentName]",
+      "embeddingModelDeploymentName": "[if(steps('aoaiSettings').deployNewAoai, steps('aoaiSettings').embeddingModelName, steps('aoaiSettings').embeddingModelDeploymentName)]",
       "embeddingModelVersion": "[steps('aoaiSettings').embeddingModelVersion]",
       "embeddingModelQuota": "[int(steps('aoaiSettings').embeddingModelQuota)]",
       "managedAppStorageAccountName": "[steps('advanced').storageSettings.storageSelector.name]",
