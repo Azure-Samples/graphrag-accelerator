@@ -15,7 +15,6 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
-from fastapi_offline import FastAPIOffline
 from kubernetes import (
     client,
     config,
@@ -132,7 +131,7 @@ async def lifespan(app: FastAPI):
     # shutdown/garbage collection code goes here
 
 
-app = FastAPIOffline(
+app = FastAPI(
     docs_url="/manpage/docs",
     openapi_url="/manpage/openapi.json",
     root_path=os.getenv("API_ROOT_PATH", ""),

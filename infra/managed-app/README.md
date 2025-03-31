@@ -16,12 +16,12 @@ This guide walks through the process to convert the graphrag solution accelerato
     helm push graphrag-<version>.tgz oci://<registry>.azurecr.io/helm
     ```
 1. This managed app [uses a storage account to deploy](https://learn.microsoft.com/en-us/azure/azure-resource-manager/managed-applications/publish-service-catalog-bring-your-own-storage?tabs=azure-powershell) an Azure Managed App Definition. Please take note of the storage account name and SAS key for later.
-1. Enable anonymous access on the blob container that will host the managed app deployment package code (a zip file).
-1. The Azure built-in service principle `Managed Applications on Behalf Application` must be granted the role of `Contributor` and `Role Based Access Control Administrator` on any Azure subscription where the app will get deployed.
+1. Enable anonymous access on the blob container that will host the managed app deployment package (a zip file).
+1. The Azure built-in service principle `Managed Applications on Behalf Application` must be granted the role of `Contributor` and `Role Based Access Control Administrator` on any Azure subscription where the app will be deployed.
 
 ### Steps to build Managed App
 
-### 1. Auto format the bicep code
+### 1. Auto format the bicep code (optional)
 
 As a precaution, start by auto-formating and linting the bicep code to detect any mistakes early-on.
 
