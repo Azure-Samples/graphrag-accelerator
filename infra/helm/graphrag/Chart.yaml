@@ -5,10 +5,9 @@ apiVersion: v2
 name: graphrag
 description: GraphRAG - a graph-based RAG search engine
 type: application
-version: 0.3.0
+version: 0.0.1
 
 # This is the version number of the application being deployed. This version number should be
-# incremented each time you make changes to the application. Versions are not expected to
-# follow Semantic Versioning. They should reflect the version the application is using.
-# It is recommended to use it with quotes.
-appVersion: "2.1.0"
+# incremented each time you make changes to the application. For graphrag, we define the appVersion to match
+# the version of the graphrag library being used.
+appVersion: "1.2.0"

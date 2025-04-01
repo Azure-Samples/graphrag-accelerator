@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.34.44.8038",
-      "templateHash": "10260802261849329885"
+      "templateHash": "9566431265507963697"
     }
   },
   "parameters": {
@@ -2971,7 +2971,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.34.44.8038",
-              "templateHash": "774597234119036898"
+              "templateHash": "6062782789806546452"
             }
           },
           "parameters": {
@@ -2987,621 +2987,162 @@
           },
           "variables": {
             "$fxv#0": {
-              "components": {
-                "schemas": {
-                  "BaseResponse": {
-                    "properties": {
-                      "status": {
-                        "title": "Status",
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "status"
-                    ],
-                    "title": "BaseResponse",
-                    "type": "object"
-                  },
-                  "Body_schedule_index_job_index_post": {
-                    "properties": {
-                      "community_summarization_prompt": {
-                        "anyOf": [
-                          {
-                            "format": "binary",
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ],
-                        "title": "Community Summarization Prompt"
-                      },
-                      "entity_extraction_prompt": {
-                        "anyOf": [
-                          {
-                            "format": "binary",
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ],
-                        "title": "Entity Extraction Prompt"
-                      },
-                      "entity_summarization_prompt": {
-                        "anyOf": [
-                          {
-                            "format": "binary",
-                            "type": "string"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ],
-                        "title": "Entity Summarization Prompt"
-                      }
-                    },
-                    "title": "Body_schedule_index_job_index_post",
-                    "type": "object"
-                  },
-                  "Body_upload_files_data_post": {
-                    "properties": {
-                      "files": {
-                        "items": {
-                          "format": "binary",
-                          "type": "string"
-                        },
-                        "title": "Files",
-                        "type": "array"
-                      }
-                    },
-                    "required": [
-                      "files"
-                    ],
-                    "title": "Body_upload_files_data_post",
-                    "type": "object"
-                  },
-                  "ClaimResponse": {
-                    "properties": {
-                      "covariate_type": {
-                        "title": "Covariate Type",
-                        "type": "string"
-                      },
-                      "description": {
-                        "title": "Description",
-                        "type": "string"
-                      },
-                      "document_ids": {
-                        "items": {
-                          "type": "string"
-                        },
-                        "title": "Document Ids",
-                        "type": "array"
-                      },
-                      "object_id": {
-                        "title": "Object Id",
-                        "type": "string"
-                      },
-                      "source_text": {
-                        "title": "Source Text",
-                        "type": "string"
-                      },
-                      "subject_id": {
-                        "title": "Subject Id",
-                        "type": "string"
-                      },
-                      "text_unit_id": {
-                        "title": "Text Unit Id",
-                        "type": "string"
-                      },
-                      "type": {
-                        "title": "Type",
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "covariate_type",
-                      "type",
-                      "description",
-                      "subject_id",
-                      "object_id",
-                      "source_text",
-                      "text_unit_id",
-                      "document_ids"
-                    ],
-                    "title": "ClaimResponse",
-                    "type": "object"
-                  },
-                  "EntityResponse": {
-                    "properties": {
-                      "description": {
-                        "title": "Description",
-                        "type": "string"
-                      },
-                      "name": {
-                        "title": "Name",
-                        "type": "string"
-                      },
-                      "text_units": {
-                        "items": {
-                          "type": "string"
-                        },
-                        "title": "Text Units",
-                        "type": "array"
-                      }
-                    },
-                    "required": [
-                      "name",
-                      "description",
-                      "text_units"
-                    ],
-                    "title": "EntityResponse",
-                    "type": "object"
-                  },
-                  "GraphRequest": {
-                    "properties": {
-                      "community_level": {
-                        "anyOf": [
-                          {
-                            "type": "integer"
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ],
-                        "title": "Community Level"
-                      },
-                      "index_name": {
-                        "title": "Index Name",
-                        "type": "string"
-                      },
-                      "query": {
-                        "title": "Query",
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "index_name",
-                      "query"
-                    ],
-                    "title": "GraphRequest",
-                    "type": "object"
-                  },
-                  "GraphResponse": {
-                    "properties": {
-                      "context_data": {
-                        "title": "Context Data"
-                      },
-                      "result": {
-                        "title": "Result"
-                      }
-                    },
-                    "required": [
-                      "result",
-                      "context_data"
-                    ],
-                    "title": "GraphResponse",
-                    "type": "object"
-                  },
-                  "HTTPValidationError": {
-                    "properties": {
-                      "detail": {
-                        "items": {
-                          "$ref": "#/components/schemas/ValidationError"
-                        },
-                        "title": "Detail",
-                        "type": "array"
-                      }
-                    },
-                    "title": "HTTPValidationError",
-                    "type": "object"
-                  },
-                  "IndexNameList": {
-                    "properties": {
-                      "index_name": {
-                        "items": {
-                          "type": "string"
-                        },
-                        "title": "Index Name",
-                        "type": "array"
-                      }
-                    },
-                    "required": [
-                      "index_name"
-                    ],
-                    "title": "IndexNameList",
-                    "type": "object"
-                  },
-                  "IndexStatusResponse": {
-                    "properties": {
-                      "index_name": {
-                        "title": "Index Name",
-                        "type": "string"
-                      },
-                      "percent_complete": {
-                        "title": "Percent Complete",
-                        "type": "number"
-                      },
-                      "progress": {
-                        "title": "Progress",
-                        "type": "string"
-                      },
-                      "status": {
-                        "title": "Status",
-                        "type": "string"
-                      },
-                      "status_code": {
-                        "title": "Status Code",
-                        "type": "integer"
-                      },
-                      "storage_name": {
-                        "title": "Storage Name",
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "status_code",
-                      "index_name",
-                      "storage_name",
-                      "status",
-                      "percent_complete",
-                      "progress"
-                    ],
-                    "title": "IndexStatusResponse",
-                    "type": "object"
-                  },
-                  "RelationshipResponse": {
-                    "properties": {
-                      "description": {
-                        "title": "Description",
-                        "type": "string"
-                      },
-                      "source": {
-                        "title": "Source",
-                        "type": "string"
-                      },
-                      "source_id": {
-                        "title": "Source Id",
-                        "type": "integer"
-                      },
-                      "target": {
-                        "title": "Target",
-                        "type": "string"
-                      },
-                      "target_id": {
-                        "title": "Target Id",
-                        "type": "integer"
-                      },
-                      "text_units": {
-                        "items": {
-                          "type": "string"
-                        },
-                        "title": "Text Units",
-                        "type": "array"
-                      }
-                    },
-                    "required": [
-                      "source",
-                      "source_id",
-                      "target",
-                      "target_id",
-                      "description",
-                      "text_units"
-                    ],
-                    "title": "RelationshipResponse",
-                    "type": "object"
-                  },
-                  "ReportResponse": {
-                    "properties": {
-                      "text": {
-                        "title": "Text",
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "text"
-                    ],
-                    "title": "ReportResponse",
-                    "type": "object"
-                  },
-                  "StorageNameList": {
-                    "properties": {
-                      "storage_name": {
-                        "items": {
-                          "type": "string"
-                        },
-                        "title": "Storage Name",
-                        "type": "array"
-                      }
-                    },
-                    "required": [
-                      "storage_name"
-                    ],
-                    "title": "StorageNameList",
-                    "type": "object"
-                  },
-                  "TextUnitResponse": {
-                    "properties": {
-                      "source_document": {
-                        "title": "Source Document",
-                        "type": "string"
-                      },
-                      "text": {
-                        "title": "Text",
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "text",
-                      "source_document"
-                    ],
-                    "title": "TextUnitResponse",
-                    "type": "object"
-                  },
-                  "ValidationError": {
-                    "properties": {
-                      "loc": {
-                        "items": {
-                          "anyOf": [
-                            {
-                              "type": "string"
-                            },
-                            {
-                              "type": "integer"
-                            }
-                          ]
-                        },
-                        "title": "Location",
-                        "type": "array"
-                      },
-                      "msg": {
-                        "title": "Message",
-                        "type": "string"
-                      },
-                      "type": {
-                        "title": "Error Type",
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "loc",
-                      "msg",
-                      "type"
-                    ],
-                    "title": "ValidationError",
-                    "type": "object"
-                  }
-                }
-              },
+              "openapi": "3.1.0",
               "info": {
                 "title": "GraphRAG",
                 "version": "v0.0.0"
               },
-              "openapi": "3.1.0",
               "paths": {
                 "/data": {
                   "get": {
+                    "tags": [
+                      "Data Management"
+                    ],
+                    "summary": "Get list of data containers.",
                     "description": "Retrieve a list of all data containers.",
                     "operationId": "get_all_data_containers_data_get",
                     "responses": {
                       "200": {
+                        "description": "Successful Response",
                         "content": {
                           "application/json": {
                             "schema": {
                               "$ref": "#/components/schemas/StorageNameList"
                             }
                           }
-                        },
-                        "description": "Successful Response"
+                        }
                       }
-                    },
-                    "summary": "Get list of data containers.",
-                    "tags": [
-                      "Data Management"
-                    ]
+                    }
                   },
                   "post": {
+                    "tags": [
+                      "Data Management"
+                    ],
+                    "summary": "Upload data to a data storage container",
                     "description": "Create a Azure Storage container and upload files to it.\n\nArgs:\n    files (List[UploadFile]): A list of files to be uploaded.\n    storage_name (str): The name of the Azure Blob Storage container to which files will be uploaded.\n    overwrite (bool): Whether to overwrite existing files with the same name. Defaults to True. If False, files that already exist will be skipped.\n\nReturns:\n    BaseResponse: An instance of the BaseResponse model with a status message indicating the result of the upload.\n\nRaises:\n    HTTPException: If the container name is invalid or if any error occurs during the upload process.",
                     "operationId": "upload_files_data_post",
                     "parameters": [
                       {
-                        "in": "query",
                         "name": "container_name",
+                        "in": "query",
                         "required": true,
                         "schema": {
-                          "title": "Container Name",
-                          "type": "string"
+                          "type": "string",
+                          "title": "Container Name"
                         }
                       },
                       {
-                        "in": "query",
                         "name": "overwrite",
+                        "in": "query",
                         "required": false,
                         "schema": {
+                          "type": "boolean",
                           "default": true,
-                          "title": "Overwrite",
-                          "type": "boolean"
+                          "title": "Overwrite"
                         }
                       }
                     ],
                     "requestBody": {
+                      "required": true,
                       "content": {
                         "multipart/form-data": {
                           "schema": {
                             "$ref": "#/components/schemas/Body_upload_files_data_post"
                           }
                         }
-                      },
-                      "required": true
+                      }
                     },
                     "responses": {
                       "200": {
+                        "description": "Successful Response",
                         "content": {
                           "application/json": {
                             "schema": {
                               "$ref": "#/components/schemas/BaseResponse"
                             }
                           }
-                        },
-                        "description": "Successful Response"
+                        }
                       },
                       "422": {
+                        "description": "Validation Error",
                         "content": {
                           "application/json": {
                             "schema": {
                               "$ref": "#/components/schemas/HTTPValidationError"
                             }
                           }
-                        },
-                        "description": "Validation Error"
+                        }
                       }
-                    },
-                    "summary": "Upload data to a data storage container",
-                    "tags": [
-                      "Data Management"
-                    ]
+                    }
                   }
                 },
                 "/data/{container_name}": {
                   "delete": {
+                    "tags": [
+                      "Data Management"
+                    ],
+                    "summary": "Delete a data storage container",
                     "description": "Delete a specified data storage container.",
                     "operationId": "delete_files_data__container_name__delete",
                     "parameters": [
                       {
-                        "in": "path",
                         "name": "container_name",
+                        "in": "path",
                         "required": true,
                         "schema": {
-                          "title": "Container Name",
-                          "type": "string"
+                          "type": "string",
+                          "title": "Container Name"
                         }
                       }
                     ],
                     "responses": {
                       "200": {
+                        "description": "Successful Response",
                         "content": {
                           "application/json": {
                             "schema": {
                               "$ref": "#/components/schemas/BaseResponse"
                             }
                           }
-                        },
-                        "description": "Successful Response"
+                        }
                       },
                       "422": {
+                        "description": "Validation Error",
                         "content": {
                           "application/json": {
                             "schema": {
                               "$ref": "#/components/schemas/HTTPValidationError"
                             }
                           }
-                        },
-                        "description": "Validation Error"
-                      }
-                    },
-                    "summary": "Delete a data storage container",
-                    "tags": [
-                      "Data Management"
-                    ]
-                  }
-                },
-                "/graph/graphml/{container_name}": {
-                  "get": {
-                    "operationId": "get_graphml_file_graph_graphml__container_name__get",
-                    "parameters": [
-                      {
-                        "in": "path",
-                        "name": "container_name",
-                        "required": true,
-                        "schema": {
-                          "title": "Container Name",
-                          "type": "string"
                         }
                       }
-                    ],
-                    "responses": {
-                      "200": {
-                        "content": {
-                          "application/json": {
-                            "schema": {}
-                          }
-                        },
-                        "description": "GraphML file successfully downloaded"
-                      },
-                      "422": {
-                        "content": {
-                          "application/json": {
-                            "schema": {
-                              "$ref": "#/components/schemas/HTTPValidationError"
-                            }
-                          }
-                        },
-                        "description": "Validation Error"
-                      }
-                    },
-                    "summary": "Retrieve a GraphML file of the knowledge graph",
-                    "tags": [
-                      "Graph Operations"
-                    ]
-                  }
-                },
-                "/health": {
-                  "get": {
-                    "description": "Returns a 200 response to indicate the API is healthy.",
-                    "operationId": "health_check_health_get",
-                    "responses": {
-                      "200": {
-                        "content": {
-                          "application/json": {
-                            "schema": {}
-                          }
-                        },
-                        "description": "Successful Response"
-                      }
-                    },
-                    "summary": "API health check"
+                    }
                   }
                 },
                 "/index": {
-                  "get": {
-                    "description": "Retrieve a list of all index names.",
-                    "operationId": "get_all_index_names_index_get",
-                    "responses": {
-                      "200": {
-                        "content": {
-                          "application/json": {
-                            "schema": {
-                              "$ref": "#/components/schemas/IndexNameList"
-                            }
-                          }
-                        },
-                        "description": "Successful Response"
-                      }
-                    },
-                    "summary": "Get all index names",
+                  "post": {
                     "tags": [
                       "Index Operations"
-                    ]
-                  },
-                  "post": {
+                    ],
+                    "summary": "Build an index",
                     "operationId": "schedule_index_job_index_post",
                     "parameters": [
                       {
-                        "in": "query",
                         "name": "storage_container_name",
+                        "in": "query",
                         "required": true,
                         "schema": {
-                          "title": "Storage Container Name",
-                          "type": "string"
+                          "type": "string",
+                          "title": "Storage Container Name"
                         }
                       },
                       {
-                        "in": "query",
                         "name": "index_container_name",
+                        "in": "query",
                         "required": true,
                         "schema": {
-                          "title": "Index Container Name",
-                          "type": "string"
+                          "type": "string",
+                          "title": "Index Container Name"
                         }
                       }
                     ],
@@ -3616,170 +3157,139 @@
                     },
                     "responses": {
                       "200": {
+                        "description": "Successful Response",
                         "content": {
                           "application/json": {
                             "schema": {
                               "$ref": "#/components/schemas/BaseResponse"
                             }
                           }
-                        },
-                        "description": "Successful Response"
+                        }
                       },
                       "422": {
+                        "description": "Validation Error",
                         "content": {
                           "application/json": {
                             "schema": {
                               "$ref": "#/components/schemas/HTTPValidationError"
                             }
                           }
-                        },
-                        "description": "Validation Error"
+                        }
                       }
-                    },
-                    "summary": "Build an index",
+                    }
+                  },
+                  "get": {
                     "tags": [
                       "Index Operations"
-                    ]
+                    ],
+                    "summary": "Get all index names",
+                    "description": "Retrieve a list of all index names.",
+                    "operationId": "get_all_index_names_index_get",
+                    "responses": {
+                      "200": {
+                        "description": "Successful Response",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/IndexNameList"
+                            }
+                          }
+                        }
+                      }
+                    }
                   }
                 },
-                "/index/config/prompts": {
-                  "get": {
-                    "description": "Generating custom prompts from user-provided data may take several minutes to run based on the amount of data used.",
-                    "operationId": "generate_prompts_index_config_prompts_get",
+                "/index/{container_name}": {
+                  "delete": {
+                    "tags": [
+                      "Index Operations"
+                    ],
+                    "summary": "Delete a specified index",
+                    "description": "Delete a specified index and all associated metadata.",
+                    "operationId": "delete_index_index__container_name__delete",
                     "parameters": [
                       {
-                        "in": "query",
                         "name": "container_name",
+                        "in": "path",
                         "required": true,
                         "schema": {
-                          "title": "Container Name",
-                          "type": "string"
-                        }
-                      },
-                      {
-                        "in": "query",
-                        "name": "limit",
-                        "required": false,
-                        "schema": {
-                          "default": 5,
-                          "title": "Limit",
-                          "type": "integer"
+                          "type": "string",
+                          "title": "Container Name"
                         }
                       }
                     ],
                     "responses": {
                       "200": {
+                        "description": "Successful Response",
                         "content": {
                           "application/json": {
-                            "schema": {}
+                            "schema": {
+                              "$ref": "#/components/schemas/BaseResponse"
+                            }
                           }
-                        },
-                        "description": "Successful Response"
+                        }
                       },
                       "422": {
+                        "description": "Validation Error",
                         "content": {
                           "application/json": {
                             "schema": {
                               "$ref": "#/components/schemas/HTTPValidationError"
                             }
                           }
-                        },
-                        "description": "Validation Error"
+                        }
                       }
-                    },
-                    "summary": "Generate custom graphrag prompts based on user-provided data.",
-                    "tags": [
-                      "Prompt Tuning"
-                    ]
+                    }
                   }
                 },
                 "/index/status/{container_name}": {
                   "get": {
+                    "tags": [
+                      "Index Operations"
+                    ],
+                    "summary": "Track the status of an indexing job",
                     "operationId": "get_index_status_index_status__container_name__get",
                     "parameters": [
                       {
-                        "in": "path",
                         "name": "container_name",
+                        "in": "path",
                         "required": true,
                         "schema": {
-                          "title": "Container Name",
-                          "type": "string"
+                          "type": "string",
+                          "title": "Container Name"
                         }
                       }
                     ],
                     "responses": {
                       "200": {
+                        "description": "Successful Response",
                         "content": {
                           "application/json": {
                             "schema": {
                               "$ref": "#/components/schemas/IndexStatusResponse"
                             }
                           }
-                        },
-                        "description": "Successful Response"
+                        }
                       },
                       "422": {
+                        "description": "Validation Error",
                         "content": {
                           "application/json": {
                             "schema": {
                               "$ref": "#/components/schemas/HTTPValidationError"
                             }
                           }
-                        },
-                        "description": "Validation Error"
-                      }
-                    },
-                    "summary": "Track the status of an indexing job",
-                    "tags": [
-                      "Index Operations"
-                    ]
-                  }
-                },
-                "/index/{container_name}": {
-                  "delete": {
-                    "description": "Delete a specified index and all associated metadata.",
-                    "operationId": "delete_index_index__container_name__delete",
-                    "parameters": [
-                      {
-                        "in": "path",
-                        "name": "container_name",
-                        "required": true,
-                        "schema": {
-                          "title": "Container Name",
-                          "type": "string"
                         }
                       }
-                    ],
-                    "responses": {
-                      "200": {
-                        "content": {
-                          "application/json": {
-                            "schema": {
-                              "$ref": "#/components/schemas/BaseResponse"
-                            }
-                          }
-                        },
-                        "description": "Successful Response"
-                      },
-                      "422": {
-                        "content": {
-                          "application/json": {
-                            "schema": {
-                              "$ref": "#/components/schemas/HTTPValidationError"
-                            }
-                          }
-                        },
-                        "description": "Validation Error"
-                      }
-                    },
-                    "summary": "Delete a specified index",
-                    "tags": [
-                      "Index Operations"
-                    ]
+                    }
                   }
                 },
                 "/query/global": {
                   "post": {
+                    "tags": [
+                      "Query Operations"
+                    ],
+                    "summary": "Perform a global search across the knowledge graph index",
                     "description": "The global query method generates answers by searching over all AI-generated community reports in a map-reduce fashion. This is a resource-intensive method, but often gives good responses for questions that require an understanding of the dataset as a whole.",
                     "operationId": "global_query_query_global_post",
                     "requestBody": {
@@ -3794,34 +3304,34 @@
                     },
                     "responses": {
                       "200": {
+                        "description": "Successful Response",
                         "content": {
                           "application/json": {
                             "schema": {
                               "$ref": "#/components/schemas/GraphResponse"
                             }
                           }
-                        },
-                        "description": "Successful Response"
+                        }
                       },
                       "422": {
+                        "description": "Validation Error",
                         "content": {
                           "application/json": {
                             "schema": {
                               "$ref": "#/components/schemas/HTTPValidationError"
                             }
                           }
-                        },
-                        "description": "Validation Error"
+                        }
                       }
-                    },
-                    "summary": "Perform a global search across the knowledge graph index",
-                    "tags": [
-                      "Query Operations"
-                    ]
+                    }
                   }
                 },
                 "/query/local": {
                   "post": {
+                    "tags": [
+                      "Query Operations"
+                    ],
+                    "summary": "Perform a local search across the knowledge graph index.",
                     "description": "The local query method generates answers by combining relevant data from the AI-extracted knowledge-graph with text chunks of the raw documents. This method is suitable for questions that require an understanding of specific entities mentioned in the documents (e.g. What are the healing properties of chamomile?).",
                     "operationId": "local_query_query_local_post",
                     "requestBody": {
@@ -3836,285 +3346,775 @@
                     },
                     "responses": {
                       "200": {
+                        "description": "Successful Response",
                         "content": {
                           "application/json": {
                             "schema": {
                               "$ref": "#/components/schemas/GraphResponse"
                             }
                           }
-                        },
-                        "description": "Successful Response"
+                        }
                       },
                       "422": {
+                        "description": "Validation Error",
                         "content": {
                           "application/json": {
                             "schema": {
                               "$ref": "#/components/schemas/HTTPValidationError"
                             }
                           }
-                        },
-                        "description": "Validation Error"
+                        }
                       }
-                    },
-                    "summary": "Perform a local search across the knowledge graph index.",
-                    "tags": [
-                      "Query Operations"
-                    ]
+                    }
                   }
                 },
-                "/source/claim/{container_name}/{claim_id}": {
+                "/index/config/prompts": {
                   "get": {
-                    "operationId": "get_claim_info_source_claim__container_name___claim_id__get",
+                    "tags": [
+                      "Prompt Tuning"
+                    ],
+                    "summary": "Generate custom graphrag prompts based on user-provided data.",
+                    "description": "Generating custom prompts from user-provided data may take several minutes to run based on the amount of data used.",
+                    "operationId": "generate_prompts_index_config_prompts_get",
                     "parameters": [
                       {
-                        "in": "path",
-                        "name": "claim_id",
+                        "name": "container_name",
+                        "in": "query",
                         "required": true,
                         "schema": {
-                          "title": "Claim Id",
-                          "type": "integer"
+                          "type": "string",
+                          "title": "Container Name"
                         }
                       },
                       {
-                        "in": "path",
-                        "name": "container_name",
-                        "required": true,
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
                         "schema": {
-                          "title": "Container Name",
-                          "type": "string"
+                          "type": "integer",
+                          "default": 5,
+                          "title": "Limit"
                         }
                       }
                     ],
                     "responses": {
                       "200": {
+                        "description": "Successful Response",
                         "content": {
                           "application/json": {
-                            "schema": {
-                              "$ref": "#/components/schemas/ClaimResponse"
-                            }
+                            "schema": {}
                           }
-                        },
-                        "description": "Successful Response"
+                        }
                       },
                       "422": {
+                        "description": "Validation Error",
                         "content": {
                           "application/json": {
                             "schema": {
                               "$ref": "#/components/schemas/HTTPValidationError"
                             }
                           }
-                        },
-                        "description": "Validation Error"
-                      }
-                    },
-                    "summary": "Return a single claim.",
-                    "tags": [
-                      "Sources"
-                    ]
-                  }
-                },
-                "/source/entity/{container_name}/{entity_id}": {
-                  "get": {
-                    "operationId": "get_entity_info_source_entity__container_name___entity_id__get",
-                    "parameters": [
-                      {
-                        "in": "path",
-                        "name": "entity_id",
-                        "required": true,
-                        "schema": {
-                          "title": "Entity Id",
-                          "type": "integer"
-                        }
-                      },
-                      {
-                        "in": "path",
-                        "name": "container_name",
-                        "required": true,
-                        "schema": {
-                          "title": "Container Name",
-                          "type": "string"
                         }
                       }
-                    ],
-                    "responses": {
-                      "200": {
-                        "content": {
-                          "application/json": {
-                            "schema": {
-                              "$ref": "#/components/schemas/EntityResponse"
-                            }
-                          }
-                        },
-                        "description": "Successful Response"
-                      },
-                      "422": {
-                        "content": {
-                          "application/json": {
-                            "schema": {
-                              "$ref": "#/components/schemas/HTTPValidationError"
-                            }
-                          }
-                        },
-                        "description": "Validation Error"
-                      }
-                    },
-                    "summary": "Return a single entity.",
-                    "tags": [
-                      "Sources"
-                    ]
-                  }
-                },
-                "/source/relationship/{container_name}/{relationship_id}": {
-                  "get": {
-                    "operationId": "get_relationship_info_source_relationship__container_name___relationship_id__get",
-                    "parameters": [
-                      {
-                        "in": "path",
-                        "name": "relationship_id",
-                        "required": true,
-                        "schema": {
-                          "title": "Relationship Id",
-                          "type": "integer"
-                        }
-                      },
-                      {
-                        "in": "path",
-                        "name": "container_name",
-                        "required": true,
-                        "schema": {
-                          "title": "Container Name",
-                          "type": "string"
-                        }
-                      }
-                    ],
-                    "responses": {
-                      "200": {
-                        "content": {
-                          "application/json": {
-                            "schema": {
-                              "$ref": "#/components/schemas/RelationshipResponse"
-                            }
-                          }
-                        },
-                        "description": "Successful Response"
-                      },
-                      "422": {
-                        "content": {
-                          "application/json": {
-                            "schema": {
-                              "$ref": "#/components/schemas/HTTPValidationError"
-                            }
-                          }
-                        },
-                        "description": "Validation Error"
-                      }
-                    },
-                    "summary": "Return a single relationship.",
-                    "tags": [
-                      "Sources"
-                    ]
+                    }
                   }
                 },
                 "/source/report/{container_name}/{report_id}": {
                   "get": {
+                    "tags": [
+                      "Sources"
+                    ],
+                    "summary": "Return a single community report.",
                     "operationId": "get_report_info_source_report__container_name___report_id__get",
                     "parameters": [
                       {
-                        "in": "path",
                         "name": "report_id",
+                        "in": "path",
                         "required": true,
                         "schema": {
-                          "title": "Report Id",
-                          "type": "integer"
+                          "type": "integer",
+                          "title": "Report Id"
                         }
                       },
                       {
-                        "in": "path",
                         "name": "container_name",
+                        "in": "path",
                         "required": true,
                         "schema": {
-                          "title": "Container Name",
-                          "type": "string"
+                          "type": "string",
+                          "title": "Container Name"
                         }
                       }
                     ],
                     "responses": {
                       "200": {
+                        "description": "Successful Response",
                         "content": {
                           "application/json": {
                             "schema": {
                               "$ref": "#/components/schemas/ReportResponse"
                             }
                           }
-                        },
-                        "description": "Successful Response"
+                        }
                       },
                       "422": {
+                        "description": "Validation Error",
                         "content": {
                           "application/json": {
                             "schema": {
                               "$ref": "#/components/schemas/HTTPValidationError"
                             }
                           }
-                        },
-                        "description": "Validation Error"
+                        }
                       }
-                    },
-                    "summary": "Return a single community report.",
-                    "tags": [
-                      "Sources"
-                    ]
+                    }
                   }
                 },
                 "/source/text/{container_name}/{text_unit_id}": {
                   "get": {
+                    "tags": [
+                      "Sources"
+                    ],
+                    "summary": "Return a single base text unit.",
                     "operationId": "get_chunk_info_source_text__container_name___text_unit_id__get",
                     "parameters": [
                       {
-                        "in": "path",
                         "name": "text_unit_id",
+                        "in": "path",
                         "required": true,
                         "schema": {
-                          "title": "Text Unit Id",
-                          "type": "string"
+                          "type": "string",
+                          "title": "Text Unit Id"
                         }
                       },
                       {
-                        "in": "path",
                         "name": "container_name",
+                        "in": "path",
                         "required": true,
                         "schema": {
-                          "title": "Container Name",
-                          "type": "string"
+                          "type": "string",
+                          "title": "Container Name"
                         }
                       }
                     ],
                     "responses": {
                       "200": {
+                        "description": "Successful Response",
                         "content": {
                           "application/json": {
                             "schema": {
                               "$ref": "#/components/schemas/TextUnitResponse"
                             }
                           }
-                        },
-                        "description": "Successful Response"
+                        }
                       },
                       "422": {
+                        "description": "Validation Error",
                         "content": {
                           "application/json": {
                             "schema": {
                               "$ref": "#/components/schemas/HTTPValidationError"
                             }
                           }
-                        },
-                        "description": "Validation Error"
+                        }
                       }
-                    },
-                    "summary": "Return a single base text unit.",
+                    }
+                  }
+                },
+                "/source/entity/{container_name}/{entity_id}": {
+                  "get": {
                     "tags": [
                       "Sources"
-                    ]
+                    ],
+                    "summary": "Return a single entity.",
+                    "operationId": "get_entity_info_source_entity__container_name___entity_id__get",
+                    "parameters": [
+                      {
+                        "name": "entity_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                          "type": "integer",
+                          "title": "Entity Id"
+                        }
+                      },
+                      {
+                        "name": "container_name",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                          "type": "string",
+                          "title": "Container Name"
+                        }
+                      }
+                    ],
+                    "responses": {
+                      "200": {
+                        "description": "Successful Response",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/EntityResponse"
+                            }
+                          }
+                        }
+                      },
+                      "422": {
+                        "description": "Validation Error",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/HTTPValidationError"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "/source/claim/{container_name}/{claim_id}": {
+                  "get": {
+                    "tags": [
+                      "Sources"
+                    ],
+                    "summary": "Return a single claim.",
+                    "operationId": "get_claim_info_source_claim__container_name___claim_id__get",
+                    "parameters": [
+                      {
+                        "name": "claim_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                          "type": "integer",
+                          "title": "Claim Id"
+                        }
+                      },
+                      {
+                        "name": "container_name",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                          "type": "string",
+                          "title": "Container Name"
+                        }
+                      }
+                    ],
+                    "responses": {
+                      "200": {
+                        "description": "Successful Response",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/ClaimResponse"
+                            }
+                          }
+                        }
+                      },
+                      "422": {
+                        "description": "Validation Error",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/HTTPValidationError"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "/source/relationship/{container_name}/{relationship_id}": {
+                  "get": {
+                    "tags": [
+                      "Sources"
+                    ],
+                    "summary": "Return a single relationship.",
+                    "operationId": "get_relationship_info_source_relationship__container_name___relationship_id__get",
+                    "parameters": [
+                      {
+                        "name": "relationship_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                          "type": "integer",
+                          "title": "Relationship Id"
+                        }
+                      },
+                      {
+                        "name": "container_name",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                          "type": "string",
+                          "title": "Container Name"
+                        }
+                      }
+                    ],
+                    "responses": {
+                      "200": {
+                        "description": "Successful Response",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/RelationshipResponse"
+                            }
+                          }
+                        }
+                      },
+                      "422": {
+                        "description": "Validation Error",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/HTTPValidationError"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "/graph/graphml/{container_name}": {
+                  "get": {
+                    "tags": [
+                      "Graph Operations"
+                    ],
+                    "summary": "Retrieve a GraphML file of the knowledge graph",
+                    "operationId": "get_graphml_file_graph_graphml__container_name__get",
+                    "parameters": [
+                      {
+                        "name": "container_name",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                          "type": "string",
+                          "title": "Container Name"
+                        }
+                      }
+                    ],
+                    "responses": {
+                      "200": {
+                        "description": "GraphML file successfully downloaded",
+                        "content": {
+                          "application/json": {
+                            "schema": {}
+                          }
+                        }
+                      },
+                      "422": {
+                        "description": "Validation Error",
+                        "content": {
+                          "application/json": {
+                            "schema": {
+                              "$ref": "#/components/schemas/HTTPValidationError"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "/health": {
+                  "get": {
+                    "summary": "API health check",
+                    "description": "Returns a 200 response to indicate the API is healthy.",
+                    "operationId": "health_check_health_get",
+                    "responses": {
+                      "200": {
+                        "description": "Successful Response",
+                        "content": {
+                          "application/json": {
+                            "schema": {}
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "components": {
+                "schemas": {
+                  "BaseResponse": {
+                    "properties": {
+                      "status": {
+                        "type": "string",
+                        "title": "Status"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "status"
+                    ],
+                    "title": "BaseResponse"
+                  },
+                  "Body_schedule_index_job_index_post": {
+                    "properties": {
+                      "entity_extraction_prompt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "binary"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "title": "Entity Extraction Prompt"
+                      },
+                      "entity_summarization_prompt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "binary"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "title": "Entity Summarization Prompt"
+                      },
+                      "community_summarization_prompt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "binary"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "title": "Community Summarization Prompt"
+                      }
+                    },
+                    "type": "object",
+                    "title": "Body_schedule_index_job_index_post"
+                  },
+                  "Body_upload_files_data_post": {
+                    "properties": {
+                      "files": {
+                        "items": {
+                          "type": "string",
+                          "format": "binary"
+                        },
+                        "type": "array",
+                        "title": "Files"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "files"
+                    ],
+                    "title": "Body_upload_files_data_post"
+                  },
+                  "ClaimResponse": {
+                    "properties": {
+                      "covariate_type": {
+                        "type": "string",
+                        "title": "Covariate Type"
+                      },
+                      "type": {
+                        "type": "string",
+                        "title": "Type"
+                      },
+                      "description": {
+                        "type": "string",
+                        "title": "Description"
+                      },
+                      "subject_id": {
+                        "type": "string",
+                        "title": "Subject Id"
+                      },
+                      "object_id": {
+                        "type": "string",
+                        "title": "Object Id"
+                      },
+                      "source_text": {
+                        "type": "string",
+                        "title": "Source Text"
+                      },
+                      "text_unit_id": {
+                        "type": "string",
+                        "title": "Text Unit Id"
+                      },
+                      "document_ids": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array",
+                        "title": "Document Ids"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "covariate_type",
+                      "type",
+                      "description",
+                      "subject_id",
+                      "object_id",
+                      "source_text",
+                      "text_unit_id",
+                      "document_ids"
+                    ],
+                    "title": "ClaimResponse"
+                  },
+                  "EntityResponse": {
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "title": "Name"
+                      },
+                      "description": {
+                        "type": "string",
+                        "title": "Description"
+                      },
+                      "text_units": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array",
+                        "title": "Text Units"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "name",
+                      "description",
+                      "text_units"
+                    ],
+                    "title": "EntityResponse"
+                  },
+                  "GraphRequest": {
+                    "properties": {
+                      "index_name": {
+                        "type": "string",
+                        "title": "Index Name"
+                      },
+                      "query": {
+                        "type": "string",
+                        "title": "Query"
+                      },
+                      "community_level": {
+                        "anyOf": [
+                          {
+                            "type": "integer"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "title": "Community Level"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "index_name",
+                      "query"
+                    ],
+                    "title": "GraphRequest"
+                  },
+                  "GraphResponse": {
+                    "properties": {
+                      "result": {
+                        "title": "Result"
+                      },
+                      "context_data": {
+                        "title": "Context Data"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "result",
+                      "context_data"
+                    ],
+                    "title": "GraphResponse"
+                  },
+                  "HTTPValidationError": {
+                    "properties": {
+                      "detail": {
+                        "items": {
+                          "$ref": "#/components/schemas/ValidationError"
+                        },
+                        "type": "array",
+                        "title": "Detail"
+                      }
+                    },
+                    "type": "object",
+                    "title": "HTTPValidationError"
+                  },
+                  "IndexNameList": {
+                    "properties": {
+                      "index_name": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array",
+                        "title": "Index Name"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "index_name"
+                    ],
+                    "title": "IndexNameList"
+                  },
+                  "IndexStatusResponse": {
+                    "properties": {
+                      "status_code": {
+                        "type": "integer",
+                        "title": "Status Code"
+                      },
+                      "index_name": {
+                        "type": "string",
+                        "title": "Index Name"
+                      },
+                      "storage_name": {
+                        "type": "string",
+                        "title": "Storage Name"
+                      },
+                      "status": {
+                        "type": "string",
+                        "title": "Status"
+                      },
+                      "percent_complete": {
+                        "type": "number",
+                        "title": "Percent Complete"
+                      },
+                      "progress": {
+                        "type": "string",
+                        "title": "Progress"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "status_code",
+                      "index_name",
+                      "storage_name",
+                      "status",
+                      "percent_complete",
+                      "progress"
+                    ],
+                    "title": "IndexStatusResponse"
+                  },
+                  "RelationshipResponse": {
+                    "properties": {
+                      "source": {
+                        "type": "string",
+                        "title": "Source"
+                      },
+                      "source_id": {
+                        "type": "integer",
+                        "title": "Source Id"
+                      },
+                      "target": {
+                        "type": "string",
+                        "title": "Target"
+                      },
+                      "target_id": {
+                        "type": "integer",
+                        "title": "Target Id"
+                      },
+                      "description": {
+                        "type": "string",
+                        "title": "Description"
+                      },
+                      "text_units": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array",
+                        "title": "Text Units"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "source",
+                      "source_id",
+                      "target",
+                      "target_id",
+                      "description",
+                      "text_units"
+                    ],
+                    "title": "RelationshipResponse"
+                  },
+                  "ReportResponse": {
+                    "properties": {
+                      "text": {
+                        "type": "string",
+                        "title": "Text"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "text"
+                    ],
+                    "title": "ReportResponse"
+                  },
+                  "StorageNameList": {
+                    "properties": {
+                      "storage_name": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array",
+                        "title": "Storage Name"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "storage_name"
+                    ],
+                    "title": "StorageNameList"
+                  },
+                  "TextUnitResponse": {
+                    "properties": {
+                      "text": {
+                        "type": "string",
+                        "title": "Text"
+                      },
+                      "source_document": {
+                        "type": "string",
+                        "title": "Source Document"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "text",
+                      "source_document"
+                    ],
+                    "title": "TextUnitResponse"
+                  },
+                  "ValidationError": {
+                    "properties": {
+                      "loc": {
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "integer"
+                            }
+                          ]
+                        },
+                        "type": "array",
+                        "title": "Location"
+                      },
+                      "msg": {
+                        "type": "string",
+                        "title": "Message"
+                      },
+                      "type": {
+                        "type": "string",
+                        "title": "Error Type"
+                      }
+                    },
+                    "type": "object",
+                    "required": [
+                      "loc",
+                      "msg",
+                      "type"
+                    ],
+                    "title": "ValidationError"
                   }
                 }
               }

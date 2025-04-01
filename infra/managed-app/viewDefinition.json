@@ -6,7 +6,7 @@
             "kind": "Overview",
             "properties": {
                 "header": "Welcome to GraphRAG!",
-                "description": "Enabling customers to build and leverage the power of knowledge graphs every day... <br/><br/> Getting Started: After a successful install of this app, please check out the `Settings` -> `Parameters and Outputs` section, and look for `azure_apim_gateway_url`. <br/><br/> GraphRAG Swagger Docs: <azure_apim_gateway_url>/manpage/docs"
+                "description": "Enabling customers to build and leverage the power of knowledge graphs every day... <br/><br/> Getting Started: Look under the `Settings` -> `Parameters and Outputs` section, and find `azure_apim_gateway_url`. <br/><br/> GraphRAG Swagger Docs: `<azure_apim_gateway_url>/manpage/docs`"
             }
         }
     ]
