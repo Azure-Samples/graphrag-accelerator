@@ -9,6 +9,7 @@ from pathlib import Path
 import yaml
 from azure.cosmos import PartitionKey, ThroughputProperties
 from fastapi import (
+    Depends,
     FastAPI,
     Request,
     status,
@@ -28,6 +29,7 @@ from graphrag_app.api.query import query_route
 from graphrag_app.api.source import source_route
 from graphrag_app.logger.load_logger import load_pipeline_logger
 from graphrag_app.utils.azure_clients import AzureClientManager
+from graphrag_app.utils.common import subscription_key_check
 
 
 async def catch_all_exceptions_middleware(request: Request, call_next):
@@ -163,6 +165,9 @@ app.include_router(graph_route)
 @app.get(
     "/health",
     summary="API health check",
+    dependencies=[Depends(subscription_key_check)]
+    if os.getenv("KUBERNETES_SERVICE_HOST")
+    else None,
 )
 def health_check():
     """Returns a 200 response to indicate the API is healthy."""
