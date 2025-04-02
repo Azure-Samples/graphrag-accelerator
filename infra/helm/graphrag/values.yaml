@@ -30,7 +30,7 @@ ingress:
     service.beta.kubernetes.io/azure-load-balancer-internal: "true"
 
 graphragConfig:
-  AI_SEARCH_AUDIENCE: ""
+  AI_SEARCH_AUDIENCE: "https://search.azure.com"
   AI_SEARCH_URL: ""
   APPLICATIONINSIGHTS_CONNECTION_STRING: ""
   # Must set hidden env variable to true to disable statsbeat. For more information: https://github.com/Azure/azure-sdk-for-python/issues/34804
@@ -53,6 +53,7 @@ master:
     pullPolicy: Always
     # Override the image tag whose default is the chart appVersion.
     tag: ""
+  imagePullSecrets: []
   podAnnotations: {}
   podLabels: {}
   podSecurityContext:

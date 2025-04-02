@@ -1,12 +1,14 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+import os
 import traceback
 from pathlib import Path
 
 import yaml
 from fastapi import (
     APIRouter,
+    Depends,
     HTTPException,
 )
 from graphrag.api.query import global_search, local_search
@@ -22,6 +24,7 @@ from graphrag_app.utils.azure_clients import AzureClientManager
 from graphrag_app.utils.common import (
     get_df,
     sanitize_name,
+    subscription_key_check,
     validate_index_file_exist,
 )
 from graphrag_app.utils.pipeline import PipelineJob
@@ -30,6 +33,8 @@ query_route = APIRouter(
     prefix="/query",
     tags=["Query Operations"],
 )
+if os.getenv("KUBERNETES_SERVICE_HOST"):
+    query_route.dependencies.append(Depends(subscription_key_check))
 
 
 @query_route.post(

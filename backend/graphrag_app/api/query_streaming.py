@@ -10,6 +10,7 @@ import pandas as pd
 import yaml
 from fastapi import (
     APIRouter,
+    Depends,
     HTTPException,
 )
 from fastapi.responses import StreamingResponse
@@ -28,6 +29,7 @@ from graphrag_app.utils.azure_clients import AzureClientManager
 from graphrag_app.utils.common import (
     get_df,
     sanitize_name,
+    subscription_key_check,
     validate_index_file_exist,
 )
 
@@ -37,6 +39,8 @@ query_streaming_route = APIRouter(
     prefix="/query/streaming",
     tags=["Query Streaming Operations"],
 )
+if os.getenv("KUBERNETES_SERVICE_HOST"):
+    query_streaming_route.dependencies.append(Depends(subscription_key_check))
 
 
 @query_streaming_route.post(

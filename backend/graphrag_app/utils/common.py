@@ -4,13 +4,14 @@
 import hashlib
 import os
 import traceback
+from typing import Annotated
 
 import pandas as pd
 from azure.core.exceptions import ResourceNotFoundError
 from azure.cosmos import ContainerProxy, exceptions
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob.aio import ContainerClient
-from fastapi import HTTPException
+from fastapi import Header, HTTPException
 
 from graphrag_app.logger.load_logger import load_pipeline_logger
 from graphrag_app.utils.azure_clients import AzureClientManager
@@ -189,3 +190,19 @@ def desanitize_name(sanitized_container_name: str) -> str | None:
         raise HTTPException(
             status_code=500, detail="Error retrieving original container name."
         )
+
+
+async def subscription_key_check(
+    Ocp_Apim_Subscription_Key: Annotated[str, Header()],
+):
+    """
+    Verifies if user has passed the Ocp_Apim_Subscription_Key (APIM subscription key) in the request header.
+    If it is not present, an HTTPException with a 400 status code is raised.
+    Note: this check is unnecessary (APIM validates subscription keys automatically), but this will add the key
+    as a required parameter in the swagger docs page, enabling users to send requests using the swagger docs "Try it out" feature.
+    """
+    if not Ocp_Apim_Subscription_Key:
+        raise HTTPException(
+            status_code=400, detail="Ocp-Apim-Subscription-Key required"
+        )
+    return Ocp_Apim_Subscription_Key

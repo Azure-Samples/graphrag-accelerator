@@ -1,0 +1,5 @@
+# These owners will be the default owners for everything in
+# the repo. Unless a later match takes precedence,
+# @graphrag-core-team and @societal-resilience-graphrag will be requested for
+# review when someone opens a pull request.
+*       @Azure-Samples/graphrag-core-team @Azure-Samples/societal-resilience-graphrag

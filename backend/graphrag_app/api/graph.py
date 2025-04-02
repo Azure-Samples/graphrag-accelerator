@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+import os
 import traceback
 
 from fastapi import (
@@ -14,6 +15,7 @@ from graphrag_app.logger.load_logger import load_pipeline_logger
 from graphrag_app.utils.azure_clients import AzureClientManager
 from graphrag_app.utils.common import (
     sanitize_name,
+    subscription_key_check,
     validate_index_file_exist,
 )
 
@@ -21,6 +23,8 @@ graph_route = APIRouter(
     prefix="/graph",
     tags=["Graph Operations"],
 )
+if os.getenv("KUBERNETES_SERVICE_HOST"):
+    graph_route.dependencies.append(Depends(subscription_key_check))
 
 
 @graph_route.get(
