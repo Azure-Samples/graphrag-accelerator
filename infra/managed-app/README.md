@@ -93,4 +93,4 @@ There are two deployment options to consider when deploying a managed app. As an
 * 1-click Deployment Button
 If `mainTemplate.json` is hosted somewhere publicly (i.e. on Github), a deployment button can be created that deploys the app when clicked, like the the example below.
 
-    [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure-Samples%2Fgraphrag-accelerator%2Frefs%2Fheads%2Fharjit-managed-app%2Finfra%2FmainTemplate.json)
+    [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure-Samples%2Fgraphrag-accelerator%2Frefs%2Fheads%2Fmain%2Finfra%2Fmanaged-app%2FmainTemplate.json)
