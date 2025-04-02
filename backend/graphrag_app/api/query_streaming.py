@@ -1,12 +1,14 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+import os
 import json
 import traceback
 from typing import Dict, List
 
 from fastapi import (
     APIRouter,
+    Depends,
     HTTPException,
 )
 from fastapi.responses import StreamingResponse
@@ -31,6 +33,7 @@ from graphrag_app.typing.models import (
 from graphrag_app.utils.common import (
     get_data_tables,
     sanitize_name,
+    subscription_key_check,
     update_multi_index_context_data,
 )
 
@@ -38,6 +41,8 @@ query_streaming_route = APIRouter(
     prefix="/query/streaming",
     tags=["Query Streaming Operations"],
 )
+if os.getenv("KUBERNETES_SERVICE_HOST"):
+    query_streaming_route.dependencies.append(Depends(subscription_key_check))
 
 
 @query_streaming_route.post(

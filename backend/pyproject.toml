@@ -48,7 +48,6 @@ azure-search-documents = ">=11.4.0"
 azure-storage-blob = ">=12.19.0"
 environs = ">=9.5.0"
 fastapi = ">=0.110.0"
-fastapi-offline = ">=1.7.3"
 fastparquet = ">=2023.10.1"
 fsspec = ">=2024.2.0"
 graphrag = { git = "https://github.com/microsoft/graphrag.git", rev = "ffd8db7104defdcd131e5af38473d2f0815e3cf7" }

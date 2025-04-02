@@ -1,11 +1,13 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+import os
 import traceback
 from pathlib import Path
 
 from fastapi import (
     APIRouter,
+    Depends,
     HTTPException,
 )
 from graphrag.api.query import drift_search as graphrag_drift_search
@@ -27,6 +29,7 @@ from graphrag_app.utils.common import (
     get_df,
     sanitize_name,
     update_multi_index_context_data,
+    subscription_key_check,
     validate_index_file_exist,
 )
 from graphrag_app.utils.pipeline import PipelineJob
@@ -35,6 +38,8 @@ query_route = APIRouter(
     prefix="/query",
     tags=["Query Operations"],
 )
+if os.getenv("KUBERNETES_SERVICE_HOST"):
+    query_route.dependencies.append(Depends(subscription_key_check))
 
 
 @query_route.post(

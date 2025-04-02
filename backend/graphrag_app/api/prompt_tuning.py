@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+import os
 import traceback
 from pathlib import Path
 
@@ -15,9 +16,11 @@ from graphrag.config.create_graphrag_config import create_graphrag_config
 
 from graphrag_app.logger.load_logger import load_pipeline_logger
 from graphrag_app.utils.azure_clients import AzureClientManager
-from graphrag_app.utils.common import sanitize_name
+from graphrag_app.utils.common import sanitize_name, subscription_key_check
 
 prompt_tuning_route = APIRouter(prefix="/index/config", tags=["Prompt Tuning"])
+if os.getenv("KUBERNETES_SERVICE_HOST"):
+    prompt_tuning_route.dependencies.append(Depends(subscription_key_check))
 
 
 @prompt_tuning_route.get(

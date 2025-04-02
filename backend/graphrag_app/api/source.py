@@ -1,7 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-
+import os
 import traceback
 
 import pandas as pd
@@ -18,6 +18,7 @@ from graphrag_app.typing.models import (
 from graphrag_app.utils.common import (
     pandas_storage_options,
     sanitize_name,
+    subscription_key_check,
     validate_index_file_exist,
 )
 
@@ -25,6 +26,9 @@ source_route = APIRouter(
     prefix="/source",
     tags=["Sources"],
 )
+
+if os.getenv("KUBERNETES_SERVICE_HOST"):
+    source_route.dependencies.append(Depends(subscription_key_check))
 
 
 COMMUNITY_REPORT_TABLE = "output/create_final_community_reports.parquet"
