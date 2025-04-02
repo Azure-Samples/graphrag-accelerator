@@ -3,7 +3,10 @@
 
 import hashlib
 import os
+import sys
 import traceback
+from pathlib import Path
+from typing import Dict, List
 
 import pandas as pd
 from azure.core.exceptions import ResourceNotFoundError
@@ -11,8 +14,12 @@ from azure.cosmos import ContainerProxy, exceptions
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob.aio import ContainerClient
 from fastapi import HTTPException
+from graphrag.config.load_config import load_config
+from graphrag.config.models.graph_rag_config import GraphRagConfig
+from graphrag.config.models.vector_store_config import VectorStoreConfig
 
 from graphrag_app.logger.load_logger import load_pipeline_logger
+from graphrag_app.typing.models import QueryData
 from graphrag_app.utils.azure_clients import AzureClientManager
 
 
@@ -189,3 +196,164 @@ def desanitize_name(sanitized_container_name: str) -> str | None:
         raise HTTPException(
             status_code=500, detail="Error retrieving original container name."
         )
+
+
+def get_data_tables(
+        index_names: Dict[str, str],
+        community_level: int = -1,
+        include_local_context: bool = True
+    ) -> QueryData:
+    """
+    Get the data tables for the given index names.
+
+    Args:
+        index_names (str | List[str]): The index names.
+
+    Returns:
+        QueryData: The data objects for the given index names.
+    """
+    logger = load_pipeline_logger()
+
+    COMMUNITY_TABLE = "output/communities.parquet"
+    COMMUNITY_REPORT_TABLE = "output/community_reports.parquet"
+    COVARIATES_TABLE = "output/covariates.parquet"
+    ENTITIES_TABLE = "output/entities.parquet"
+    RELATIONSHIPS_TABLE = "output/relationships.parquet"
+    TEXT_UNITS_TABLE = "output/text_units.parquet"
+
+    if isinstance(community_level, int):
+        COMMUNITY_LEVEL = community_level
+    elif isinstance(community_level, float):
+        COMMUNITY_LEVEL = int(community_level)
+    else:
+        # community level 1 is best for local and drift search, level 2 is best got global search
+        COMMUNITY_LEVEL = 1 if include_local_context else 2
+
+    if COMMUNITY_LEVEL == -1:
+        # get all available communities when the community level is set to -1
+        COMMUNITY_LEVEL = sys.maxsize  # get the largest possible integer in python
+
+    sanitized_name = index_names["sanitized_name"]
+
+    # check for existence of files the query relies on to validate the index is complete
+    validate_index_file_exist(sanitized_name, COMMUNITY_TABLE)
+    validate_index_file_exist(sanitized_name, COMMUNITY_REPORT_TABLE)
+    validate_index_file_exist(sanitized_name, ENTITIES_TABLE)
+    validate_index_file_exist(sanitized_name, RELATIONSHIPS_TABLE)
+    validate_index_file_exist(sanitized_name, TEXT_UNITS_TABLE)
+
+    # load community reports data
+    communities_df = get_df(f"abfs://{sanitized_name}/{COMMUNITY_TABLE}")
+    communities_df[communities_df.level <= COMMUNITY_LEVEL]
+
+    # load community reports data
+    community_report_df = get_df(f"abfs://{sanitized_name}/{COMMUNITY_REPORT_TABLE}")
+    community_report_df[community_report_df.level <= COMMUNITY_LEVEL]
+    
+    entities_df = get_df(f"abfs://{sanitized_name}/{ENTITIES_TABLE}")
+    
+    if include_local_context:
+        # we only need to get these tables when we are not doing a global query
+        text_units_df = get_df(f"abfs://{sanitized_name}/{TEXT_UNITS_TABLE}")
+        relationships_df = get_df(f"abfs://{sanitized_name}/{RELATIONSHIPS_TABLE}")
+        covariates_df = None
+        try:
+            covariates_df = get_df(f"abfs://{sanitized_name}/{COVARIATES_TABLE}")
+        except Exception as e:
+            logger.warning(f"Covariates table not found: {e}")
+
+    # load custom pipeline settings
+    ROOT_DIR = Path(__file__).resolve().parent.parent.parent / "scripts/settings.yaml"
+    
+    # layer the custom settings on top of the default configuration settings of graphrag
+    config: GraphRagConfig = load_config(
+        root_dir=ROOT_DIR.parent, 
+        config_filepath=ROOT_DIR
+    )
+    # dynamically assign the sanitized index name 
+    config.vector_store["default_vector_store"].container_name = sanitized_name
+    
+    data = QueryData(
+        communities=communities_df,
+        community_reports=community_report_df,
+        entities=entities_df,
+        community_level=COMMUNITY_LEVEL,
+        config=config,
+    )
+    if include_local_context:
+        # add local context to the data object
+        data.text_units = text_units_df
+        data.relationships = relationships_df
+        data.covariates = covariates_df
+    return data
+
+
+def update_multi_index_context_data(
+    context_data,
+    index_name: str,
+    index_id: str,
+):
+    """
+    Update context data with the links dict so that it contains both the index name and community id.
+
+    Parameters
+    ----------
+    - context_data (str | list[pd.DataFrame] | dict[str, pd.DataFrame]): The context data to update.
+    - index_name (str): The name of the index.
+    - index_id (str): The id of the index.
+
+    Returns
+    -------
+    str | list[pd.DataFrame] | dict[str, pd.DataFrame]: The updated context data.
+    """
+    updated_context_data = {}
+    for key in context_data:
+        updated_entry = []
+        if key == "reports":
+            updated_entry = [
+                {
+                    **entry,
+                    "index_name": index_name,
+                    "index_id": index_id,
+                } 
+                for entry in context_data[key].to_dict(orient="records")
+            ]
+        if key == "entities":
+            updated_entry = [
+                {
+                    **entry,
+                    "index_name": index_name,
+                    "index_id": index_id,
+                }
+                for entry in context_data[key].to_dict(orient="records")
+            ]
+        if key == "relationships":
+            updated_entry = [
+                {
+                    **entry,
+                    "index_name": index_name,
+                    "index_id": index_id,
+                }
+                for entry in context_data[key].to_dict(orient="records")
+            ]
+        if key == "claims":
+            updated_entry = [
+                {
+                    **entry,
+                    "index_name": index_name,
+                    "index_id": index_id,
+                }
+                for entry in context_data[key].to_dict(orient="records")
+            ]
+        if key == "sources":
+            updated_entry = [
+                {
+                    **entry,
+                    "index_name": index_name,
+                    "index_id": index_id,
+                }
+                for entry in context_data[key].to_dict(orient="records")
+            ]
+        updated_context_data[key] = updated_entry
+    return updated_context_data
+    

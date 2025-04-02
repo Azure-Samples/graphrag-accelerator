@@ -1,11 +1,16 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+from io import StringIO
 from typing import (
     Any,
+    Dict,
     List,
+    Optional,
 )
 
+import pandas as pd
+from graphrag.callbacks.query_callbacks import QueryCallbacks
 from pydantic import BaseModel
 
 
@@ -49,6 +54,10 @@ class GraphLocalRequest(GraphRequest):
     conversation_history_max_turns: int = 5
 
 
+class GraphDriftRequest(GraphRequest):
+    conversation_history_max_turns: int = 5
+
+
 class GraphResponse(BaseModel):
     result: Any
     context_data: Any
@@ -83,6 +92,35 @@ class RelationshipResponse(BaseModel):
     target_id: int
     description: str
     text_units: list[str]
+
+
+class QueryData(BaseModel):
+    class Config:
+        arbitrary_types_allowed = True
+
+    communities: pd.DataFrame
+    community_reports: pd.DataFrame
+    entities: pd.DataFrame
+    text_units: Optional[pd.DataFrame] = None
+    relationships: Optional[pd.DataFrame] = None
+    covariates: Optional[pd.DataFrame] = None
+    community_level: Optional[int] = 1
+    config: Optional[Any] = None
+
+
+class StreamingCallback(QueryCallbacks):
+    context: Optional[Any] = None
+    response: Optional[StringIO] = StringIO()
+
+    def on_context(self, context) -> None:
+        """Handle when context data is constructed."""
+        super().on_context(context)
+        self.context = context
+
+    def on_llm_new_token(self, token) -> None:
+        """Handle when a new token is generated."""
+        super().on_llm_new_token(token)
+        self.response.write(token)
 
 
 class StorageNameList(BaseModel):
