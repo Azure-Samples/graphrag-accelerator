@@ -1,10 +1,13 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+import csv
 import hashlib
 import os
 import traceback
-from typing import Annotated
+from hashlib import sha256
+from io import StringIO
+from typing import Annotated, BinaryIO
 
 import pandas as pd
 from azure.core.exceptions import ResourceNotFoundError
@@ -206,3 +209,92 @@ async def subscription_key_check(
             status_code=400, detail="Ocp-Apim-Subscription-Key required"
         )
     return Ocp_Apim_Subscription_Key
+
+
+async def create_cache(container_client: ContainerClient) -> None:
+    """
+    Create a file cache to track the uploaded files if it doesn't exist.
+    """
+    try:
+        cache_blob_client = container_client.get_blob_client("uploaded_files_cache.csv")
+        if not await cache_blob_client.exists():
+            # create the empty file cache csv
+            headers = [["Filename", "Hash"]]
+            with open("uploaded_files_cache.csv", "w", newline="") as f:
+                writer = csv.writer(f, delimiter=",")
+                writer.writerows(headers)
+
+            # upload to Azure Blob Storage and remove the temporary file
+            with open("uploaded_files_cache.csv", "rb") as f:
+                await cache_blob_client.upload_blob(f, overwrite=True)
+            if os.path.exists("uploaded_files_cache.csv"):
+                os.remove("uploaded_files_cache.csv")
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="Error creating file cache in Azure Blob Storage.",
+        )
+
+
+async def check_cache(file_stream: BinaryIO, container_client: ContainerClient) -> bool:
+    """
+    Check if the file has already been uploaded.
+    """
+    try:
+        # load the file cache
+        cache_blob_client = container_client.get_blob_client("uploaded_files_cache.csv")
+        cache_download_stream = await cache_blob_client.download_blob()
+        cache_bytes = await cache_download_stream.readall()
+        cache_content = StringIO(cache_bytes.decode("utf-8"))
+
+        # comupte the sha256 hash of the file and check if it exists in the cache
+        cache_reader = csv.reader(cache_content, delimiter=",")
+        file_hash = sha256(file_stream.read()).hexdigest()
+        for row in cache_reader:
+            if file_hash in row:
+                return True
+        return False
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="Error checking file cache in Azure Blob Storage.",
+        )
+
+
+async def update_cache(
+    filename: str, file_stream: BinaryIO, container_client: ContainerClient
+) -> None:
+    """
+    Update the file cache with the new file by appending a new row to the cache.
+    """
+    try:
+        # Load the file cache
+        cache_blob_client = container_client.get_blob_client("uploaded_files_cache.csv")
+        cache_download_stream = await cache_blob_client.download_blob()
+        cache_bytes = await cache_download_stream.readall()
+        cache_content = StringIO(cache_bytes.decode("utf-8"))
+
+        # Read existing rows and prepare to append
+        cache_reader = csv.reader(cache_content, delimiter=",")
+        existing_rows = list(cache_reader)
+
+        # Compute the sha256 hash of the file and append it to the cache
+        file_hash = sha256(file_stream.read()).hexdigest()
+        new_row = [filename, file_hash]
+        existing_rows.append(new_row)
+
+        # Write the updated content back to the StringIO object
+        updated_cache_content = StringIO()
+        cache_writer = csv.writer(updated_cache_content, delimiter=",")
+        cache_writer.writerows(existing_rows)
+
+        # Upload the updated cache to Azure Blob Storage
+        updated_cache_content.seek(0)
+        await cache_blob_client.upload_blob(
+            updated_cache_content.getvalue().encode("utf-8"), overwrite=True
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="Error updating file cache in Azure Blob Storage.",
+        )
