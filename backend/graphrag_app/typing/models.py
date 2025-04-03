@@ -31,6 +31,7 @@ class ClaimResponse(BaseModel):
 
 class EntityResponse(BaseModel):
     name: str
+    type: str
     description: str
     text_units: list[str]
 
@@ -128,5 +129,7 @@ class StorageNameList(BaseModel):
 
 
 class TextUnitResponse(BaseModel):
+    text_unit_id: str
     text: str
     source_document: str
+    source_document_id: str

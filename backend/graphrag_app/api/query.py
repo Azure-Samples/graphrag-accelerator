@@ -13,8 +13,6 @@ from fastapi import (
 from graphrag.api.query import drift_search as graphrag_drift_search
 from graphrag.api.query import global_search as graphrag_global_search
 from graphrag.api.query import local_search as graphrag_local_search
-from graphrag.config.load_config import load_config
-from graphrag.config.models.graph_rag_config import GraphRagConfig
 
 from graphrag_app.logger.load_logger import load_pipeline_logger
 from graphrag_app.typing.models import (
@@ -26,11 +24,9 @@ from graphrag_app.typing.models import (
 from graphrag_app.typing.pipeline import PipelineJobState
 from graphrag_app.utils.common import (
     get_data_tables,
-    get_df,
     sanitize_name,
-    update_multi_index_context_data,
     subscription_key_check,
-    validate_index_file_exist,
+    update_multi_index_context_data,
 )
 from graphrag_app.utils.pipeline import PipelineJob
 
