@@ -1,0 +1,13 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/viewdefinition/0.0.1-preview/ViewDefinition.json#",
+    "contentVersion": "0.0.0.1",
+    "views": [
+        {
+            "kind": "Overview",
+            "properties": {
+                "header": "Welcome to GraphRAG!",
+                "description": "Enabling customers to build and leverage the power of knowledge graphs every day... <br/><br/> Getting Started: Look under the `Settings` -> `Parameters and Outputs` section, and find `azure_apim_gateway_url`. <br/><br/> GraphRAG Swagger Docs: `<azure_apim_gateway_url>/manpage/docs`"
+            }
+        }
+    ]
+}

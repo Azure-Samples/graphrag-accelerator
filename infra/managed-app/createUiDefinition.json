@@ -1,0 +1,474 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/0.1.2-preview/CreateUIDefinition.MultiVm.json#",
+  "handler": "Microsoft.Azure.CreateUIDef",
+  "version": "0.1.2-preview",
+  "parameters": {
+    "config": {
+      "isWizard": false,
+      "basics": {
+        "description": "Welcome to **[GraphRAG](https://aka.ms/graphrag)**.",
+        "subscription": {
+          "constraints": {
+            "validations": [
+              {
+                "permission": "Microsoft.Compute/virtualmachines/write",
+                "message": "Must have write permission for the virtual machine."
+              }
+            ]
+          },
+          "resourceProviders": [
+            "Microsoft.ApiManagement",
+            "Microsoft.Authorization",
+            "Microsoft.Compute",
+            "Microsoft.ContainerRegistry",
+            "Microsoft.ContainerService",
+            "Microsoft.DocumentDB",
+            "Microsoft.Insights",
+            "Microsoft.ManagedIdentity",
+            "Microsoft.Network",
+            "Microsoft.OperationalInsights",
+            "Microsoft.Search",
+            "Microsoft.Storage",
+            "Microsoft.CognitiveServices"
+          ]
+        },
+        "resourceGroup": {
+          "constraints": {
+            "validations": [
+              {
+                "isValid": "[not(contains(resourceGroup().name, 'test'))]",
+                "message": "Resource group name can't contain 'test'."
+              }
+            ]
+          },
+          "allowExisting": false
+        },
+        "location": {
+          "resourceTypes": [
+            "Microsoft.ApiManagement/service",
+            "Microsoft.Authorization/roleAssignments",
+            "Microsoft.CognitiveServices/accounts",
+            "Microsoft.ContainerRegistry/registries",
+            "Microsoft.ContainerService/managedClusters",
+            "Microsoft.DocumentDB/databaseAccounts",
+            "Microsoft.Insights/components",
+            "Microsoft.Insights/privateLinkScopes",
+            "Microsoft.ManagedIdentity/userAssignedIdentities",
+            "Microsoft.Network/networkSecurityGroups",
+            "Microsoft.Network/privateDnsZones",
+            "Microsoft.Network/privateEndpoints",
+            "Microsoft.Network/publicIPAddresses",
+            "Microsoft.Network/virtualNetworks",
+            "Microsoft.OperationalInsights/workspaces",
+            "Microsoft.Search/searchServices",
+            "Microsoft.Storage/storageAccounts"
+          ]
+        }
+      }
+    },
+    "basics": [],
+    "steps": [
+      {
+        "name": "apiSettings",
+        "label": "API Configuration",
+        "description": "Customize GraphRAG API endpoint behavior:",
+        "subLabel": {
+          "preValidation": "Configure the API settings",
+          "postValidation": "Complete"
+        },
+        "elements": [
+          {
+            "name": "apimTier",
+            "type": "Microsoft.Common.DropDown",
+            "label": "APIM Tier",
+            "defaultValue": "StandardV2",
+            "toolTip": "API Management tier to use.",
+            "visible": true,
+            "constraints": {
+              "allowedValues": [
+                {
+                  "label": "Developer",
+                  "value": "Developer"
+                },
+                {
+                  "label": "StandardV2",
+                  "value": "StandardV2"
+                }
+              ],
+              "required": true
+            }
+          },
+          {
+            "name": "apimPublisherName",
+            "type": "Microsoft.Common.TextBox",
+            "label": "API Publisher",
+            "toolTip": "Provide the name of a person or company that will manage this API.",
+            "defaultValue": "Microsoft",
+            "constraints": {
+              "required": true,
+              "regex": "^(?!\\s*$).+",
+              "validationMessage": "Must provide a valid name."
+            }
+          },
+          {
+            "name": "apimPublisherEmail",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Name",
+            "toolTip": "Provide an email address associated with a person or company that will manage this API.",
+            "defaultValue": "publisher@microsoft.com",
+            "constraints": {
+              "required": true,
+              "regex": "^(?!\\s*$).+",
+              "validationMessage": "Must provide a valid storage account name."
+            }
+          }
+        ]
+      },
+      {
+        "name": "aoaiSettings",
+        "label": "OpenAI",
+        "description": "Customize Azure OpenAI model settings:",
+        "subLabel": {
+          "preValidation": "Configure AOAI settings",
+          "postValidation": "Complete"
+        },
+        "elements": [
+          {
+            "name": "deployNewAoai",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Deploy new AOAI?",
+            "toolTip": "Whether or not to deploy a new AOAI.",
+            "defaultValue": false,
+            "constraints": {
+              "required": false
+            }
+          },
+          {
+            "name": "aoaiSelector",
+            "_comment": "For more information: https://learn.microsoft.com/en-us/azure/azure-resource-manager/managed-applications/microsoft-solutions-resourceselector",
+            "type": "Microsoft.Solutions.ResourceSelector",
+            "label": "Select existing AOAI",
+            "resourceType": "Microsoft.CognitiveServices/accounts",
+            "options": {
+              "filter": {
+                "subscription": "onBasics"
+              }
+            },
+            "visible": "[equals(steps('aoaiSettings').deployNewAoai, false)]"
+          },
+          {
+            "name": "getModels",
+            "_comment": "This element makes a REST call to the AOAI service and returns a list of available models for the deployer's chosen cloud region. For more information: https://learn.microsoft.com/en-us/rest/api/aiservices/accountmanagement/models/list",
+            "type": "Microsoft.Solutions.ArmApiControl",
+            "request": {
+              "method": "GET",
+              "path": "[concat(subscription().id, '/providers/Microsoft.CognitiveServices/locations/', location(), '/models?api-version=2024-10-01')]"
+            }
+          },
+          {
+            "name": "getModelDeployments",
+            "_comment": "This element makes a REST call to a selected AOAI resource and returns a list of current model deployments. For more information: https://learn.microsoft.com/en-us/rest/api/aiservices/accountmanagement/deployments/list",
+            "type": "Microsoft.Solutions.ArmApiControl",
+            "request": {
+              "method": "GET",
+              "path": "[concat(steps('aoaiSettings').aoaiSelector.id, '/deployments?api-version=2024-10-01')]"
+            }
+          },
+          {
+            "name": "llmModelName",
+            "type": "Microsoft.Common.DropDown",
+            "label": "LLM Model",
+            "defaultValue": "gpt-4o",
+            "toolTip": "LLM model to use.",
+            "constraints": {
+              "required": true,
+              "allowedValues": "[map(steps('aoaiSettings').getModels.value, (item) => parse(concat('{\"label\":\"', item.model.name, '\",\"value\":\"', item.model.name, '\"}')))]"
+            },
+            "visible": "[or(steps('aoaiSettings').deployNewAoai, not(empty(steps('aoaiSettings').aoaiSelector.id)))]"
+          },
+          {
+            "name": "llmModelDeploymentName",
+            "type": "Microsoft.Common.DropDown",
+            "label": "LLM Model Deployment",
+            "toolTip": "Select a LLM model deployment to use.",
+            "constraints": {
+              "required": false,
+              "allowedValues": "[map(steps('aoaiSettings').getModelDeployments.value, (item) => parse(concat('{\"label\":\"', item.name, '\",\"value\":\"', item.name, '\"}')))]"
+            },
+            "visible": "[and(equals(steps('aoaiSettings').deployNewAoai, false), not(empty(steps('aoaiSettings').aoaiSelector.id)))]"
+          },
+          {
+            "name": "llmModelVersion",
+            "type": "Microsoft.Common.DropDown",
+            "label": "LLM Model Version",
+            "defaultValue": "2024-08-06",
+            "toolTip": "LLM model version to use.",
+            "constraints": {
+              "allowedValues": [
+                {
+                  "label": "2024-08-06",
+                  "value": "2024-08-06"
+                },
+                {
+                  "label": "2024-07-18",
+                  "value": "2024-07-18"
+                }
+              ],
+              "required": true
+            },
+            "visible": "[or(steps('aoaiSettings').deployNewAoai, not(empty(steps('aoaiSettings').aoaiSelector.id)))]"
+          },
+          {
+            "name": "llmModelQuota",
+            "type": "Microsoft.Common.TextBox",
+            "label": "LLM Model Quota (x1000)",
+            "placeholder": "85",
+            "defaultValue": "1",
+            "toolTip": "LLM model quota to use.",
+            "constraints": {
+              "required": true,
+              "regex": "^[1-9][0-9]*$",
+              "validationMessage": "Must provide a valid amount (> 0) of LLM model quota."
+            },
+            "visible": "[or(steps('aoaiSettings').deployNewAoai, not(empty(steps('aoaiSettings').aoaiSelector.id)))]"
+          },
+          {
+            "name": "embeddingModelName",
+            "type": "Microsoft.Common.DropDown",
+            "label": "Embedding Model",
+            "defaultValue": "text-embedding-ada-002",
+            "toolTip": "Embedding model to use.",
+            "constraints": {
+              "required": true,
+              "allowedValues": "[map(steps('aoaiSettings').getModels.value, (item) => parse(concat('{\"label\":\"', item.model.name, '\",\"value\":\"', item.model.name, '\"}')))]"
+            },
+            "visible": "[or(steps('aoaiSettings').deployNewAoai, not(empty(steps('aoaiSettings').aoaiSelector.id)))]"
+          },
+          {
+            "name": "embeddingModelDeploymentName",
+            "type": "Microsoft.Common.DropDown",
+            "label": "Embedding Model Deployment",
+            "toolTip": "Select am embedding model deployment to use.",
+            "constraints": {
+              "required": false,
+              "allowedValues": "[map(steps('aoaiSettings').getModelDeployments.value, (item) => parse(concat('{\"label\":\"', item.name, '\",\"value\":\"', item.name, '\"}')))]"
+            },
+            "visible": "[and(equals(steps('aoaiSettings').deployNewAoai, false), not(empty(steps('aoaiSettings').aoaiSelector.id)))]"
+          },
+          {
+            "name": "embeddingModelVersion",
+            "type": "Microsoft.Common.DropDown",
+            "label": "Embedding Model Version",
+            "defaultValue": "2",
+            "toolTip": "Embedding model version to use.",
+            "constraints": {
+              "allowedValues": [
+                {
+                  "label": "2",
+                  "value": "2"
+                },
+                {
+                  "label": "1",
+                  "value": "1"
+                }
+              ],
+              "required": true
+            },
+            "visible": "[or(steps('aoaiSettings').deployNewAoai, not(empty(steps('aoaiSettings').aoaiSelector.id)))]"
+          },
+          {
+            "name": "embeddingModelQuota",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Embedding Model Quota (x1000)",
+            "placeholder": "100",
+            "defaultValue": "1",
+            "toolTip": "Embedding model quota to use.",
+            "constraints": {
+              "required": true,
+              "regex": "^[1-9][0-9]*$",
+              "validationMessage": "Must provide a valid amount (> 0) of embedding model quota."
+            },
+            "visible": "[or(steps('aoaiSettings').deployNewAoai, not(empty(steps('aoaiSettings').aoaiSelector.id)))]"
+          }
+        ]
+      },
+      {
+        "name": "networking",
+        "label": "Networking",
+        "description": "Customize networking & security settings:",
+        "subLabel": {
+          "preValidation": "Configure network settings",
+          "postValidation": "Complete"
+        },
+        "elements": [
+          {
+            "name": "enablePrivateEndpoints",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Enable private endpoints.",
+            "toolTip": "Whether or not to use private endpoint connections.",
+            "defaultValue": true,
+            "constraints": {
+              "required": false
+            }
+          }
+        ]
+      },
+      {
+        "name": "advanced",
+        "label": "Advanced",
+        "description": "**Demo Purposes Only** <br /> Specify additional configuration settings that are required as part of the deployment process. These settings would typically be hidden from the user and hardcoded in an actual managed app.",
+        "subLabel": {
+          "preValidation": "Configure advanced settings",
+          "postValidation": "Complete"
+        },
+        "elements": [
+          {
+            "name": "storageSettings",
+            "type": "Microsoft.Common.Section",
+            "label": "Storage",
+            "elements": [
+              {
+                "name": "announcement",
+                "type": "Microsoft.Common.TextBlock",
+                "visible": true,
+                "options": {
+                  "text": "Temporary access to a public storage account container is required for deployment."
+                }
+              },
+              {
+                "_comment": "For more information: https://learn.microsoft.com/en-us/azure/azure-resource-manager/managed-applications/microsoft-solutions-resourceselector",
+                "name": "storageSelector",
+                "type": "Microsoft.Solutions.ResourceSelector",
+                "label": "Storage Account",
+                "resourceType": "Microsoft.Storage/storageAccounts",
+                "options": {
+                  "filter": {
+                    "subscription": "onBasics"
+                  }
+                },
+                "visible": true
+              },
+              {
+                "name": "accountKey",
+                "type": "Microsoft.Common.PasswordBox",
+                "label": {
+                  "password": "Account Access Key"
+                },
+                "toolTip": "Provide a valid account key associated with the storage account.",
+                "constraints": {
+                  "required": true,
+                  "regex": "^(?!\\s*$).+",
+                  "validationMessage": "Must provide a valid account key."
+                },
+                "options": {
+                  "hideConfirmation": true
+                }
+              }
+            ]
+          },
+          {
+            "name": "containerRegistrySettings",
+            "type": "Microsoft.Common.Section",
+            "label": "Container Registry",
+            "elements": [
+              {
+                "name": "announcement",
+                "type": "Microsoft.Common.TextBlock",
+                "visible": true,
+                "options": {
+                  "text": "Access to a container registry that contains the graphrag docker image is required for deployment."
+                }
+              },
+              {
+                "name": "endpoint",
+                "type": "Microsoft.Common.TextBox",
+                "label": "Registry Endpoint",
+                "toolTip": "Provide the complete endpoint of an existing container registry that contains the graphrag docker image.",
+                "constraints": {
+                  "required": true,
+                  "regex": "^[a-zA-Z0-9]+\\.azurecr\\.io$",
+                  "validationMessage": "Must provide a valid container registry name of the form <registry_name>.azurecr.io."
+                }
+              },
+              {
+                "name": "acrTokenName",
+                "type": "Microsoft.Common.TextBox",
+                "label": "Token Name",
+                "toolTip": "Provide the name of a token to access the container registry that contains the graphrag docker image.",
+                "constraints": {
+                  "required": true,
+                  "regex": "^(?!\\s*$).+",
+                  "validationMessage": "Must provide a valid token name."
+                }
+              },
+              {
+                "name": "acrTokenPassword",
+                "type": "Microsoft.Common.PasswordBox",
+                "label": {
+                  "password": "Token Password"
+                },
+                "toolTip": "Provide a token password to access the container registry that contains the graphrag docker image.",
+                "constraints": {
+                  "required": true,
+                  "regex": "^(?!\\s*$).+",
+                  "validationMessage": "Must provide a valid token password."
+                },
+                "options": {
+                  "hideConfirmation": true
+                }
+              },
+              {
+                "name": "imageName",
+                "type": "Microsoft.Common.TextBox",
+                "label": "Docker Image Name",
+                "toolTip": "Provide the name of the graphrag docker image to use.",
+                "defaultValue": "graphrag",
+                "constraints": {
+                  "required": true,
+                  "regex": "^(?!\\s*$).+",
+                  "validationMessage": "Must provide a valid docker image name."
+                }
+              },
+              {
+                "name": "imageVersion",
+                "type": "Microsoft.Common.TextBox",
+                "label": "Docker Image Version",
+                "toolTip": "Provide the version tag of the graphrag docker image to use.",
+                "defaultValue": "latest",
+                "constraints": {
+                  "required": true,
+                  "regex": "^(?!\\s*$).+",
+                  "validationMessage": "Must provide a valid docker image version tag."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "outputs": {
+      "location": "[location()]",
+      "apiPublisherName": "[steps('apiSettings').apimPublisherName]",
+      "apiPublisherEmail": "[steps('apiSettings').apimPublisherEmail]",
+      "enablePrivateEndpoints": "[steps('networking').enablePrivateEndpoints]",
+      "apimTier": "[steps('apiSettings').apimTier]",
+      "deployAoai": "[steps('aoaiSettings').deployNewAoai]",
+      "existingAoaiId": "[steps('aoaiSettings').aoaiSelector.id]",
+      "llmModelName": "[steps('aoaiSettings').llmModelName]",
+      "llmModelDeploymentName": "[if(steps('aoaiSettings').deployNewAoai, steps('aoaiSettings').llmModelName, steps('aoaiSettings').llmModelDeploymentName)]",
+      "llmModelVersion": "[steps('aoaiSettings').llmModelVersion]",
+      "llmModelQuota": "[int(steps('aoaiSettings').llmModelQuota)]",
+      "embeddingModelName": "[steps('aoaiSettings').embeddingModelName]",
+      "embeddingModelDeploymentName": "[if(steps('aoaiSettings').deployNewAoai, steps('aoaiSettings').embeddingModelName, steps('aoaiSettings').embeddingModelDeploymentName)]",
+      "embeddingModelVersion": "[steps('aoaiSettings').embeddingModelVersion]",
+      "embeddingModelQuota": "[int(steps('aoaiSettings').embeddingModelQuota)]",
+      "managedAppStorageAccountName": "[steps('advanced').storageSettings.storageSelector.name]",
+      "managedAppStorageAccountKey": "[steps('advanced').storageSettings.accountKey]",
+      "existingAcrLoginServer": "[steps('advanced').containerRegistrySettings.endpoint]",
+      "acrTokenName": "[steps('advanced').containerRegistrySettings.acrTokenName]",
+      "acrTokenPassword": "[steps('advanced').containerRegistrySettings.acrTokenPassword]",
+      "graphragImageName": "[steps('advanced').containerRegistrySettings.imageName]",
+      "graphragImageVersion": "[steps('advanced').containerRegistrySettings.imageVersion]"
+    }
+  }
+}

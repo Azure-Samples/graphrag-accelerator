@@ -9,13 +9,13 @@ from pathlib import Path
 import yaml
 from azure.cosmos import PartitionKey, ThroughputProperties
 from fastapi import (
+    Depends,
     FastAPI,
     Request,
     status,
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
-from fastapi_offline import FastAPIOffline
 from kubernetes import (
     client,
     config,
@@ -29,6 +29,7 @@ from graphrag_app.api.query import query_route
 from graphrag_app.api.source import source_route
 from graphrag_app.logger.load_logger import load_pipeline_logger
 from graphrag_app.utils.azure_clients import AzureClientManager
+from graphrag_app.utils.common import subscription_key_check
 
 
 async def catch_all_exceptions_middleware(request: Request, call_next):
@@ -96,12 +97,19 @@ async def lifespan(app: FastAPI):
         ROOT_DIR = Path(__file__).resolve().parent.parent
         with (ROOT_DIR / "manifests/cronjob.yaml").open("r") as f:
             manifest = yaml.safe_load(f)
+        # set docker image name
         manifest["spec"]["jobTemplate"]["spec"]["template"]["spec"]["containers"][0][
             "image"
         ] = pod.spec.containers[0].image
+        # set service account name
         manifest["spec"]["jobTemplate"]["spec"]["template"]["spec"][
             "serviceAccountName"
         ] = pod.spec.service_account_name
+        # set image pull secrets only if they were provided as part of the deployment.
+        if hasattr(pod.spec, "image_pull_secrets"):
+            manifest["spec"]["jobTemplate"]["spec"]["template"]["spec"][
+                "imagePullSecrets"
+            ] = pod.spec.image_pull_secrets
         # retrieve list of existing cronjobs
         batch_v1 = client.BatchV1Api()
         namespace_cronjobs = batch_v1.list_namespaced_cron_job(
@@ -125,7 +133,7 @@ async def lifespan(app: FastAPI):
     # shutdown/garbage collection code goes here
 
 
-app = FastAPIOffline(
+app = FastAPI(
     docs_url="/manpage/docs",
     openapi_url="/manpage/openapi.json",
     root_path=os.getenv("API_ROOT_PATH", ""),
@@ -157,6 +165,9 @@ app.include_router(graph_route)
 @app.get(
     "/health",
     summary="API health check",
+    dependencies=[Depends(subscription_key_check)]
+    if os.getenv("KUBERNETES_SERVICE_HOST")
+    else None,
 )
 def health_check():
     """Returns a 200 response to indicate the API is healthy."""

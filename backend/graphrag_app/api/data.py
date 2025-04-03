@@ -31,12 +31,15 @@ from graphrag_app.utils.common import (
     get_cosmos_container_store_client,
     sanitize_name,
     update_cache,
+    subscription_key_check,
 )
 
 data_route = APIRouter(
     prefix="/data",
     tags=["Data Management"],
 )
+if os.getenv("KUBERNETES_SERVICE_HOST"):
+    data_route.dependencies.append(Depends(subscription_key_check))
 
 
 @data_route.get(

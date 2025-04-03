@@ -33,6 +33,7 @@ from graphrag_app.utils.common import (
     delete_storage_container_if_exist,
     get_cosmos_container_store_client,
     sanitize_name,
+    subscription_key_check,
 )
 from graphrag_app.utils.pipeline import PipelineJob
 
@@ -40,6 +41,8 @@ index_route = APIRouter(
     prefix="/index",
     tags=["Index Operations"],
 )
+if os.getenv("KUBERNETES_SERVICE_HOST"):
+    index_route.dependencies.append(Depends(subscription_key_check))
 
 
 @index_route.post(

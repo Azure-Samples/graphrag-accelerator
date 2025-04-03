@@ -38,11 +38,18 @@ def schedule_indexing_job(index_name: str):
         pod = core_v1.read_namespaced_pod(
             name=pod_name, namespace=os.environ["AKS_NAMESPACE"]
         )
+        # get image pull secrets only if they were provided as part of the deployment.
+        image_pull_secrets = (
+            pod.spec.image_pull_secrets
+            if hasattr(pod.spec, "image_pull_secrets")
+            else None
+        )
         # retrieve job manifest template and replace necessary values
         job_manifest = _generate_aks_job_manifest(
             docker_image_name=pod.spec.containers[0].image,
             index_name=index_name,
             service_account_name=pod.spec.service_account_name,
+            image_pull_secrets=image_pull_secrets,
         )
         batch_v1 = client.BatchV1Api()
         batch_v1.create_namespaced_job(
@@ -66,6 +73,7 @@ def _generate_aks_job_manifest(
     docker_image_name: str,
     index_name: str,
     service_account_name: str,
+    image_pull_secrets: list,
 ) -> dict:
     """Generate an AKS Jobs manifest file with the specified parameters.
 
@@ -76,6 +84,8 @@ def _generate_aks_job_manifest(
         manifest = yaml.safe_load(f)
     manifest["metadata"]["name"] = f"indexing-job-{sanitize_name(index_name)}"
     manifest["spec"]["template"]["spec"]["serviceAccountName"] = service_account_name
+    if image_pull_secrets:
+        manifest["spec"]["template"]["spec"]["imagePullSecrets"] = image_pull_secrets
     manifest["spec"]["template"]["spec"]["containers"][0]["image"] = docker_image_name
     manifest["spec"]["template"]["spec"]["containers"][0]["command"] = [
         "python",
