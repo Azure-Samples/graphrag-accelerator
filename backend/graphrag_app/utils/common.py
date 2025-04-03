@@ -7,8 +7,7 @@ import os
 import traceback
 from hashlib import sha256
 from io import StringIO
-from typing import BinaryIO
-from typing import Annotated
+from typing import Annotated, BinaryIO
 
 import pandas as pd
 from azure.core.exceptions import ResourceNotFoundError

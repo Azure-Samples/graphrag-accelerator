@@ -30,8 +30,8 @@ from graphrag_app.utils.common import (
     get_blob_container_client,
     get_cosmos_container_store_client,
     sanitize_name,
-    update_cache,
     subscription_key_check,
+    update_cache,
 )
 
 data_route = APIRouter(
