@@ -7,6 +7,7 @@ from typing import (
 )
 
 from azure.cosmos.exceptions import CosmosHttpResponseError
+from graphrag.config.enums import IndexingMethod
 
 from graphrag_app.typing.pipeline import PipelineJobState
 from graphrag_app.utils.azure_clients import AzureClientManager
@@ -39,7 +40,9 @@ class PipelineJob:
 
     _entity_extraction_prompt: str = field(default=None, init=False)
     _entity_summarization_prompt: str = field(default=None, init=False)
-    _community_summarization_prompt: str = field(default=None, init=False)
+    _community_summarization_graph_prompt: str = field(default=None, init=False)
+    _community_summarization_text_prompt: str = field(default=None, init=False)
+    _indexing_method: str = field(default=IndexingMethod.Standard.value, init=False)
 
     @staticmethod
     def _jobs_container():
@@ -56,7 +59,9 @@ class PipelineJob:
         human_readable_storage_name: str,
         entity_extraction_prompt: str | None = None,
         entity_summarization_prompt: str | None = None,
-        community_summarization_prompt: str | None = None,
+        community_summarization_graph_prompt: str | None = None,
+        community_summarization_text_prompt: str | None = None,
+        indexing_method: str = IndexingMethod.Standard.value,
         **kwargs,
     ) -> "PipelineJob":
         """
@@ -112,7 +117,10 @@ class PipelineJob:
 
         instance._entity_extraction_prompt = entity_extraction_prompt
         instance._entity_summarization_prompt = entity_summarization_prompt
-        instance._community_summarization_prompt = community_summarization_prompt
+        instance._community_summarization_graph_prompt = community_summarization_graph_prompt
+        instance._community_summarization_text_prompt = community_summarization_text_prompt
+
+        instance._indexing_method = IndexingMethod(indexing_method).value
 
         # Create the item in the database
         instance.update_db()
@@ -160,9 +168,15 @@ class PipelineJob:
         instance._entity_summarization_prompt = db_item.get(
             "entity_summarization_prompt"
         )
-        instance._community_summarization_prompt = db_item.get(
-            "community_summarization_prompt"
+        instance._community_summarization_graph_prompt = db_item.get(
+            "community_summarization_graph_prompt"
         )
+        instance._community_summarization_text_prompt = db_item.get(
+            "community_summarization_text_prompt"
+        )
+
+        instance._indexing_method = db_item.get("indexing_method")
+
         return instance
 
     @staticmethod
@@ -200,14 +214,19 @@ class PipelineJob:
             "status": self._status.value,
             "percent_complete": self._percent_complete,
             "progress": self._progress,
+            "indexing_method": self._indexing_method,
         }
         if self._entity_extraction_prompt:
             model["entity_extraction_prompt"] = self._entity_extraction_prompt
         if self._entity_summarization_prompt:
             model["entity_summarization_prompt"] = self._entity_summarization_prompt
-        if self._community_summarization_prompt:
-            model["community_summarization_prompt"] = (
-                self._community_summarization_prompt
+        if self._community_summarization_graph_prompt:
+            model["community_summarization_graph_prompt"] = (
+                self._community_summarization_graph_prompt
+            )
+        if self._community_summarization_text_prompt:
+            model["community_summarization_text_prompt"] = (
+                self._community_summarization_text_prompt
             )
         return model
 
@@ -291,14 +310,34 @@ class PipelineJob:
         self.update_db()
 
     @property
-    def community_summarization_prompt(self) -> str:
-        return self._community_summarization_prompt
+    def community_summarization_graph_prompt(self) -> str:
+        return self._community_summarization_graph_prompt
 
-    @community_summarization_prompt.setter
-    def community_summarization_prompt(
-        self, community_summarization_prompt: str
+    @community_summarization_graph_prompt.setter
+    def community_summarization_graph_prompt(
+        self, community_summarization_graph_prompt: str
     ) -> None:
-        self._community_summarization_prompt = community_summarization_prompt
+        self._community_summarization_graph_prompt = community_summarization_graph_prompt
+        self.update_db()
+    
+    @property
+    def community_summarization_text_prompt(self) -> str:
+        return self._community_summarization_text_prompt
+
+    @community_summarization_text_prompt.setter
+    def community_summarization_text_prompt(
+        self, community_summarization_text_prompt: str
+    ) -> None:
+        self._community_summarization_text_prompt = community_summarization_text_prompt
+        self.update_db()
+
+    @property
+    def indexing_method(self) -> str:
+        return self._indexing_method
+    
+    @indexing_method.setter
+    def indexing_method(self, indexing_method: str) -> None:
+        self._indexing_method = IndexingMethod(indexing_method).value
         self.update_db()
 
     @property

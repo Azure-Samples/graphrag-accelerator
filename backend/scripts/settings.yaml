@@ -68,7 +68,7 @@ models:
 vector_store:
   default_vector_store:
     type: cosmosdb # or [lancedb, azure_ai_search, cosmosdb]
-    url: ${COSMOS_URL}
+    url: ${COSMOS_URI_ENDPOINT}
     container_name: PLACEHOLDER
     overwrite: True
     database_name: vectordb
@@ -85,7 +85,7 @@ extract_graph:
 
 extract_graph_nlp:
   text_analyzer:
-    extractor_type: syntactic_parser # [regex_english, syntactic_parser, cfg]
+    extractor_type: regex_english # [regex_english, syntactic_parser, cfg]
 
 summarize_descriptions:
   model_id: default_chat_model

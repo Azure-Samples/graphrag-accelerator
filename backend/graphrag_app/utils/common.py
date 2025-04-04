@@ -5,9 +5,8 @@ import hashlib
 import os
 import sys
 import traceback
-from typing import Annotated
 from pathlib import Path
-from typing import Dict, List
+from typing import Annotated, Dict, List
 
 import pandas as pd
 from azure.core.exceptions import ResourceNotFoundError
@@ -17,7 +16,6 @@ from azure.storage.blob.aio import ContainerClient
 from fastapi import Header, HTTPException
 from graphrag.config.load_config import load_config
 from graphrag.config.models.graph_rag_config import GraphRagConfig
-from graphrag.config.models.vector_store_config import VectorStoreConfig
 
 from graphrag_app.logger.load_logger import load_pipeline_logger
 from graphrag_app.typing.models import QueryData
@@ -287,6 +285,10 @@ def get_data_tables(
         root_dir=ROOT_DIR.parent, 
         config_filepath=ROOT_DIR
     )
+    # update the config to use the correct blob storage containers
+    config.cache.container_name = index_names["sanitized_name"]
+    config.reporting.container_name = index_names["sanitized_name"]
+    config.output.container_name = index_names["sanitized_name"]
     # dynamically assign the sanitized index name 
     config.vector_store["default_vector_store"].container_name = sanitized_name
     

@@ -12,8 +12,8 @@ from fastapi import (
     Depends,
     HTTPException,
 )
-from graphrag.config.create_graphrag_config import create_graphrag_config
-
+from graphrag.config.load_config import load_config
+from graphrag.config.models.graph_rag_config import GraphRagConfig
 from graphrag_app.logger.load_logger import load_pipeline_logger
 from graphrag_app.utils.azure_clients import AzureClientManager
 from graphrag_app.utils.common import sanitize_name, subscription_key_check
@@ -46,12 +46,15 @@ async def generate_prompts(
             detail=f"Storage container '{container_name}' does not exist.",
         )
 
-    # load pipeline configuration file (settings.yaml) for input data and other settings
-    ROOT_DIR = Path(__file__).resolve().parent.parent.parent
-    with (ROOT_DIR / "scripts/settings.yaml").open("r") as f:
-        data = yaml.safe_load(f)
-    data["input"]["container_name"] = sanitized_container_name
-    graphrag_config = create_graphrag_config(values=data, root_dir=".")
+    # load custom pipeline settings
+    ROOT_DIR = Path(__file__).resolve().parent.parent.parent / "scripts/settings.yaml"
+    
+    # layer the custom settings on top of the default configuration settings of graphrag
+    graphrag_config: GraphRagConfig = load_config(
+        root_dir=ROOT_DIR.parent, 
+        config_filepath=ROOT_DIR
+    )
+    graphrag_config.input.container_name = sanitized_container_name
 
     # generate prompts
     try:

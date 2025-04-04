@@ -29,6 +29,8 @@ GRAPHRAG_EMBEDDING_MODEL="text-embedding-ada-002"
 GRAPHRAG_EMBEDDING_MODEL_VERSION="2"
 GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME="text-embedding-ada-002"
 GRAPHRAG_EMBEDDING_MODEL_QUOTA="300"
+GRAPHRAG_LLM_MODEL_CONCURRENT_REQUEST="15"
+GRAPHRAG_EMBEDDING_MODEL_CONCURRENT_REQUEST="15"
 
 requiredParams=(
     LOCATION
@@ -56,6 +58,8 @@ optionalParams=(
     GRAPHRAG_EMBEDDING_MODEL_QUOTA
     GRAPHRAG_EMBEDDING_MODEL_VERSION
     GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME
+    GRAPHRAG_LLM_MODEL_CONCURRENT_REQUEST
+    GRAPHRAG_EMBEDDING_MODEL_CONCURRENT_REQUEST
 )
 
 errorBanner () {
@@ -527,6 +531,9 @@ installGraphRAGHelmChart () {
         exitIfValueEmpty "$graphragEmbeddingModelDeployment" "Unable to parse embedding model deployment name from deployment outputs, exiting..."
     fi
 
+    graphragLlmModelConcurrentRequest="$GRAPHRAG_LLM_MODEL_CONCURRENT_REQUEST"
+    graphragEmbeddingModelConcurrentRequest="$GRAPHRAG_EMBEDDING_MODEL_CONCURRENT_REQUEST"
+
     reset_x=true
     if ! [ -o xtrace ]; then
         set -x
@@ -552,7 +559,10 @@ installGraphRAGHelmChart () {
         --set "graphragConfig.GRAPHRAG_LLM_DEPLOYMENT_NAME=$graphragLlmModelDeployment" \
         --set "graphragConfig.GRAPHRAG_EMBEDDING_MODEL=$graphragEmbeddingModel" \
         --set "graphragConfig.GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME=$graphragEmbeddingModelDeployment" \
-        --set "graphragConfig.STORAGE_ACCOUNT_BLOB_URL=$storageAccountBlobUrl"
+        --set "graphragConfig.STORAGE_ACCOUNT_BLOB_URL=$storageAccountBlobUrl" \
+        --set "graphragConfig.GRAPHRAG_LLM_MODEL_CONCURRENT_REQUEST=$GRAPHRAG_LLM_MODEL_CONCURRENT_REQUEST" \
+        --set "graphragConfig.GRAPHRAG_EMBEDDING_MODEL_CONCURRENT_REQUEST=$GRAPHRAG_EMBEDDING_MODEL_CONCURRENT_REQUEST"
+      
 
     local helmResult
     helmResult=$?
