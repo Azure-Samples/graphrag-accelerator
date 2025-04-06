@@ -213,7 +213,7 @@ async def subscription_key_check(
 
 async def create_cache(container_client: ContainerClient) -> None:
     """
-    Create a file cache to track the uploaded files if it doesn't exist.
+    Create a file cache (csv) to track uploaded files.
     """
     try:
         cache_blob_client = container_client.get_blob_client("uploaded_files_cache.csv")
@@ -238,7 +238,9 @@ async def create_cache(container_client: ContainerClient) -> None:
 
 async def check_cache(file_stream: BinaryIO, container_client: ContainerClient) -> bool:
     """
-    Check if the file has already been uploaded.
+    Check a cache file to determine if a file has previously been uploaded.
+
+    Note: This function creates/checks a CSV file in azure storage to act as a cache of previously uploaded files.
     """
     try:
         # load the file cache
@@ -265,7 +267,7 @@ async def update_cache(
     filename: str, file_stream: BinaryIO, container_client: ContainerClient
 ) -> None:
     """
-    Update the file cache with the new file by appending a new row to the cache.
+    Update the file cache (csv) with a new file by adding a new row.
     """
     try:
         # Load the file cache

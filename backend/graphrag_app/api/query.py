@@ -10,6 +10,7 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    status,
 )
 from graphrag.api.query import global_search, local_search
 from graphrag.config.create_graphrag_config import create_graphrag_config
@@ -42,7 +43,7 @@ if os.getenv("KUBERNETES_SERVICE_HOST"):
     summary="Perform a global search across the knowledge graph index",
     description="The global query method generates answers by searching over all AI-generated community reports in a map-reduce fashion. This is a resource-intensive method, but often gives good responses for questions that require an understanding of the dataset as a whole.",
     response_model=GraphResponse,
-    responses={200: {"model": GraphResponse}},
+    responses={status.HTTP_200_OK: {"model": GraphResponse}},
 )
 async def global_query(request: GraphRequest):
     # this is a slightly modified version of the graphrag.query.cli.run_global_search method
@@ -122,7 +123,7 @@ async def global_query(request: GraphRequest):
     summary="Perform a local search across the knowledge graph index.",
     description="The local query method generates answers by combining relevant data from the AI-extracted knowledge-graph with text chunks of the raw documents. This method is suitable for questions that require an understanding of specific entities mentioned in the documents (e.g. What are the healing properties of chamomile?).",
     response_model=GraphResponse,
-    responses={200: {"model": GraphResponse}},
+    responses={status.HTTP_200_OK: {"model": GraphResponse}},
 )
 async def local_query(request: GraphRequest):
     index_name = request.index_name

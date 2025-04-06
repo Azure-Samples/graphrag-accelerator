@@ -12,6 +12,7 @@ from fastapi import (
     Depends,
     HTTPException,
     UploadFile,
+    status,
 )
 from kubernetes import (
     client as kubernetes_client,
@@ -49,7 +50,7 @@ if os.getenv("KUBERNETES_SERVICE_HOST"):
     "",
     summary="Build an index",
     response_model=BaseResponse,
-    responses={200: {"model": BaseResponse}},
+    responses={status.HTTP_202_ACCEPTED: {"model": BaseResponse}},
 )
 async def schedule_index_job(
     storage_container_name: str,
@@ -142,7 +143,7 @@ async def schedule_index_job(
     "",
     summary="Get all index names",
     response_model=IndexNameList,
-    responses={200: {"model": IndexNameList}},
+    responses={status.HTTP_200_OK: {"model": IndexNameList}},
 )
 async def get_all_index_names(
     container_store_client=Depends(get_cosmos_container_store_client),
@@ -218,7 +219,7 @@ def _delete_k8s_job(job_name: str, namespace: str) -> None:
     "/{container_name}",
     summary="Delete a specified index",
     response_model=BaseResponse,
-    responses={200: {"model": BaseResponse}},
+    responses={status.HTTP_200_OK: {"model": BaseResponse}},
 )
 async def delete_index(
     container_name: str,
@@ -267,6 +268,7 @@ async def delete_index(
     "/status/{container_name}",
     summary="Track the status of an indexing job",
     response_model=IndexStatusResponse,
+    status_code=status.HTTP_200_OK,
 )
 async def get_index_status(
     container_name: str, sanitized_container_name: str = Depends(sanitize_name)

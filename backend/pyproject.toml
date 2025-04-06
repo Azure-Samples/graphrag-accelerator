@@ -53,7 +53,7 @@ fsspec = ">=2024.2.0"
 graphrag = "==1.2.0"
 httpx = ">=0.25.2"
 kubernetes = ">=29.0.0"
-markitdown = "0.1.0a3"
+markitdown = {extras = ["all"], version = "^0.1.1"}
 networkx = ">=3.2.1"
 nltk = "*"
 pandas = ">=2.2.1"

@@ -14,6 +14,7 @@ from fastapi import (
     Depends,
     HTTPException,
     UploadFile,
+    status,
 )
 from markitdown import MarkItDown, StreamInfo
 
@@ -98,7 +99,7 @@ async def upload_file_async(
                     stream_info=stream_info,
                 )
 
-                # clean the output and upload to blob storage
+                # remove illegal unicode characters and upload to blob storage
                 cleaned_result = clean_output(result.text_content)
                 await converted_blob_client.upload_blob(
                     cleaned_result, overwrite=overwrite
@@ -107,11 +108,12 @@ async def upload_file_async(
                 # update the file cache
                 await update_cache(filename, file_stream, container_client)
         except Exception:
-            pass
+            # if any exception occurs, return the filename to indicate conversion/upload failures
+            return upload_file.filename
 
 
 def clean_output(val: str, replacement: str = ""):
-    """Remove illegal XML characters from a string."""
+    """Removes unicode characters that are invalid XML characters (not valid for graphml files at least)."""
     # fmt: off
     _illegal_xml_chars_RE = re.compile(
             "[\x00-\x08\x0b\x0c\x0e-\x1F\uD800-\uDFFF\uFFFE\uFFFF]"
@@ -124,7 +126,7 @@ def clean_output(val: str, replacement: str = ""):
     "",
     summary="Upload data to a data storage container",
     response_model=BaseResponse,
-    responses={200: {"model": BaseResponse}},
+    responses={status.HTTP_201_CREATED: {"model": BaseResponse}},
 )
 async def upload_files(
     files: List[UploadFile],
@@ -133,18 +135,8 @@ async def upload_files(
     overwrite: bool = True,
 ):
     """
-    Create a Azure Storage container and upload files to it.
-
-    Args:
-        files (List[UploadFile]): A list of files to be uploaded.
-        storage_name (str): The name of the Azure Blob Storage container to which files will be uploaded.
-        overwrite (bool): Whether to overwrite existing files with the same name. Defaults to True. If False, files that already exist will be skipped.
-
-    Returns:
-        BaseResponse: An instance of the BaseResponse model with a status message indicating the result of the upload.
-
-    Raises:
-        HTTPException: If the container name is invalid or if any error occurs during the upload process.
+    Create a Azure Storage container (if needed) and upload files. Multiple file types are supported, including pdf, powerpoint, word, excel, html, csv, json, xml, etc.
+    The complete set of supported file types can be found in the MarkItDown (https://github.com/microsoft/markitdown) library.
     """
     try:
         # create the initial cache if it doesn't exist
@@ -153,8 +145,9 @@ async def upload_files(
         )
         await create_cache(blob_container_client)
 
-        # upload files in batches of 1000 to avoid exceeding Azure Storage API limits
-        batch_size = 1000
+        # upload files in batches of 100 to avoid exceeding Azure Storage API limits
+        processing_errors = []
+        batch_size = 100
         num_batches = ceil(len(files) / batch_size)
         for i in range(num_batches):
             batch_files = files[i * batch_size : (i + 1) * batch_size]
@@ -162,7 +155,9 @@ async def upload_files(
                 upload_file_async(file, blob_container_client, overwrite)
                 for file in batch_files
             ]
-            await asyncio.gather(*tasks)
+            results = await asyncio.gather(*tasks)
+            results = [r for r in results if r is not None]
+            processing_errors.extend(results)
 
         # update container-store entry in cosmosDB once upload process is successful
         cosmos_container_store_client = get_cosmos_container_store_client()
@@ -171,6 +166,12 @@ async def upload_files(
             "human_readable_name": container_name,
             "type": "data",
         })
+
+        if len(processing_errors) > 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Error uploading files: {processing_errors}.",
+            )
         return BaseResponse(status="File upload successful.")
     except Exception as e:
         logger = load_pipeline_logger()
