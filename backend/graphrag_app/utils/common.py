@@ -14,15 +14,18 @@ from azure.core.exceptions import ResourceNotFoundError
 from azure.cosmos import ContainerProxy, exceptions
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob.aio import ContainerClient
-from fastapi import Header, HTTPException
+from fastapi import Header, HTTPException, status
 
 from graphrag_app.logger.load_logger import load_pipeline_logger
 from graphrag_app.utils.azure_clients import AzureClientManager
+
+FILE_UPLOAD_CACHE = "cache/uploaded_files.csv"
 
 
 def get_df(
     table_path: str,
 ) -> pd.DataFrame:
+    """Read a parquet file from Azure Storage and return it as a pandas DataFrame."""
     df = pd.read_parquet(
         table_path,
         storage_options=pandas_storage_options(),
@@ -126,7 +129,10 @@ def get_cosmos_container_store_client() -> ContainerProxy:
             cause=e,
             stack=traceback.format_exc(),
         )
-        raise HTTPException(status_code=500, detail="Error fetching cosmosdb client.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error fetching cosmosdb client.",
+        )
 
 
 async def get_blob_container_client(name: str) -> ContainerClient:
@@ -144,7 +150,10 @@ async def get_blob_container_client(name: str) -> ContainerClient:
             cause=e,
             stack=traceback.format_exc(),
         )
-        raise HTTPException(status_code=500, detail="Error fetching storage client.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error fetching storage client.",
+        )
 
 
 def sanitize_name(container_name: str) -> str:
@@ -191,7 +200,8 @@ def desanitize_name(sanitized_container_name: str) -> str | None:
             return None
     except Exception:
         raise HTTPException(
-            status_code=500, detail="Error retrieving original container name."
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error retrieving original container name.",
         )
 
 
@@ -199,14 +209,14 @@ async def subscription_key_check(
     Ocp_Apim_Subscription_Key: Annotated[str, Header()],
 ):
     """
-    Verifies if user has passed the Ocp_Apim_Subscription_Key (APIM subscription key) in the request header.
-    If it is not present, an HTTPException with a 400 status code is raised.
-    Note: this check is unnecessary (APIM validates subscription keys automatically), but this will add the key
+    Verify if user has passed the Ocp_Apim_Subscription_Key (APIM subscription key) in the request header.
+    Note: this check is unnecessary (APIM validates subscription keys automatically), but it effectively adds the key
     as a required parameter in the swagger docs page, enabling users to send requests using the swagger docs "Try it out" feature.
     """
     if not Ocp_Apim_Subscription_Key:
         raise HTTPException(
-            status_code=400, detail="Ocp-Apim-Subscription-Key required"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ocp-Apim-Subscription-Key required",
         )
     return Ocp_Apim_Subscription_Key
 
@@ -216,7 +226,7 @@ async def create_cache(container_client: ContainerClient) -> None:
     Create a file cache (csv) to track uploaded files.
     """
     try:
-        cache_blob_client = container_client.get_blob_client("uploaded_files_cache.csv")
+        cache_blob_client = container_client.get_blob_client(FILE_UPLOAD_CACHE)
         if not await cache_blob_client.exists():
             # create the empty file cache csv
             headers = [["Filename", "Hash"]]
@@ -231,20 +241,20 @@ async def create_cache(container_client: ContainerClient) -> None:
                 os.remove("uploaded_files_cache.csv")
     except Exception:
         raise HTTPException(
-            status_code=500,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error creating file cache in Azure Blob Storage.",
         )
 
 
 async def check_cache(file_stream: BinaryIO, container_client: ContainerClient) -> bool:
     """
-    Check a cache file to determine if a file has previously been uploaded.
+    Check a file cache (csv) to determine if a file has previously been uploaded.
 
     Note: This function creates/checks a CSV file in azure storage to act as a cache of previously uploaded files.
     """
     try:
         # load the file cache
-        cache_blob_client = container_client.get_blob_client("uploaded_files_cache.csv")
+        cache_blob_client = container_client.get_blob_client(FILE_UPLOAD_CACHE)
         cache_download_stream = await cache_blob_client.download_blob()
         cache_bytes = await cache_download_stream.readall()
         cache_content = StringIO(cache_bytes.decode("utf-8"))
@@ -258,7 +268,7 @@ async def check_cache(file_stream: BinaryIO, container_client: ContainerClient) 
         return False
     except Exception:
         raise HTTPException(
-            status_code=500,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error checking file cache in Azure Blob Storage.",
         )
 
@@ -267,11 +277,11 @@ async def update_cache(
     filename: str, file_stream: BinaryIO, container_client: ContainerClient
 ) -> None:
     """
-    Update the file cache (csv) with a new file by adding a new row.
+    Update a file cache (csv) with a new file by adding a new row.
     """
     try:
         # Load the file cache
-        cache_blob_client = container_client.get_blob_client("uploaded_files_cache.csv")
+        cache_blob_client = container_client.get_blob_client(FILE_UPLOAD_CACHE)
         cache_download_stream = await cache_blob_client.download_blob()
         cache_bytes = await cache_download_stream.readall()
         cache_content = StringIO(cache_bytes.decode("utf-8"))
@@ -297,6 +307,6 @@ async def update_cache(
         )
     except Exception:
         raise HTTPException(
-            status_code=500,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error updating file cache in Azure Blob Storage.",
         )

@@ -52,7 +52,7 @@ async def global_query(request: GraphRequest):
 
     if not _is_index_complete(sanitized_index_name):
         raise HTTPException(
-            status_code=500,
+            status_code=status.HTTP_425_TOO_EARLY,
             detail=f"{index_name} not ready for querying.",
         )
 
@@ -131,7 +131,7 @@ async def local_query(request: GraphRequest):
 
     if not _is_index_complete(sanitized_index_name):
         raise HTTPException(
-            status_code=500,
+            status_code=status.HTTP_425_TOO_EARLY,
             detail=f"{index_name} not ready for querying.",
         )
 

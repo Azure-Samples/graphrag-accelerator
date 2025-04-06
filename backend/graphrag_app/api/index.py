@@ -72,7 +72,7 @@ async def schedule_index_job(
         sanitized_storage_container_name
     ).exists():
         raise HTTPException(
-            status_code=500,
+            status_code=status.HTTP_412_PRECONDITION_FAILED,
             detail=f"Storage container '{storage_container_name}' does not exist",
         )
 
@@ -102,7 +102,7 @@ async def schedule_index_job(
             PipelineJobState(existing_job.status) == PipelineJobState.RUNNING
         ):
             raise HTTPException(
-                status_code=202,  # request has been accepted for processing but is not complete.
+                status_code=status.HTTP_425_TOO_EARLY,  # request has been accepted for processing but is not complete.
                 detail=f"Index '{index_container_name}' already exists and has not finished building.",
             )
         # if indexing job is in a failed state, delete the associated K8s job and pod to allow for a new job to be scheduled
@@ -258,7 +258,8 @@ async def delete_index(
             details={"container": container_name},
         )
         raise HTTPException(
-            status_code=500, detail=f"Error deleting '{container_name}'."
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error deleting '{container_name}'.",
         )
 
     return BaseResponse(status="Success")
@@ -277,7 +278,7 @@ async def get_index_status(
     if pipelinejob.item_exist(sanitized_container_name):
         pipeline_job = pipelinejob.load_item(sanitized_container_name)
         return IndexStatusResponse(
-            status_code=200,
+            status_code=status.HTTP_200_OK,
             index_name=pipeline_job.human_readable_index_name,
             storage_name=pipeline_job.human_readable_storage_name,
             status=pipeline_job.status.value,
@@ -286,5 +287,6 @@ async def get_index_status(
         )
     else:
         raise HTTPException(
-            status_code=404, detail=f"'{container_name}' does not exist."
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"'{container_name}' does not exist.",
         )

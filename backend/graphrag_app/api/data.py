@@ -47,7 +47,7 @@ if os.getenv("KUBERNETES_SERVICE_HOST"):
     "",
     summary="Get list of data containers.",
     response_model=StorageNameList,
-    responses={200: {"model": StorageNameList}},
+    responses={status.HTTP_200_OK: {"model": StorageNameList}},
 )
 async def get_all_data_containers():
     """
@@ -169,20 +169,20 @@ async def upload_files(
 
         if len(processing_errors) > 0:
             raise HTTPException(
-                status_code=400,
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Error uploading files: {processing_errors}.",
             )
-        return BaseResponse(status="File upload successful.")
+        return BaseResponse(status="Success.")
     except Exception as e:
         logger = load_pipeline_logger()
         logger.error(
             message="Error uploading files.",
             cause=e,
             stack=traceback.format_exc(),
-            details={"files": [f.filename for f in files]},
+            details={"files": processing_errors},
         )
         raise HTTPException(
-            status_code=500,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error uploading files to container '{container_name}'.",
         )
 
@@ -191,7 +191,7 @@ async def upload_files(
     "/{container_name}",
     summary="Delete a data storage container",
     response_model=BaseResponse,
-    responses={200: {"model": BaseResponse}},
+    responses={status.HTTP_200_OK: {"model": BaseResponse}},
 )
 async def delete_files(
     container_name: str, sanitized_container_name: str = Depends(sanitize_name)
