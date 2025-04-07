@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 
 import asyncio
+import hashlib
 import os
 import re
 import traceback
@@ -72,21 +73,26 @@ async def get_all_data_containers():
     return StorageNameList(storage_name=items)
 
 
-async def upload_file_async(
+async def upload_file(
     upload_file: UploadFile, container_client: ContainerClient, overwrite: bool = True
-) -> None:
+):
     """
-    Asynchronously convert and upload a file to the specified blob container.
-    Silently ignore errors that occur when overwrite=False.
+    Convert and upload a file to a specified blob container.
+
+    Returns a list of objects where each object will have one of the following types:
+      * Tuple[str, str] - a tuple of (filename, file_hash) for successful uploads
+      * Tuple[str, None] - a tuple of (filename, None) for failed uploads or
+      * None for skipped files
     """
     filename = upload_file.filename
     extension = os.path.splitext(filename)[1]
-    converted_filename = filename.replace(extension, ".txt")
+    converted_filename = filename + ".txt"
     converted_blob_client = container_client.get_blob_client(converted_filename)
 
     with upload_file.file as file_stream:
         try:
-            if not await check_cache(file_stream, container_client):
+            file_hash = hashlib.sha256(file_stream.read()).hexdigest()
+            if not await check_cache(file_hash, container_client):
                 # extract text from file using MarkItDown
                 md = MarkItDown()
                 stream_info = StreamInfo(
@@ -100,19 +106,19 @@ async def upload_file_async(
                 )
 
                 # remove illegal unicode characters and upload to blob storage
-                cleaned_result = clean_output(result.text_content)
+                cleaned_result = _clean_output(result.text_content)
                 await converted_blob_client.upload_blob(
                     cleaned_result, overwrite=overwrite
                 )
 
-                # update the file cache
-                await update_cache(filename, file_stream, container_client)
+                # return tuple of (filename, file_hash) to indicate success
+                return (filename, file_hash)
         except Exception:
-            # if any exception occurs, return the filename to indicate conversion/upload failures
-            return upload_file.filename
+            # if any exception occurs, return a tuple of (filename, None) to indicate conversion/upload failure
+            return (upload_file.filename, None)
 
 
-def clean_output(val: str, replacement: str = ""):
+def _clean_output(val: str, replacement: str = ""):
     """Removes unicode characters that are invalid XML characters (not valid for graphml files at least)."""
     # fmt: off
     _illegal_xml_chars_RE = re.compile(
@@ -145,19 +151,23 @@ async def upload_files(
         )
         await create_cache(blob_container_client)
 
-        # upload files in batches of 100 to avoid exceeding Azure Storage API limits
+        # process file uploads in batches to avoid exceeding Azure Storage API limits
         processing_errors = []
         batch_size = 100
         num_batches = ceil(len(files) / batch_size)
         for i in range(num_batches):
             batch_files = files[i * batch_size : (i + 1) * batch_size]
             tasks = [
-                upload_file_async(file, blob_container_client, overwrite)
+                upload_file(file, blob_container_client, overwrite)
                 for file in batch_files
             ]
-            results = await asyncio.gather(*tasks)
-            results = [r for r in results if r is not None]
-            processing_errors.extend(results)
+            upload_results = await asyncio.gather(*tasks)
+            successful_uploads = [r for r in upload_results if r and r[1] is not None]
+            # update the file cache with successful uploads
+            await update_cache(successful_uploads, blob_container_client)
+            # collect failed uploads
+            failed_uploads = [r[0] for r in upload_results if r and r[1] is None]
+            processing_errors.extend(failed_uploads)
 
         # update container-store entry in cosmosDB once upload process is successful
         cosmos_container_store_client = get_cosmos_container_store_client()

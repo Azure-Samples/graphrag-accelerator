@@ -1,13 +1,15 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
+"""
+Common utility functions used by the API endpoints.
+"""
 
 import csv
 import hashlib
 import os
 import traceback
-from hashlib import sha256
 from io import StringIO
-from typing import Annotated, BinaryIO
+from typing import Annotated, Tuple
 
 import pandas as pd
 from azure.core.exceptions import ResourceNotFoundError
@@ -23,11 +25,11 @@ FILE_UPLOAD_CACHE = "cache/uploaded_files.csv"
 
 
 def get_df(
-    table_path: str,
+    filepath: str,
 ) -> pd.DataFrame:
     """Read a parquet file from Azure Storage and return it as a pandas DataFrame."""
     df = pd.read_parquet(
-        table_path,
+        filepath,
         storage_options=pandas_storage_options(),
     )
     return df
@@ -223,22 +225,23 @@ async def subscription_key_check(
 
 async def create_cache(container_client: ContainerClient) -> None:
     """
-    Create a file cache (csv) to track uploaded files.
+    Create a file cache (csv).
     """
     try:
         cache_blob_client = container_client.get_blob_client(FILE_UPLOAD_CACHE)
         if not await cache_blob_client.exists():
             # create the empty file cache csv
             headers = [["Filename", "Hash"]]
-            with open("uploaded_files_cache.csv", "w", newline="") as f:
+            tmp_cache_file = "uploaded_files_cache.csv"
+            with open(tmp_cache_file, "w", newline="") as f:
                 writer = csv.writer(f, delimiter=",")
                 writer.writerows(headers)
 
             # upload to Azure Blob Storage and remove the temporary file
-            with open("uploaded_files_cache.csv", "rb") as f:
+            with open(tmp_cache_file, "rb") as f:
                 await cache_blob_client.upload_blob(f, overwrite=True)
-            if os.path.exists("uploaded_files_cache.csv"):
-                os.remove("uploaded_files_cache.csv")
+            if os.path.exists(tmp_cache_file):
+                os.remove(tmp_cache_file)
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -246,9 +249,9 @@ async def create_cache(container_client: ContainerClient) -> None:
         )
 
 
-async def check_cache(file_stream: BinaryIO, container_client: ContainerClient) -> bool:
+async def check_cache(file_hash: str, container_client: ContainerClient) -> bool:
     """
-    Check a file cache (csv) to determine if a file has previously been uploaded.
+    Check a file cache (csv) to determine if a file hash has previously been uploaded.
 
     Note: This function creates/checks a CSV file in azure storage to act as a cache of previously uploaded files.
     """
@@ -261,7 +264,6 @@ async def check_cache(file_stream: BinaryIO, container_client: ContainerClient) 
 
         # comupte the sha256 hash of the file and check if it exists in the cache
         cache_reader = csv.reader(cache_content, delimiter=",")
-        file_hash = sha256(file_stream.read()).hexdigest()
         for row in cache_reader:
             if file_hash in row:
                 return True
@@ -274,26 +276,24 @@ async def check_cache(file_stream: BinaryIO, container_client: ContainerClient) 
 
 
 async def update_cache(
-    filename: str, file_stream: BinaryIO, container_client: ContainerClient
+    new_files: Tuple[str, str], container_client: ContainerClient
 ) -> None:
     """
-    Update a file cache (csv) with a new file by adding a new row.
+    Update an existing file cache (csv) with new files.
     """
     try:
-        # Load the file cache
+        # Load the existing cache
         cache_blob_client = container_client.get_blob_client(FILE_UPLOAD_CACHE)
         cache_download_stream = await cache_blob_client.download_blob()
         cache_bytes = await cache_download_stream.readall()
         cache_content = StringIO(cache_bytes.decode("utf-8"))
-
-        # Read existing rows and prepare to append
         cache_reader = csv.reader(cache_content, delimiter=",")
-        existing_rows = list(cache_reader)
 
-        # Compute the sha256 hash of the file and append it to the cache
-        file_hash = sha256(file_stream.read()).hexdigest()
-        new_row = [filename, file_hash]
-        existing_rows.append(new_row)
+        # append new data
+        existing_rows = list(cache_reader)
+        for filename, file_hash in new_files:
+            row = [filename, file_hash]
+            existing_rows.append(row)
 
         # Write the updated content back to the StringIO object
         updated_cache_content = StringIO()
