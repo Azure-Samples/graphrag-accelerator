@@ -22,7 +22,7 @@ def test_schedule_index_without_data(client, cosmos_client: CosmosClient):
             "storage_container_name": "nonexistent-data-container",
         },
     )
-    assert response.status_code == 500
+    assert response.status_code == 412
 
 
 # def test_schedule_index_with_data(client, cosmos_client, blob_with_data_container_name):

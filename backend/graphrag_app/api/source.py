@@ -5,7 +5,12 @@ import os
 import traceback
 
 import pandas as pd
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    status,
+)
 
 from graphrag_app.logger.load_logger import load_pipeline_logger
 from graphrag_app.typing.models import (
@@ -43,7 +48,7 @@ DOCUMENTS_TABLE = "output/create_final_documents.parquet"
     "/report/{container_name}/{report_id}",
     summary="Return a single community report.",
     response_model=ReportResponse,
-    responses={200: {"model": ReportResponse}},
+    responses={status.HTTP_200_OK: {"model": ReportResponse}},
 )
 async def get_report_info(
     report_id: int,
@@ -88,7 +93,7 @@ async def get_report_info(
     "/text/{container_name}/{text_unit_id}",
     summary="Return a single base text unit.",
     response_model=TextUnitResponse,
-    responses={200: {"model": TextUnitResponse}},
+    responses={status.HTTP_200_OK: {"model": TextUnitResponse}},
 )
 async def get_chunk_info(
     text_unit_id: str,
@@ -148,7 +153,7 @@ async def get_chunk_info(
     "/entity/{container_name}/{entity_id}",
     summary="Return a single entity.",
     response_model=EntityResponse,
-    responses={200: {"model": EntityResponse}},
+    responses={status.HTTP_200_OK: {"model": EntityResponse}},
 )
 async def get_entity_info(
     entity_id: int,
@@ -190,7 +195,7 @@ async def get_entity_info(
     "/claim/{container_name}/{claim_id}",
     summary="Return a single claim.",
     response_model=ClaimResponse,
-    responses={200: {"model": ClaimResponse}},
+    responses={status.HTTP_200_OK: {"model": ClaimResponse}},
 )
 async def get_claim_info(
     claim_id: int,
@@ -240,7 +245,7 @@ async def get_claim_info(
     "/relationship/{container_name}/{relationship_id}",
     summary="Return a single relationship.",
     response_model=RelationshipResponse,
-    responses={200: {"model": RelationshipResponse}},
+    responses={status.HTTP_200_OK: {"model": RelationshipResponse}},
 )
 async def get_relationship_info(
     relationship_id: int,

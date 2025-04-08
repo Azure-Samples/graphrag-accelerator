@@ -12,6 +12,7 @@ from fastapi import (
     Depends,
     HTTPException,
     UploadFile,
+    status,
 )
 from kubernetes import (
     client as kubernetes_client,
@@ -49,7 +50,7 @@ if os.getenv("KUBERNETES_SERVICE_HOST"):
     "",
     summary="Build an index",
     response_model=BaseResponse,
-    responses={200: {"model": BaseResponse}},
+    responses={status.HTTP_202_ACCEPTED: {"model": BaseResponse}},
 )
 async def schedule_index_job(
     storage_container_name: str,
@@ -71,7 +72,7 @@ async def schedule_index_job(
         sanitized_storage_container_name
     ).exists():
         raise HTTPException(
-            status_code=500,
+            status_code=status.HTTP_412_PRECONDITION_FAILED,
             detail=f"Storage container '{storage_container_name}' does not exist",
         )
 
@@ -101,7 +102,7 @@ async def schedule_index_job(
             PipelineJobState(existing_job.status) == PipelineJobState.RUNNING
         ):
             raise HTTPException(
-                status_code=202,  # request has been accepted for processing but is not complete.
+                status_code=status.HTTP_425_TOO_EARLY,  # request has been accepted for processing but is not complete.
                 detail=f"Index '{index_container_name}' already exists and has not finished building.",
             )
         # if indexing job is in a failed state, delete the associated K8s job and pod to allow for a new job to be scheduled
@@ -142,7 +143,7 @@ async def schedule_index_job(
     "",
     summary="Get all index names",
     response_model=IndexNameList,
-    responses={200: {"model": IndexNameList}},
+    responses={status.HTTP_200_OK: {"model": IndexNameList}},
 )
 async def get_all_index_names(
     container_store_client=Depends(get_cosmos_container_store_client),
@@ -218,7 +219,7 @@ def _delete_k8s_job(job_name: str, namespace: str) -> None:
     "/{container_name}",
     summary="Delete a specified index",
     response_model=BaseResponse,
-    responses={200: {"model": BaseResponse}},
+    responses={status.HTTP_200_OK: {"model": BaseResponse}},
 )
 async def delete_index(
     container_name: str,
@@ -257,7 +258,8 @@ async def delete_index(
             details={"container": container_name},
         )
         raise HTTPException(
-            status_code=500, detail=f"Error deleting '{container_name}'."
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error deleting '{container_name}'.",
         )
 
     return BaseResponse(status="Success")
@@ -267,6 +269,7 @@ async def delete_index(
     "/status/{container_name}",
     summary="Track the status of an indexing job",
     response_model=IndexStatusResponse,
+    status_code=status.HTTP_200_OK,
 )
 async def get_index_status(
     container_name: str, sanitized_container_name: str = Depends(sanitize_name)
@@ -275,7 +278,7 @@ async def get_index_status(
     if pipelinejob.item_exist(sanitized_container_name):
         pipeline_job = pipelinejob.load_item(sanitized_container_name)
         return IndexStatusResponse(
-            status_code=200,
+            status_code=status.HTTP_200_OK,
             index_name=pipeline_job.human_readable_index_name,
             storage_name=pipeline_job.human_readable_storage_name,
             status=pipeline_job.status.value,
@@ -284,5 +287,6 @@ async def get_index_status(
         )
     else:
         raise HTTPException(
-            status_code=404, detail=f"'{container_name}' does not exist."
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"'{container_name}' does not exist.",
         )
