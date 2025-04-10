@@ -70,7 +70,7 @@ def start_indexing_job(index_name: str):
     PROMPT_DIR = Path(__file__).resolve().parent
 
     # set prompt for entity extraction / graph construction
-    if pipeline_job.entity_extraction_prompt:
+    if pipeline_job.entity_extraction_prompt is None:
         # use the default prompt
         config.extract_graph.prompt = None
     else:
@@ -120,9 +120,7 @@ def start_indexing_job(index_name: str):
     # reset pipeline job details
     pipeline_job.status = PipelineJobState.RUNNING
 
-    pipeline_job.all_workflows = [
-        workflow for workflow in pipeline_workflows.names()
-    ]
+    pipeline_job.all_workflows = pipeline_workflows.names()
     pipeline_job.completed_workflows = []
     pipeline_job.failed_workflows = []
 
@@ -144,6 +142,7 @@ def start_indexing_job(index_name: str):
         pipeline_results: list[PipelineRunResult] = asyncio.run(
             api.build_index(
                 config=config,
+                method=indexing_method,
                 callbacks=[logger, pipeline_job_updater],
             )
         )

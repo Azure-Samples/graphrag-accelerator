@@ -261,9 +261,19 @@ async def delete_index(
             credential=DefaultAzureCredential(),
             audience=os.environ["AI_SEARCH_AUDIENCE"],
         )
-        ai_search_index_name = f"{sanitized_container_name}_description_embedding"
-        if ai_search_index_name in index_client.list_index_names():
-            index_client.delete_index(ai_search_index_name)
+        
+        index_names = index_client.list_index_names()
+        ai_search_index_report_name = f"{sanitized_container_name}-community-full_content"
+        if ai_search_index_report_name in index_names:
+            index_client.delete_index(ai_search_index_report_name)
+        
+        ai_search_index_description_name = f"{sanitized_container_name}-entity-description"
+        if ai_search_index_description_name in index_names:
+            index_client.delete_index(ai_search_index_description_name)
+        
+        ai_search_index_text_name = f"{sanitized_container_name}-text_unit-text"
+        if ai_search_index_text_name in index_names:
+            index_client.delete_index(ai_search_index_text_name)
 
     except Exception as e:
         logger = load_pipeline_logger()

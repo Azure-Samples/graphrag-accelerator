@@ -18,7 +18,7 @@ from graphrag_app.logger.load_logger import load_pipeline_logger
 from graphrag_app.typing.models import (
     GraphDriftRequest,
     GraphGlobalRequest,
-    GraphLocalRequest,
+    GraphRequest,
     GraphResponse,
 )
 from graphrag_app.typing.pipeline import PipelineJobState
@@ -94,7 +94,7 @@ async def global_search(request: GraphGlobalRequest):
         logger.error(
             message="Could not perform global search.",
             cause=e,
-            stack=traceback.format_exc(),
+            stack=traceback.format_exc()
         )
         raise HTTPException(status_code=500, detail=None)
 
@@ -106,7 +106,7 @@ async def global_search(request: GraphGlobalRequest):
     response_model=GraphResponse,
     responses={200: {"model": GraphResponse}},
 )
-async def local_search(request: GraphLocalRequest):
+async def local_search(request: GraphRequest):
     logger = load_pipeline_logger()
     
     if isinstance(request.index_name, list):
@@ -157,7 +157,7 @@ async def local_search(request: GraphLocalRequest):
         logger.error(
             message="Could not perform local search.",
             cause=e,
-            stack=traceback.format_exc(),
+            stack=traceback.format_exc()
         )
         raise HTTPException(status_code=500, detail=None)
 
@@ -169,7 +169,7 @@ async def local_search(request: GraphLocalRequest):
     response_model=GraphResponse,
     responses={200: {"model": GraphResponse}},
 )
-async def drift_search(request: GraphDriftRequest):
+async def drift_search(request: GraphRequest):
     logger = load_pipeline_logger()
     
     if isinstance(request.index_name, list):
@@ -217,9 +217,9 @@ async def drift_search(request: GraphDriftRequest):
         return GraphResponse(result=result[0], context_data=context)
     except Exception as e:
         logger.error(
-            message="Could not perform local search.",
+            message="Could not perform drift search.",
             cause=e,
-            stack=traceback.format_exc(),
+            stack=traceback.format_exc()
         )
         raise HTTPException(status_code=500, detail=None)
 

@@ -23,6 +23,28 @@ param storageName string
 @description('ID of an existing AOAI resource.')
 param aoaiId string
 
+// custom role definition for cosmosDB vector store- allows write access to the database and container level
+var customRoleName = 'Graphrag Cosmos DB Data Writer - Allow principal to create SQL databases and containers'
+resource customCosmosRoleDefinition 'Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions@2024-12-01-preview' = {
+  // note: the guid must be globally unique and deterministic (reproducible) across Azure
+  name: guid(cosmosDb.id, customRoleName)
+  parent: cosmosDb
+  properties: {
+    roleName: customRoleName
+    type: 'CustomRole'
+    assignableScopes: [
+      cosmosDb.id // defining the custom Cosmos DB role with the actual Cosmos account scope
+    ]
+    permissions: [
+      {
+        dataActions: [
+          'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/write'
+        ]
+      }
+    ]
+  }
+}
+
 @description('Role definitions for various roles that will be assigned. Learn more: https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles')
 var roleIds = {
   contributor: 'b24988ac-6180-42a0-ab88-20f7382dd24c' // Contributor Role
@@ -36,6 +58,7 @@ var roleIds = {
   monitoringMetricsPublisher: '3913510d-42f4-4e42-8a64-420c390055eb' // Monitoring Metrics Publisher Role
   storageBlobDataContributor: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe' // Storage Blob Data Contributor Role
   sqlDBContributor: '9b7fa17d-e63e-47b0-bb0a-15c516ac86ec' // SQL DB Contributor Role - cosmos control plane operations
+  customCosmosRoleDefinition: customCosmosRoleDefinition.id // Custom Cosmos DB role definition
 }
 
 // get references to existing resources
@@ -176,6 +199,17 @@ resource sqlRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignm
     scope: cosmosDb.id
   }
 }
+
+// // assign the newly created (Graphrag Cosmos DB Data Contributor) custom role to the principal
+// resource customRoleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-12-01-preview' = {
+//   name: guid(cosmosDb.id, principalId, principalType, customCosmosRoleDefinition.id)
+//   parent: cosmosDb
+//   properties: {
+//     principalId: principalId
+//     roleDefinitionId: customCosmosRoleDefinition.id
+//     scope: cosmosDb.id
+//   }
+// }
 
 // var customRoleName = 'Custom cosmosDB role for graphrag - adds read/write permissions at the container level'
 // resource customCosmosRoleDefinition 'Microsoft.DocumentDB/databaseAccounts/sqlRoleDefinitions@2024-12-01-preview' = {

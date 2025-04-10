@@ -67,12 +67,12 @@ models:
     
 vector_store:
   default_vector_store:
-    type: cosmosdb # or [lancedb, azure_ai_search, cosmosdb]
-    url: ${COSMOS_URI_ENDPOINT}
+    type: azure_ai_search # or [lancedb, azure_ai_search, cosmosdb]
     container_name: PLACEHOLDER
     overwrite: True
-    database_name: vectordb
-
+    url: ${AI_SEARCH_URL}
+    audience: ${AI_SEARCH_AUDIENCE}
+    
 embed_text:
   model_id: default_embedding_model
   vector_store_id: default_vector_store
