@@ -10,6 +10,7 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    status,
 )
 from fastapi.responses import StreamingResponse
 from graphrag.api.query import (
@@ -49,6 +50,7 @@ if os.getenv("KUBERNETES_SERVICE_HOST"):
     "/global",
     summary="Stream a response back after performing a global search",
     description="The global query method generates answers by searching over all AI-generated community reports in a map-reduce fashion. This is a resource-intensive method, but often gives good responses for questions that require an understanding of the dataset as a whole.",
+    status_code=status.HTTP_200_OK,
 )
 async def global_search_streaming(request: GraphGlobalRequest):
     logger = load_pipeline_logger()
@@ -108,6 +110,7 @@ async def global_search_streaming(request: GraphGlobalRequest):
     "/local",
     summary="Stream a response back after performing a local search",
     description="The local query method generates answers by combining relevant data from the AI-extracted knowledge-graph with text chunks of the raw documents. This method is suitable for questions that require an understanding of specific entities mentioned in the documents (e.g. What are the healing properties of chamomile?).",
+    status_code=status.HTTP_200_OK,
 )
 async def local_search_streaming(request: GraphLocalRequest):
     logger = load_pipeline_logger()

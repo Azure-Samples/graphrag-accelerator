@@ -33,7 +33,7 @@ from graphrag_app.utils.common import subscription_key_check
 
 
 async def catch_all_exceptions_middleware(request: Request, call_next):
-    """a function to globally catch all exceptions and return a 500 response with the exception message"""
+    """A global function to catch all exceptions and produce a standard error message"""
     try:
         return await call_next(request)
     except Exception as e:
@@ -44,7 +44,10 @@ async def catch_all_exceptions_middleware(request: Request, call_next):
             cause=e,
             stack=stack,
         )
-        return Response("Unexpected internal server error.", status_code=500)
+        return Response(
+            "Unexpected internal server error.",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
 
 # NOTE: this function is not currently used, but it is a placeholder for future use once RBAC issues have been resolved

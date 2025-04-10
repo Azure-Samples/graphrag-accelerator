@@ -11,6 +11,7 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    status,
 )
 from graphrag.config.load_config import load_config
 from graphrag.config.models.graph_rag_config import GraphRagConfig
@@ -30,6 +31,7 @@ if os.getenv("KUBERNETES_SERVICE_HOST"):
     "/prompts",
     summary="Generate custom graphrag prompts based on user-provided data.",
     description="Generating custom prompts from user-provided data may take several minutes to run based on the amount of data used.",
+    status_code=status.HTTP_200_OK,
 )
 async def generate_prompts(
     container_name: str,

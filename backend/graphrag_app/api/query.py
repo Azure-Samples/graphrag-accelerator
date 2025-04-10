@@ -9,6 +9,7 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    status,
 )
 from graphrag.api.query import drift_search as graphrag_drift_search
 from graphrag.api.query import global_search as graphrag_global_search
@@ -43,7 +44,7 @@ if os.getenv("KUBERNETES_SERVICE_HOST"):
     summary="Perform a global search across the knowledge graph index",
     description="The global query method generates answers by searching over all AI-generated community reports in a map-reduce fashion. This is a resource-intensive method, but often gives good responses for questions that require an understanding of the dataset as a whole.",
     response_model=GraphResponse,
-    responses={200: {"model": GraphResponse}},
+    responses={status.HTTP_200_OK: {"model": GraphResponse}},
 )
 async def global_search(request: GraphGlobalRequest):
     logger = load_pipeline_logger()
@@ -61,8 +62,8 @@ async def global_search(request: GraphGlobalRequest):
     }
     if not _is_index_complete(index_name_map['sanitized_name']):
         raise HTTPException(
-            status_code=500,
-            detail=f"{index_name_map['index_name']} not ready for querying.",
+            status_code=status.HTTP_425_TOO_EARLY,
+            detail=f"{index_name} not ready for querying.",
         )
 
     try:
@@ -104,7 +105,7 @@ async def global_search(request: GraphGlobalRequest):
     summary="Perform a local search across the knowledge graph index.",
     description="The local query method generates answers by combining relevant data from the AI-extracted knowledge-graph with text chunks of the raw documents. This method is suitable for questions that require an understanding of specific entities mentioned in the documents (e.g. What are the healing properties of chamomile?).",
     response_model=GraphResponse,
-    responses={200: {"model": GraphResponse}},
+    responses={status.HTTP_200_OK: {"model": GraphResponse}},
 )
 async def local_search(request: GraphRequest):
     logger = load_pipeline_logger()
@@ -122,8 +123,8 @@ async def local_search(request: GraphRequest):
     }
     if not _is_index_complete(index_name_map['sanitized_name']):
         raise HTTPException(
-            status_code=500,
-            detail=f"{index_name_map['index_name']} not ready for querying.",
+            status_code=status.HTTP_425_TOO_EARLY,
+            detail=f"{index_name} not ready for querying.",
         )
 
     try:

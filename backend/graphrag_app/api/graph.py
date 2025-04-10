@@ -10,6 +10,7 @@ from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
+    status,
 )
 from fastapi.responses import StreamingResponse
 
@@ -34,6 +35,7 @@ if os.getenv("KUBERNETES_SERVICE_HOST"):
     "/graphml/{container_name}",
     summary="Retrieve a GraphML file of the knowledge graph",
     response_description="GraphML file successfully downloaded",
+    status_code=status.HTTP_200_OK,
 )
 async def get_graphml_file(
     container_name, sanitized_container_name: str = Depends(sanitize_name)
