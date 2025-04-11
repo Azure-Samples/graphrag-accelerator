@@ -202,7 +202,7 @@ def desanitize_name(sanitized_container_name: str) -> str | None:
         try:
             return container_store_client.read_item(
                 sanitized_container_name, sanitized_container_name
-            )["human_readable_name"]
+            )["human_readable_index_name"]
         except exceptions.CosmosResourceNotFoundError:
             return None
     except Exception:

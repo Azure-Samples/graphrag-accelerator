@@ -172,7 +172,7 @@ async def get_all_index_names(
     try:
         for item in container_store_client.read_all_items():
             if item["type"] == "index":
-                items.append(item["human_readable_name"])
+                items.append(item["human_readable_index_name"])
     except Exception as e:
         logger = load_pipeline_logger()
         logger.error(
