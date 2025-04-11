@@ -12,7 +12,6 @@ from graphrag.callbacks.workflow_callbacks import WorkflowCallbacks
 # from graphrag.index.create_pipeline_config import create_pipeline_config
 from graphrag.config.enums import IndexingMethod
 from graphrag.config.load_config import load_config
-from graphrag.config.models.community_reports_config import CommunityReportsConfig
 from graphrag.config.models.graph_rag_config import GraphRagConfig
 from graphrag.index.typing.pipeline_run_result import PipelineRunResult
 from graphrag.index.workflows.factory import PipelineFactory

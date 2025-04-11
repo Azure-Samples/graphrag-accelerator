@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 
 import os
+from pathlib import PurePosixPath
 
 from azure.cosmos import (
     ContainerProxy,
@@ -11,7 +12,6 @@ from azure.cosmos import (
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient
 from azure.storage.blob.aio import BlobServiceClient as BlobServiceClientAsync
-from pathlib import PurePosixPath
 
 ENDPOINT_ERROR_MSG = "Could not find connection string in environment variables"
 
@@ -132,7 +132,6 @@ class AzureClientManager:
             self.storage_account_name = meta_info["AccountName"]
         else:
             self.storage_account_name = self.storage_account_hostname.split(".")[0]
-
 
     def get_blob_service_client(self) -> BlobServiceClient:
         """

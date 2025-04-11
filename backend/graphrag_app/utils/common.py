@@ -9,20 +9,18 @@ import hashlib
 import os
 import sys
 import traceback
-from pathlib import Path
-from typing import Annotated, Dict, List
 from io import StringIO
-from typing import Annotated, Tuple
+from pathlib import Path
+from typing import Annotated, Dict, Tuple
 
 import pandas as pd
 from azure.core.exceptions import ResourceNotFoundError
 from azure.cosmos import ContainerProxy, exceptions
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob.aio import ContainerClient
-from fastapi import Header, HTTPException
+from fastapi import Header, HTTPException, status
 from graphrag.config.load_config import load_config
 from graphrag.config.models.graph_rag_config import GraphRagConfig
-from fastapi import Header, HTTPException, status
 
 from graphrag_app.logger.load_logger import load_pipeline_logger
 from graphrag_app.typing.models import QueryData
@@ -393,6 +391,7 @@ def update_multi_index_context_data(
         updated_context_data[key] = updated_entry
     return updated_context_data
     
+
 async def create_cache(container_client: ContainerClient) -> None:
     """
     Create a file cache (csv).

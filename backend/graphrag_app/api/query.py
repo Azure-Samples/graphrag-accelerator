@@ -3,7 +3,6 @@
 
 import os
 import traceback
-from pathlib import Path
 
 from fastapi import (
     APIRouter,
@@ -17,7 +16,6 @@ from graphrag.api.query import local_search as graphrag_local_search
 
 from graphrag_app.logger.load_logger import load_pipeline_logger
 from graphrag_app.typing.models import (
-    GraphDriftRequest,
     GraphGlobalRequest,
     GraphRequest,
     GraphResponse,

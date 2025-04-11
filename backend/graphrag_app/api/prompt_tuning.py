@@ -6,7 +6,6 @@ import traceback
 from pathlib import Path
 
 import graphrag.api as api
-import yaml
 from fastapi import (
     APIRouter,
     Depends,
