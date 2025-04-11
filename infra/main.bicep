@@ -95,7 +95,11 @@ param llmModelVersion string = '2024-08-06'
 param llmModelQuota int = 1
 
 @description('Name of the AOAI embedding model to use. Must match official model id. For more information: https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models')
-@allowed(['text-embedding-ada-002', 'text-embedding-3-large'])
+@allowed([
+  'text-embedding-ada-002'
+  'text-embedding-3-large'
+  'text-embedding-3-small'
+])
 param embeddingModelName string = 'text-embedding-ada-002'
 
 @description('Deployment name of the AOAI embedding model to use. Must match official model id. For more information: https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models')
@@ -125,6 +129,15 @@ var appHostname = 'graphrag.${dnsDomain}'
 var appUrl = 'http://${appHostname}'
 //
 // end AKS parameters
+//
+
+//
+// start AI Search parameters
+//
+@description('Whether or not to restore the API Management service from a soft-deleted state.')
+param aiSearchTier string = 'Standard'
+//
+// end AI Search parameters
 //
 
 var abbrs = loadJsonContent('abbreviations.json')
@@ -275,6 +288,7 @@ module aiSearch 'core/ai-search/ai-search.bicep' = {
     name: '${abbrs.searchSearchServices}${resourceBaseNameFinal}'
     location: location
     publicNetworkAccess: enablePrivateEndpoints ? 'disabled' : 'enabled'
+    sku: aiSearchTier
   }
 }
 

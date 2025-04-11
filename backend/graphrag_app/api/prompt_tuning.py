@@ -6,14 +6,16 @@ import traceback
 from pathlib import Path
 
 import graphrag.api as api
-import yaml
 from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
     status,
 )
-from graphrag.config.create_graphrag_config import create_graphrag_config
+from graphrag.config.load_config import load_config
+from graphrag.config.models.graph_rag_config import GraphRagConfig
+from graphrag.logger.rich_progress import RichProgressLogger
+from graphrag.prompt_tune.types import DocSelectionType
 
 from graphrag_app.logger.load_logger import load_pipeline_logger
 from graphrag_app.utils.azure_clients import AzureClientManager
@@ -32,7 +34,7 @@ if os.getenv("KUBERNETES_SERVICE_HOST"):
 )
 async def generate_prompts(
     container_name: str,
-    limit: int = 5,
+    limit: int = 15,
     sanitized_container_name: str = Depends(sanitize_name),
 ):
     """
@@ -48,21 +50,31 @@ async def generate_prompts(
             detail=f"Storage container '{container_name}' does not exist.",
         )
 
-    # load pipeline configuration file (settings.yaml) for input data and other settings
-    ROOT_DIR = Path(__file__).resolve().parent.parent.parent
-    with (ROOT_DIR / "scripts/settings.yaml").open("r") as f:
-        data = yaml.safe_load(f)
-    data["input"]["container_name"] = sanitized_container_name
-    graphrag_config = create_graphrag_config(values=data, root_dir=".")
+    # load custom pipeline settings
+    ROOT_DIR = Path(__file__).resolve().parent.parent.parent / "scripts/settings.yaml"
+    
+    # layer the custom settings on top of the default configuration settings of graphrag
+    graphrag_config: GraphRagConfig = load_config(
+        root_dir=ROOT_DIR.parent, 
+        config_filepath=ROOT_DIR
+    )
+    graphrag_config.input.container_name = sanitized_container_name
 
     # generate prompts
     try:
         prompts: tuple[str, str, str] = await api.generate_indexing_prompts(
             config=graphrag_config,
+            logger=RichProgressLogger(prefix=sanitized_container_name),
             root=".",
             limit=limit,
-            selection_method="random",
+            selection_method=DocSelectionType.AUTO,
         )
+        prompt_content = {
+            "entity_extraction_prompt": prompts[0],
+            "entity_summarization_prompt": prompts[1],
+            "community_summarization_prompt": prompts[2],
+        }
+        return prompt_content  # returns a fastapi.responses.JSONResponse object
     except Exception as e:
         logger = load_pipeline_logger()
         error_details = {
@@ -78,10 +90,3 @@ async def generate_prompts(
             status_code=500,
             detail=f"Error generating prompts for data in '{container_name}'. Please try a lower limit.",
         )
-
-    prompt_content = {
-        "entity_extraction_prompt": prompts[0],
-        "entity_summarization_prompt": prompts[1],
-        "community_summarization_prompt": prompts[2],
-    }
-    return prompt_content  # returns a fastapi.responses.JSONResponse object

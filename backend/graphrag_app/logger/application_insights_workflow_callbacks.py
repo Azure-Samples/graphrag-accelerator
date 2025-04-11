@@ -136,6 +136,9 @@ class ApplicationInsightsWorkflowCallbacks(NoopWorkflowCallbacks):
         details: Optional[dict] = {},
     ) -> None:
         """A call back handler for when an error occurs."""
+        if details is None:
+            details = {}
+
         details = {"cause": str(cause), "stack": stack, **details}
         self._logger.error(
             message,

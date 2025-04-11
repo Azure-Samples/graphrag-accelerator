@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 
 import os
-from pathlib import Path
+from pathlib import PurePosixPath
 from typing import List
 
 from graphrag.callbacks.file_workflow_callbacks import FileWorkflowCallbacks
@@ -44,7 +44,7 @@ def load_pipeline_logger(
                     log_blob_name = os.path.join(logging_dir, log_blob_name)
                 # ensure the root directory exists; if not, create it
                 blob_service_client = azure_client_manager.get_blob_service_client()
-                container_root = Path(log_blob_name).parts[0]
+                container_root = PurePosixPath(log_blob_name).parts[0]
                 if not blob_service_client.get_container_client(
                     container_root
                 ).exists():

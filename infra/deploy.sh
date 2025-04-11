@@ -2,13 +2,14 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-# set -ux # uncomment this line to debug
+set -ux # uncomment this line to debug
 # TODO: use https://www.shellcheck.net to lint this script and make recommended updates
 
 aksNamespace="graphrag"
 
 # Optional parameters with default values
 AI_SEARCH_AUDIENCE="https://search.azure.com"
+AI_SEARCH_TIER="standard"
 AISEARCH_ENDPOINT_SUFFIX="search.windows.net"
 APIM_NAME=""
 APIM_TIER="Developer"
@@ -29,6 +30,8 @@ GRAPHRAG_EMBEDDING_MODEL="text-embedding-ada-002"
 GRAPHRAG_EMBEDDING_MODEL_VERSION="2"
 GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME="text-embedding-ada-002"
 GRAPHRAG_EMBEDDING_MODEL_QUOTA="300"
+GRAPHRAG_LLM_MODEL_CONCURRENT_REQUEST="15"
+GRAPHRAG_EMBEDDING_MODEL_CONCURRENT_REQUEST="15"
 
 requiredParams=(
     LOCATION
@@ -39,6 +42,7 @@ optionalParams=(
     AISEARCH_ENDPOINT_SUFFIX
     APIM_NAME
     APIM_TIER
+    AI_SEARCH_TIER
     CLOUD_NAME
     GRAPHRAG_IMAGE
     PUBLISHER_EMAIL
@@ -56,6 +60,8 @@ optionalParams=(
     GRAPHRAG_EMBEDDING_MODEL_QUOTA
     GRAPHRAG_EMBEDDING_MODEL_VERSION
     GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME
+    GRAPHRAG_LLM_MODEL_CONCURRENT_REQUEST
+    GRAPHRAG_EMBEDDING_MODEL_CONCURRENT_REQUEST
 )
 
 errorBanner () {
@@ -360,6 +366,7 @@ deployAzureResources () {
         --parameters "resourceBaseName=$RESOURCE_BASE_NAME" \
         --parameters "apimName=$APIM_NAME" \
         --parameters "apimTier=$APIM_TIER" \
+        --parameters "aiSearchTier=$AI_SEARCH_TIER" \
         --parameters "apiPublisherEmail=$PUBLISHER_EMAIL" \
         --parameters "apiPublisherName=$PUBLISHER_NAME" \
         --parameters "enablePrivateEndpoints=$ENABLE_PRIVATE_ENDPOINTS" \
@@ -552,7 +559,10 @@ installGraphRAGHelmChart () {
         --set "graphragConfig.GRAPHRAG_LLM_DEPLOYMENT_NAME=$graphragLlmModelDeployment" \
         --set "graphragConfig.GRAPHRAG_EMBEDDING_MODEL=$graphragEmbeddingModel" \
         --set "graphragConfig.GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME=$graphragEmbeddingModelDeployment" \
-        --set "graphragConfig.STORAGE_ACCOUNT_BLOB_URL=$storageAccountBlobUrl"
+        --set "graphragConfig.STORAGE_ACCOUNT_BLOB_URL=$storageAccountBlobUrl" \
+        --set "graphragConfig.GRAPHRAG_LLM_MODEL_CONCURRENT_REQUEST=\"$GRAPHRAG_LLM_MODEL_CONCURRENT_REQUEST\"" \
+        --set "graphragConfig.GRAPHRAG_EMBEDDING_MODEL_CONCURRENT_REQUEST=\"$GRAPHRAG_EMBEDDING_MODEL_CONCURRENT_REQUEST\""
+      
 
     local helmResult
     helmResult=$?

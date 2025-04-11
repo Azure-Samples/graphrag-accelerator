@@ -3,135 +3,164 @@
 
 # this yaml file serves as a configuration template for the graphrag indexing jobs
 # some values are hardcoded while others denoted by PLACEHOLDER will be dynamically set
-
-######################  LLM settings  ######################
-encoding_model: cl100k_base # this needs to be matched to your model!
-
-llm:
-  type: azure_openai_chat
-  api_base: $GRAPHRAG_API_BASE
-  api_version: $GRAPHRAG_API_VERSION
-  model: $GRAPHRAG_LLM_MODEL
-  deployment_name: $GRAPHRAG_LLM_DEPLOYMENT_NAME
-  audience: $COGNITIVE_SERVICES_AUDIENCE
-  model_supports_json: True
-  tokens_per_minute: 80_000
-  requests_per_minute: 480
-  concurrent_requests: 25
-  max_retries: 250
-  max_retry_wait: 60.0
-  sleep_on_rate_limit_recommendation: True
-
-parallelization:
-  num_threads: 10
-  stagger: 0.25
-
-async_mode: threaded # or asyncio
-
-embeddings:
-  vector_store:
-    type: azure_ai_search
-    collection_name: PLACEHOLDER
-    title_column: name
-    overwrite: True
-    url: $AI_SEARCH_URL
-    audience: $AI_SEARCH_AUDIENCE
-  llm:
-    type: azure_openai_embedding
-    api_base: $GRAPHRAG_API_BASE
-    api_version: $GRAPHRAG_API_VERSION
-    batch_size: 10
-    model: $GRAPHRAG_EMBEDDING_MODEL
-    deployment_name: $GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME
-    audience: $COGNITIVE_SERVICES_AUDIENCE
-    tokens_per_minute: 350_000
-    requests_per_minute: 2_100
+# For a full list of available settings, see https://microsoft.github.io/graphrag/config/yaml/
 
 ######################  Input settings  ######################
+encoding_model: &encoding_name o200k_base # gpt-4o
+
 input:
-  type: blob
-  file_type: text
+  type: blob # or file
+  file_type: text # [csv, text, json]
   base_dir: .
-  file_encoding: utf-8
-  file_pattern: .*\.txt$
-  storage_account_blob_url: $STORAGE_ACCOUNT_BLOB_URL
   container_name: PLACEHOLDER
+  storage_account_blob_url: &storage_account_blob_url ${STORAGE_ACCOUNT_BLOB_URL}
 
 chunks:
-  size: 1_200
-  overlap: 100
-  group_by_columns: [id]
+  size: 800 # 800 tokens (about 3200 characters)
+  overlap: 100 # 100 tokens (about 400 characters)
+  strategy: tokens # or sentences
+  encoding_model: *encoding_name
 
 ######################  Storage settings  ######################
 cache:
-  type: blob
-  storage_account_blob_url: $STORAGE_ACCOUNT_BLOB_URL
-  container_name: PLACEHOLDER
+  type: blob # or [file, memory, none, blob, cosmosdb]
   base_dir: cache
+  container_name: PLACEHOLDER
+  storage_account_blob_url: *storage_account_blob_url 
 
 reporting:
-  type: blob
-  storage_account_blob_url: $STORAGE_ACCOUNT_BLOB_URL
-  container_name: PLACEHOLDER
+  type: blob # or [file, console, blob]
   base_dir: logs
-
-storage:
-  type: blob
-  storage_account_blob_url: $STORAGE_ACCOUNT_BLOB_URL
   container_name: PLACEHOLDER
+  storage_account_blob_url: *storage_account_blob_url
+
+output:
+  type: blob # or [file, memory, blob, cosmosdb]
   base_dir: output
+  container_name: PLACEHOLDER
+  storage_account_blob_url: *storage_account_blob_url 
+
+######################  LLM settings  ######################
+models:
+  default_chat_model: &default_chat_model
+    encoding_model: *encoding_name
+    type: azure_openai_chat # or openai_chat 
+    auth_type: azure_managed_identity # or api_key 
+    model: ${GRAPHRAG_LLM_MODEL}
+    deployment_name: ${GRAPHRAG_LLM_DEPLOYMENT_NAME}
+    audience: ${COGNITIVE_SERVICES_AUDIENCE}
+    model_supports_json: true # recommended if this is available for your model.
+    concurrent_requests: ${GRAPHRAG_LLM_MODEL_CONCURRENT_REQUEST} # max number of simultaneous LLM requests allowed
+    async_mode: threaded # or asyncio
+    retry_strategy: native
+    max_retries: -1 # set to -1 for dynamic retry logic (most optimal setting based on server response)
+    tokens_per_minute: 0  # set to 0 to disable rate limiting
+    requests_per_minute: 0 # set to 0 to disable rate limiting
+    api_base: ${GRAPHRAG_API_BASE}
+    api_version: ${GRAPHRAG_API_VERSION}
+  default_embedding_model:
+    <<: *default_chat_model # use the same settings as the chat model
+    type: azure_openai_embedding # or azure_openai_embedding
+    model: ${GRAPHRAG_EMBEDDING_MODEL}
+    deployment_name: ${GRAPHRAG_EMBEDDING_DEPLOYMENT_NAME}
+    concurrent_requests: ${GRAPHRAG_EMBEDDING_MODEL_CONCURRENT_REQUEST} # max number of simultaneous LLM requests allowed
+    
+vector_store:
+  default_vector_store:
+    type: azure_ai_search # or [lancedb, azure_ai_search, cosmosdb]
+    container_name: PLACEHOLDER
+    overwrite: True
+    url: ${AI_SEARCH_URL}
+    audience: ${AI_SEARCH_AUDIENCE}
+    
+embed_text:
+  model_id: default_embedding_model
+  vector_store_id: default_vector_store
 
 ######################  Workflow settings  ######################
-skip_workflows: []
-
-entity_extraction:
+extract_graph:
+  model_id: default_chat_model
   prompt: PLACEHOLDER
-  entity_types: [organization, person, geo, event]
   max_gleanings: 1
 
+extract_graph_nlp:
+  text_analyzer:
+    extractor_type: regex_english # [regex_english, syntactic_parser, cfg]
+
 summarize_descriptions:
+  model_id: default_chat_model
   prompt: PLACEHOLDER
   max_length: 500
 
 claim_extraction:
   enabled: false
+  model_id: default_chat_model
   prompt: "prompts/claim_extraction.txt"
   description: "Any claims or facts that could be relevant to information discovery."
   max_gleanings: 1
 
 community_reports:
-  prompt: PLACEHOLDER
+  model_id: default_chat_model
+  graph_prompt: "prompts/community_report_graph.txt"
+  text_prompt: prompts/community_report_text.txt
   max_length: 2_000
   max_input_length: 8_000
-
+  
 cluster_graph:
   max_cluster_size: 10
 
 embed_graph:
-  enabled: false
+  enabled: false # if true, will generate node2vec embeddings for nodes
 
 umap:
-  enabled: false
+  enabled: false # if true, will generate UMAP embeddings for nodes
 
 snapshots:
-  graphml: True
+  graphml: true
+  transient: true
   embeddings: false
-  transient: false
 
 ######################  Query settings  ######################
+
+#######################
+# search parameters # 
+#######################
+
 ## The prompt locations are required here, but each search method has a number of optional knobs that can be tuned.
 ## See the config docs: https://microsoft.github.io/graphrag/config/yaml/#query
+
+### Query settings ###
 local_search:
-  prompt: PLACEHOLDER
+  chat_model_id: default_chat_model
+  embedding_model_id: default_embedding_model
+  prompt: "prompts/local_search_system_prompt.txt"
+  text_unit_prop: 0.5
+  community_prop: 0.1
+  conversation_history_max_turns: 5
+  top_k_entities: 10
+  top_k_relationships: 10
+  temperature: 0.0
+  top_p: 1.0
+  n: 1
+  max_tokens: 12000
+  llm_max_tokens: 2000
 
 global_search:
-  map_prompt: PLACEHOLDER
-  reduce_prompt: PLACEHOLDER
-  knowledge_prompt: PLACEHOLDER
+  chat_model_id: default_chat_model
+  embedding_model_id: default_embedding_model
+  map_prompt: "prompts/global_search_map_system_prompt.txt"
+  reduce_prompt: "prompts/global_search_reduce_system_prompt.txt"
+  knowledge_prompt: "prompts/global_search_knowledge_system_prompt.txt"
+  concurrency: 50
 
 drift_search:
-  prompt: PLACEHOLDER
-  reduce_prompt: PLACEHOLDER
+  chat_model_id: default_chat_model
+  embedding_model_id: default_embedding_model
+  prompt: "prompts/drift_search_system_prompt.txt"
+  reduce_prompt: "prompts/drift_search_reduce_prompt.txt"
+  concurrency: 50
 
 basic_search:
-  prompt: PLACEHOLDER
+  chat_model_id: default_chat_model
+  embedding_model_id: default_embedding_model
+  prompt: "prompts/basic_search_system_prompt.txt"

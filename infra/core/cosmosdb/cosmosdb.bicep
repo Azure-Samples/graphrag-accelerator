@@ -10,7 +10,7 @@ param location string = resourceGroup().location
 @allowed(['Enabled', 'Disabled'])
 param publicNetworkAccess string = 'Disabled'
 
-var maxThroughput = 1000
+var maxThroughput = 3000
 
 resource cosmosDb 'Microsoft.DocumentDB/databaseAccounts@2024-11-15' = {
   name: cosmosDbName
@@ -54,7 +54,11 @@ resource cosmosDb 'Microsoft.DocumentDB/databaseAccounts@2024-11-15' = {
       }
     ]
     cors: []
-    capabilities: []
+    capabilities: [
+      // {
+      //   name: 'EnableNoSQLVectorSearch'
+      // }
+    ]
     ipRules: []
     backupPolicy: {
       type: 'Periodic'

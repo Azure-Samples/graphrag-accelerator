@@ -14,6 +14,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from graphrag.config.enums import IndexingMethod
 from kubernetes import (
     client as kubernetes_client,
 )
@@ -57,8 +58,12 @@ async def schedule_index_job(
     index_container_name: str,
     entity_extraction_prompt: UploadFile | None = None,
     entity_summarization_prompt: UploadFile | None = None,
-    community_summarization_prompt: UploadFile | None = None,
+    community_summarization_graph_prompt: UploadFile | None = None,
+    community_summarization_text_prompt: UploadFile | None = None,
+    indexing_method: IndexingMethod = IndexingMethod.Standard.value,
 ):
+    indexing_method = IndexingMethod(indexing_method).value
+
     azure_client_manager = AzureClientManager()
     blob_service_client = azure_client_manager.get_blob_service_client()
     pipelinejob = PipelineJob()
@@ -87,9 +92,14 @@ async def schedule_index_job(
         if entity_summarization_prompt
         else None
     )
-    community_summarization_prompt_content = (
-        community_summarization_prompt.file.read().decode("utf-8")
-        if community_summarization_prompt
+    community_summarization_graph_content = (
+        community_summarization_graph_prompt.file.read().decode("utf-8")
+        if community_summarization_graph_prompt
+        else None
+    )
+    community_summarization_text_content = (
+        community_summarization_text_prompt.file.read().decode("utf-8")
+        if community_summarization_text_prompt
         else None
     )
 
@@ -120,9 +130,14 @@ async def schedule_index_job(
         ) = []
         existing_job._entity_extraction_prompt = entity_extraction_prompt_content
         existing_job._entity_summarization_prompt = entity_summarization_prompt_content
-        existing_job._community_summarization_prompt = (
-            community_summarization_prompt_content
+        existing_job.community_summarization_graph_prompt = (
+            community_summarization_graph_content
         )
+        existing_job.community_summarization_text_prompt = (
+            community_summarization_text_content
+        )
+        existing_job._indexing_method = indexing_method
+
         existing_job._epoch_request_time = int(time())
         existing_job.update_db()
     else:
@@ -132,7 +147,9 @@ async def schedule_index_job(
             human_readable_storage_name=storage_container_name,
             entity_extraction_prompt=entity_extraction_prompt_content,
             entity_summarization_prompt=entity_summarization_prompt_content,
-            community_summarization_prompt=community_summarization_prompt_content,
+            community_summarization_graph_prompt=community_summarization_graph_content,
+            community_summarization_text_prompt=community_summarization_text_content,
+            indexing_method=indexing_method,
             status=PipelineJobState.SCHEDULED,
         )
 
@@ -155,7 +172,7 @@ async def get_all_index_names(
     try:
         for item in container_store_client.read_all_items():
             if item["type"] == "index":
-                items.append(item["human_readable_name"])
+                items.append(item["human_readable_index_name"])
     except Exception as e:
         logger = load_pipeline_logger()
         logger.error(
@@ -245,9 +262,19 @@ async def delete_index(
             credential=DefaultAzureCredential(),
             audience=os.environ["AI_SEARCH_AUDIENCE"],
         )
-        ai_search_index_name = f"{sanitized_container_name}_description_embedding"
-        if ai_search_index_name in index_client.list_index_names():
-            index_client.delete_index(ai_search_index_name)
+        
+        index_names = index_client.list_index_names()
+        ai_search_index_report_name = f"{sanitized_container_name}-community-full_content"
+        if ai_search_index_report_name in index_names:
+            index_client.delete_index(ai_search_index_report_name)
+        
+        ai_search_index_description_name = f"{sanitized_container_name}-entity-description"
+        if ai_search_index_description_name in index_names:
+            index_client.delete_index(ai_search_index_description_name)
+        
+        ai_search_index_text_name = f"{sanitized_container_name}-text_unit-text"
+        if ai_search_index_text_name in index_names:
+            index_client.delete_index(ai_search_index_text_name)
 
     except Exception as e:
         logger = load_pipeline_logger()

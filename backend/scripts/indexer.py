@@ -7,11 +7,14 @@ import traceback
 from pathlib import Path
 
 import graphrag.api as api
-import yaml
 from graphrag.callbacks.workflow_callbacks import WorkflowCallbacks
-from graphrag.config.create_graphrag_config import create_graphrag_config
-from graphrag.index.create_pipeline_config import create_pipeline_config
-from graphrag.index.typing import PipelineRunResult
+
+# from graphrag.index.create_pipeline_config import create_pipeline_config
+from graphrag.config.enums import IndexingMethod
+from graphrag.config.load_config import load_config
+from graphrag.config.models.graph_rag_config import GraphRagConfig
+from graphrag.index.typing.pipeline_run_result import PipelineRunResult
+from graphrag.index.workflows.factory import PipelineFactory
 
 from graphrag_app.logger import (
     PipelineJobUpdater,
@@ -48,55 +51,75 @@ def start_indexing_job(index_name: str):
     storage_name = pipeline_job.human_readable_index_name
 
     # load custom pipeline settings
-    SCRIPT_DIR = Path(__file__).resolve().parent
-    with (SCRIPT_DIR / "settings.yaml").open("r") as f:
-        data = yaml.safe_load(f)
-    # dynamically set some values
-    data["input"]["container_name"] = sanitized_storage_name
-    data["storage"]["container_name"] = sanitized_index_name
-    data["reporting"]["container_name"] = sanitized_index_name
-    data["cache"]["container_name"] = sanitized_index_name
-    if "vector_store" in data["embeddings"]:
-        data["embeddings"]["vector_store"]["collection_name"] = (
-            f"{sanitized_index_name}_description_embedding"
-        )
+    ROOT_DIR = Path(__file__).resolve().parent / "settings.yaml"
+    config: GraphRagConfig = load_config(
+        root_dir=ROOT_DIR.parent, 
+        config_filepath=ROOT_DIR
+    )
+    # dynamically assign the sanitized index name 
+    config.vector_store["default_vector_store"].container_name = sanitized_index_name
 
-    # set prompt for entity extraction
-    if pipeline_job.entity_extraction_prompt:
-        fname = "entity-extraction-prompt.txt"
-        with open(fname, "w") as outfile:
-            outfile.write(pipeline_job.entity_extraction_prompt)
-        data["entity_extraction"]["prompt"] = fname
+    # dynamically set indexing storage values
+    config.input.container_name = sanitized_storage_name
+    config.output.container_name = sanitized_index_name
+    config.reporting.container_name = sanitized_index_name
+    config.cache.container_name = sanitized_index_name
+    
+    # update extraction prompts
+    PROMPT_DIR = Path(__file__).resolve().parent
+
+    # set prompt for entity extraction / graph construction
+    if pipeline_job.entity_extraction_prompt is None:
+        # use the default prompt
+        config.extract_graph.prompt = None
     else:
-        data.pop("entity_extraction")
+        # try to load the custom prompt
+        fname = "extract_graph.txt"
+        with open(PROMPT_DIR / fname, "w") as file:
+            file.write(pipeline_job.entity_extraction_prompt)
+        config.extract_graph.prompt = fname
 
     # set prompt for entity summarization
-    if pipeline_job.entity_summarization_prompt:
-        fname = "entity-summarization-prompt.txt"
-        with open(fname, "w") as outfile:
-            outfile.write(pipeline_job.entity_summarization_prompt)
-        data["summarize_descriptions"]["prompt"] = fname
+    if pipeline_job.entity_summarization_prompt is None:
+        # use the default prompt
+        config.summarize_descriptions.prompt = None
     else:
-        data.pop("summarize_descriptions")
+        # try to load the custom prompt
+        fname = "summarize_descriptions.txt"
+        with open(PROMPT_DIR / fname, "w") as file:
+            file.write(pipeline_job.entity_summarization_prompt)
+        config.summarize_descriptions.prompt = fname
 
-    # set prompt for community summarization
-    if pipeline_job.community_summarization_prompt:
-        fname = "community-summarization-prompt.txt"
-        with open(fname, "w") as outfile:
-            outfile.write(pipeline_job.community_summarization_prompt)
-        data["community_reports"]["prompt"] = fname
+    # set prompt for community graph summarization
+    if pipeline_job.community_summarization_graph_prompt is None:
+        # use the default prompt
+        config.community_reports.graph_prompt = None
     else:
-        data.pop("community_reports")
+        # try to load the custom prompt
+        fname = "community_report_graph.txt"
+        with open(PROMPT_DIR / fname, "w") as file:
+            file.write(pipeline_job.community_summarization_graph_prompt)
+        pipeline_job.community_summarization_graph_prompt = fname
 
-    # generate default graphrag config parameters and override with custom settings
-    parameters = create_graphrag_config(data, ".")
+    # set prompt for community text summarization
+    if pipeline_job.community_summarization_text_prompt is None:
+        # use the default prompt
+        config.community_reports.text_prompt = None
+    else:
+        fname = "community_report_text.txt"
+        # try to load the custom prompt
+        with open(PROMPT_DIR / fname, "w") as file:
+            file.write(pipeline_job.community_summarization_text_prompt)
+        config.community_reports.text_prompt = fname
+
+    # set the extraction strategy
+    indexing_method = IndexingMethod(pipeline_job.indexing_method)
+    pipeline_workflows = PipelineFactory.create_pipeline(config, indexing_method)
 
     # reset pipeline job details
     pipeline_job.status = PipelineJobState.RUNNING
-    pipeline_config = create_pipeline_config(parameters)
-    pipeline_job.all_workflows = [
-        workflow.name for workflow in pipeline_config.workflows
-    ]
+
+    pipeline_job.all_workflows = pipeline_workflows.names()
     pipeline_job.completed_workflows = []
     pipeline_job.failed_workflows = []
 
@@ -117,7 +140,8 @@ def start_indexing_job(index_name: str):
         print("Building index...")
         pipeline_results: list[PipelineRunResult] = asyncio.run(
             api.build_index(
-                config=parameters,
+                config=config,
+                method=indexing_method,
                 callbacks=[logger, pipeline_job_updater],
             )
         )

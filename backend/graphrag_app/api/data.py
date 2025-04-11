@@ -50,13 +50,15 @@ if os.getenv("KUBERNETES_SERVICE_HOST"):
     response_model=StorageNameList,
     responses={status.HTTP_200_OK: {"model": StorageNameList}},
 )
-async def get_all_data_containers():
+async def get_all_data_containers(
+    container_store_client=Depends(get_cosmos_container_store_client),
+):
     """
     Retrieve a list of all data containers.
     """
     items = []
     try:
-        container_store_client = get_cosmos_container_store_client()
+        # container_store_client = get_cosmos_container_store_client()
         for item in container_store_client.read_all_items():
             if item["type"] == "data":
                 items.append(item["human_readable_name"])
@@ -184,6 +186,8 @@ async def upload_files(
             )
         return BaseResponse(status="Success.")
     except Exception as e:
+        # import traceback
+        # traceback.print_exc()
         logger = load_pipeline_logger()
         logger.error(
             message="Error uploading files.",

@@ -50,11 +50,11 @@ environs = ">=9.5.0"
 fastapi = ">=0.110.0"
 fastparquet = ">=2023.10.1"
 fsspec = ">=2024.2.0"
-graphrag = "==1.2.0"
+graphrag = { git = "https://github.com/microsoft/graphrag.git", rev = "ffd8db7104defdcd131e5af38473d2f0815e3cf7" }
 httpx = ">=0.25.2"
 kubernetes = ">=29.0.0"
 markitdown = {extras = ["all"], version = "^0.1.1"}
-networkx = ">=3.2.1"
+networkx = ">=3.4.2"
 nltk = "*"
 pandas = ">=2.2.1"
 pyaml-env = ">=1.2.1"

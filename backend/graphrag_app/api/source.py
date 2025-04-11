@@ -35,13 +35,13 @@ source_route = APIRouter(
 if os.getenv("KUBERNETES_SERVICE_HOST"):
     source_route.dependencies.append(Depends(subscription_key_check))
 
-
-COMMUNITY_REPORT_TABLE = "output/create_final_community_reports.parquet"
-COVARIATES_TABLE = "output/create_final_covariates.parquet"
-ENTITY_EMBEDDING_TABLE = "output/create_final_entities.parquet"
-RELATIONSHIPS_TABLE = "output/create_final_relationships.parquet"
-TEXT_UNITS_TABLE = "output/create_final_text_units.parquet"
-DOCUMENTS_TABLE = "output/create_final_documents.parquet"
+COMMUNITY_TABLE = "output/communities.parquet"
+COMMUNITY_REPORT_TABLE = "output/community_reports.parquet"
+COVARIATES_TABLE = "output/covariates.parquet"
+ENTITIES_TABLE = "output/entities.parquet"
+RELATIONSHIPS_TABLE = "output/relationships.parquet"
+TEXT_UNITS_TABLE = "output/text_units.parquet"
+DOCUMENTS_TABLE = "output/documents.parquet"
 
 
 @source_route.get(
@@ -96,7 +96,7 @@ async def get_report_info(
     responses={status.HTTP_200_OK: {"model": TextUnitResponse}},
 )
 async def get_chunk_info(
-    text_unit_id: str,
+    text_unit_id: int,
     container_name: str,
     sanitized_container_name: str = Depends(sanitize_name),
 ):
@@ -108,32 +108,51 @@ async def get_chunk_info(
             f"abfs://{sanitized_container_name}/{TEXT_UNITS_TABLE}",
             storage_options=pandas_storage_options(),
         )
+        text_units_filter = text_units["human_readable_id"].isin([text_unit_id])
+
+        # verify that text_unit_id exists in the index
+        if not text_units_filter.any():
+            raise ValueError(
+                f"Text unit '{text_unit_id}' not found in index '{container_name}'."
+            )
+
+        # explode the 'document_ids' column so the format matches with 'document_id'
+        text_units = text_units[text_units_filter].explode("document_ids")
+
         docs = pd.read_parquet(
             f"abfs://{sanitized_container_name}/{DOCUMENTS_TABLE}",
             storage_options=pandas_storage_options(),
         )
         # rename columns for easy joining
-        docs = docs[["id", "title"]].rename(
-            columns={"id": "document_id", "title": "source_document"}
+        docs = docs[
+            [
+                "id", "title", "human_readable_id"
+            ]
+        ].rename(
+            columns={
+                "id": "document_id", 
+                "title": "source_document",
+                "human_readable_id": "document_human_readable_id"
+            }
         )
-        # explode the 'document_ids' column so the format matches with 'document_id'
-        text_units = text_units.explode("document_ids")
-
-        # verify that text_unit_id exists in the index
-        if not text_units["id"].isin([text_unit_id]).any():
-            raise ValueError(
-                f"Text unit '{text_unit_id}' not found in index '{container_name}'."
-            )
 
         # combine tables to create a (chunk_id -> source_document) mapping
         merged_table = text_units.merge(
             docs, left_on="document_ids", right_on="document_id", how="left"
         )
         row = merged_table.loc[
-            merged_table["id"] == text_unit_id, ["id", "source_document"]
+            merged_table["human_readable_id"] == text_unit_id, 
+            [
+                "text", 
+                "source_document",
+                "human_readable_id",
+                "document_human_readable_id"
+            ]
         ]
         return TextUnitResponse(
-            text=row["id"].to_numpy()[0],
+            text_unit_id=row["human_readable_id"].to_numpy()[0],
+            source_document_id=row["document_human_readable_id"].to_numpy()[0],
+            text=row["text"].to_numpy()[0],
             source_document=row["source_document"].to_numpy()[0],
         )
     except Exception as e:
@@ -161,10 +180,14 @@ async def get_entity_info(
     sanitized_container_name: str = Depends(sanitize_name),
 ):
     # check for existence of file the query relies on to validate the index is complete
-    validate_index_file_exist(sanitized_container_name, ENTITY_EMBEDDING_TABLE)
+    validate_index_file_exist(sanitized_container_name, ENTITIES_TABLE)
     try:
         entity_table = pd.read_parquet(
-            f"abfs://{sanitized_container_name}/{ENTITY_EMBEDDING_TABLE}",
+            f"abfs://{sanitized_container_name}/{ENTITIES_TABLE}",
+            storage_options=pandas_storage_options(),
+        )
+        text_units = pd.read_parquet(
+            f"abfs://{sanitized_container_name}/{TEXT_UNITS_TABLE}",
             storage_options=pandas_storage_options(),
         )
         # check if entity_id exists in the index
@@ -173,10 +196,14 @@ async def get_entity_info(
                 f"Entity '{entity_id}' not found in index '{container_name}'."
             )
         row = entity_table[entity_table["human_readable_id"] == entity_id]
+        text_unit_human_readable_ids = text_units[
+            text_units["id"].isin(row["text_unit_ids"].to_numpy()[0].tolist())
+        ]["human_readable_id"].to_list()
         return EntityResponse(
             name=row["title"].to_numpy()[0],
+            type=row["type"].to_numpy()[0],
             description=row["description"].to_numpy()[0],
-            text_units=row["text_unit_ids"].to_numpy()[0].tolist(),
+            text_units=text_unit_human_readable_ids,
         )
     except Exception as e:
         logger = load_pipeline_logger()
@@ -254,32 +281,38 @@ async def get_relationship_info(
 ):
     # check for existence of file the query relies on to validate the index is complete
     validate_index_file_exist(sanitized_container_name, RELATIONSHIPS_TABLE)
-    validate_index_file_exist(sanitized_container_name, ENTITY_EMBEDDING_TABLE)
+    validate_index_file_exist(sanitized_container_name, ENTITIES_TABLE)
     try:
         relationship_table = pd.read_parquet(
             f"abfs://{sanitized_container_name}/{RELATIONSHIPS_TABLE}",
             storage_options=pandas_storage_options(),
         )
-        entity_table = pd.read_parquet(
-            f"abfs://{sanitized_container_name}/{ENTITY_EMBEDDING_TABLE}",
-            storage_options=pandas_storage_options(),
-        )
-        row = relationship_table[
+        relationship_table_row = relationship_table[
             relationship_table.human_readable_id == relationship_id
         ]
+
+        entity_table = pd.read_parquet(
+            f"abfs://{sanitized_container_name}/{ENTITIES_TABLE}",
+            storage_options=pandas_storage_options(),
+        )
+        text_units = pd.read_parquet(
+            f"abfs://{sanitized_container_name}/{TEXT_UNITS_TABLE}",
+            storage_options=pandas_storage_options(),
+        )
+        text_unit_ids = text_units[text_units["id"].isin(
+            relationship_table_row["text_unit_ids"].values[0]
+        )]["human_readable_id"]
         return RelationshipResponse(
-            source=row["source"].values[0],
+            source=relationship_table_row["source"].values[0],
             source_id=entity_table[
-                entity_table.title == row["source"].values[0]
+                entity_table.title == relationship_table_row["source"].values[0]
             ].human_readable_id.values[0],
-            target=row["target"].values[0],
+            target=relationship_table_row["target"].values[0],
             target_id=entity_table[
-                entity_table.title == row["target"].values[0]
+                entity_table.title == relationship_table_row["target"].values[0]
             ].human_readable_id.values[0],
-            description=row["description"].values[0],
-            text_units=[
-                x[0] for x in row["text_unit_ids"].to_list()
-            ],  # extract text_unit_ids from a list of panda series
+            description=relationship_table_row["description"].values[0],
+            text_units=text_unit_ids.to_list(),  # extract text_unit_ids from a list of panda series
         )
     except Exception as e:
         logger = load_pipeline_logger()
