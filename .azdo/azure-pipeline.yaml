@@ -1,13 +1,13 @@
 trigger:
-- main
+  - main
 
 # the `resources` specify the location and version of the 1ES Pipeline Template (PT).
 resources:
   repositories:
-  - repository: 1ESPipelineTemplates
-    type: git
-    name: 1ESPipelineTemplates/1ESPipelineTemplates
-    ref: refs/tags/release
+    - repository: 1ESPipelineTemplates
+      type: git
+      name: 1ESPipelineTemplates/1ESPipelineTemplates
+      ref: refs/tags/release
 
 extends:
   # this pipeline extends an existing 1ES PT which injects various SDL and compliance tasks
@@ -28,14 +28,12 @@ extends:
     stages:
       - stage: Component_Governance
         jobs:
-        - job: CG_Prep
-          steps:
-            # Component Governance (CG) does not support pyproject.toml yet.
-            # For this reason, use toml-to-requirements to export dependencies into a requirements.txt file.
-            # CG will auto-detect the requirements.txt file and use it to scan for dependencies.
-            - script: |
-                pip install toml-to-requirements
-                toml-to-req --toml-file backend/pyproject.toml --poetry --optional-lists dev,test,backend,frontend
-                # toml-to-req is not perfect. It will leave wildcard characters in the requirements.txt file which we remove
-                sed -i 's/\*//g' requirements.txt
-              displayName: 'Export python dependencies to requirements.txt for CG'
+          - job: CG_Prep
+            steps:
+              # Component Governance (CG) does not support pyproject.toml yet.
+              # For this reason, we export dependencies into a requirements.txt file.
+              # CG will auto-detect the requirements.txt file and use it to scan for dependencies.
+              - script: |
+                  pip install poetry poetry-plugin-export
+                  poetry export --directory=backend --format=requirements.txt --without-hashes --without-urls --all-extras --all-groups -o requirements.txt
+                displayName: "Export python dependencies to requirements.txt for CG"

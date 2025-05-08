@@ -1,21 +1,20 @@
-[tool.poetry]
-authors = [
-    "Josh Bradley <joshbradley@microsoft.com>",
-    "Newman Cheng <newmancheng@microsoft.com>",
-    "Christine DiFonzo <cdifonzo@microsoft.com>",
-    "Gabriel Nieves <gnievesponce@microsoft.com>",
-    "Douglas Orbaker <dorbaker@microsoft.com>",
-    "Chris Sanchez <chrissanchez@microsoft.com>",
-    "Shane Solomon <shane.solomon@microsoft.com>",
-    "Kenny Zhang <zhangken@microsoft.com>",
-]
-description = "A web API wrapper around the official GraphRAG library."
-license = "MIT"
+[project]
 name = "graphrag-app"
-version = "1.2.0"
-
-[tool.poetry.dependencies]
-python = "~3.10"
+description = "A web API wrapper around the official GraphRAG library."
+# we make the version defined here match the graphrag library version
+version = "2.1.0"
+license = "MIT"
+authors = [
+    {name = "Josh Bradley", email = "joshbradley@microsoft.com"},
+    {name = "Newman Cheng", email = "newmancheng@microsoft.com"},
+    {name = "Christine DiFonzo", email = "cdifonzo@microsoft.com"},
+    {name = "Gabriel Nieves", email = "gnievesponce@microsoft.com"},
+    {name = "Douglas Orbaker", email = "dorbaker@microsoft.com"},
+    {name = "Shane Solomon", email = "shane.solomon@microsoft.com"},
+    {name = "Kenny Zhang", email = "zhangken@microsoft.com"},
+]
+requires-python = '>=3.10, <3.13'
+package-mode=false
 
 [tool.poetry.group.dev.dependencies]
 detect-secrets = ">=1.5.0"
