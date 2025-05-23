@@ -44,10 +44,12 @@ This can be accomplished via the [Azure Portal](https://learn.microsoft.com/en-u
 az provider register --namespace Microsoft.OperationsManagement
 az provider register --namespace Microsoft.AlertsManagement
 az provider register --namespace Microsoft.Compute
+az provider register --namespace Microsoft.ApiManagement
 # verify providers were registered
 az provider show --namespace Microsoft.OperationsManagement -o table
 az provider show --namespace Microsoft.AlertsManagement -o table
 az provider show --namespace Microsoft.Compute -o table
+az provider show --namespace Microsoft.ApiManagement -o table
 ```
 
 ## Installation
