@@ -1,5 +1,12 @@
 # GraphRAG Accelerator
 
+## ⚠️ ATTENTION
+This repository is no longer maintained. We sincerely appreciate the interest and all contributors to the Graphrag Solution Accelerator.
+
+🚀 Future development and updates - Please visit the [graphrag library](https://github.com/microsoft/graphrag) for future updates and continued collaboration with the graphrag community at Microsoft.
+
+---
+
 [![Open in Dev Containers](https://img.shields.io/static/v1?label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/Azure-Samples/graphrag-accelerator)
 
 Welcome to the GraphRAG solution accelerator! This accelerator builds on top of the [graphrag](https://github.com/microsoft/graphrag) python package and exposes API endpoints hosted on Azure, which can be used to trigger indexing pipelines and enable querying of the graphrag knowledge graph.
